@@ -1,10 +1,14 @@
 package ion
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 )
+
+var ten = big.NewInt(10)
 
 // TODO: Precision.
 
@@ -14,7 +18,8 @@ type Decimal struct {
 	scale int
 }
 
-// NewDecimal creates a new (big-integer) decimal.
+// NewDecimal creates a new decimal whose value is equal to the given
+// (big) integer.
 func NewDecimal(n *big.Int) *Decimal {
 	return NewDecimalWithScale(n, 0)
 }
@@ -28,7 +33,99 @@ func NewDecimalWithScale(n *big.Int, scale int) *Decimal {
 	}
 }
 
+func ParseDecimal(in string) (*Decimal, error) {
+	if len(in) == 0 {
+		return nil, errors.New("empty string")
+	}
+
+	shift := 0
+
+	d := strings.IndexAny(in, "Dd")
+	if d != -1 {
+		// There's an explicit exponent.
+		exp := in[d+1:]
+		if len(exp) == 0 {
+			return nil, errors.New("unexpected end of input after d")
+		}
+
+		tmp, err := strconv.ParseInt(exp, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		shift = int(tmp)
+		in = in[:d]
+	}
+
+	d = strings.Index(in, ".")
+	if d != -1 {
+		// There's zero or more decimal places.
+		ipart := in[:d]
+		fpart := in[d+1:]
+
+		shift -= len(fpart)
+		in = ipart + fpart
+	}
+
+	n, ok := new(big.Int).SetString(in, 10)
+	if !ok {
+		// Unfortunately this is all we get?
+		return nil, errors.New("not a valid number")
+	}
+
+	return NewDecimalWithScale(n, -shift), nil
+}
+
+func (d *Decimal) Abs() *Decimal {
+	return &Decimal{
+		n:     new(big.Int).Abs(d.n),
+		scale: d.scale,
+	}
+}
+
+func (d *Decimal) Add(o *Decimal) *Decimal {
+	a, b := rescale(d, o)
+	return &Decimal{
+		n:     new(big.Int).Add(a.n, b.n),
+		scale: a.scale,
+	}
+}
+
 // TODO: Maths.
+
+func (d *Decimal) Cmp(o *Decimal) int {
+	a, b := rescale(d, o)
+	return a.n.Cmp(b.n)
+}
+
+func (d *Decimal) Equal(o *Decimal) bool {
+	return d.Cmp(o) == 0
+}
+
+func rescale(a, b *Decimal) (*Decimal, *Decimal) {
+	if a.scale < b.scale {
+		return a.upscale(b.scale), b
+	} else if a.scale > b.scale {
+		return a, b.upscale(a.scale)
+	} else {
+		return a, b
+	}
+}
+
+func (d *Decimal) upscale(scale int) *Decimal {
+	diff := int64(scale) - int64(d.scale)
+	if diff < 0 {
+		panic("can't upscale to a smaller scale")
+	}
+
+	pow := new(big.Int).Exp(ten, big.NewInt(diff), nil)
+	n := new(big.Int).Mul(d.n, pow)
+
+	return &Decimal{
+		n:     n,
+		scale: scale,
+	}
+}
 
 func (d *Decimal) String() string {
 	switch {
