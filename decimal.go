@@ -10,7 +10,7 @@ import (
 
 // Decimal is an arbitrary-precision decimal value.
 type Decimal struct {
-	n *big.Int
+	n     *big.Int
 	scale int
 }
 
@@ -23,7 +23,7 @@ func NewDecimal(n *big.Int) *Decimal {
 // equal to n * 10^-scale.
 func NewDecimalWithScale(n *big.Int, scale int) *Decimal {
 	return &Decimal{
-		n: n,
+		n:     n,
 		scale: scale,
 	}
 }

@@ -9,7 +9,7 @@ func TestDecimalToString(t *testing.T) {
 	test := func(n int64, scale int, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			d := Decimal{
-				n: big.NewInt(n),
+				n:     big.NewInt(n),
 				scale: scale,
 			}
 			actual := d.String()
