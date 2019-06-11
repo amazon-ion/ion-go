@@ -1,4 +1,4 @@
-package text
+package ion
 
 import (
 	"math"
@@ -6,12 +6,10 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/fernomac/ion-go"
 )
 
 func TestTopLevelFieldName(t *testing.T) {
-	writeText(func(w ion.Writer) {
+	writeText(func(w Writer) {
 		w.FieldName("foo")
 		if w.Err() == nil {
 			t.Error("expected an error")
@@ -20,7 +18,7 @@ func TestTopLevelFieldName(t *testing.T) {
 }
 
 func TestEmptyStruct(t *testing.T) {
-	testTextWriter(t, "{}", func(w ion.Writer) {
+	testTextWriter(t, "{}", func(w Writer) {
 		if w.InStruct() {
 			t.Error("already in struct")
 		}
@@ -51,7 +49,7 @@ func TestEmptyStruct(t *testing.T) {
 }
 
 func TestAnnotatedStruct(t *testing.T) {
-	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w ion.Writer) {
+	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w Writer) {
 		w.TypeAnnotation("foo")
 		w.TypeAnnotation("$bar")
 		w.TypeAnnotation(".baz")
@@ -65,7 +63,7 @@ func TestAnnotatedStruct(t *testing.T) {
 }
 
 func TestNestedStruct(t *testing.T) {
-	testTextWriter(t, "{foo:'true'::{},'null':{}}", func(w ion.Writer) {
+	testTextWriter(t, "{foo:'true'::{},'null':{}}", func(w Writer) {
 		w.BeginStruct()
 
 		w.FieldName("foo")
@@ -82,7 +80,7 @@ func TestNestedStruct(t *testing.T) {
 }
 
 func TestEmptyList(t *testing.T) {
-	testTextWriter(t, "[]", func(w ion.Writer) {
+	testTextWriter(t, "[]", func(w Writer) {
 		w.BeginList()
 		if w.Err() != nil {
 			t.Fatal(w.Err())
@@ -105,7 +103,7 @@ func TestEmptyList(t *testing.T) {
 }
 
 func TestNestedLists(t *testing.T) {
-	testTextWriter(t, "[{},foo::{},'null'::[]]", func(w ion.Writer) {
+	testTextWriter(t, "[{},foo::{},'null'::[]]", func(w Writer) {
 		w.BeginList()
 
 		w.BeginStruct()
@@ -124,7 +122,7 @@ func TestNestedLists(t *testing.T) {
 }
 
 func TestSexps(t *testing.T) {
-	testTextWriter(t, "()\n(())\n(() ())", func(w ion.Writer) {
+	testTextWriter(t, "()\n(())\n(() ())", func(w Writer) {
 		w.BeginSexp()
 		w.EndSexp()
 
@@ -144,15 +142,15 @@ func TestSexps(t *testing.T) {
 
 func TestNull(t *testing.T) {
 	expected := "[null,foo::null,null.int,bar::null.sexp]"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginList()
 
 		w.WriteNull()
 		w.TypeAnnotation("foo")
-		w.WriteNullWithType(ion.NullType)
-		w.WriteNullWithType(ion.IntType)
+		w.WriteNullWithType(NullType)
+		w.WriteNullWithType(IntType)
 		w.TypeAnnotation("bar")
-		w.WriteNullWithType(ion.SexpType)
+		w.WriteNullWithType(SexpType)
 
 		w.EndList()
 	})
@@ -160,7 +158,7 @@ func TestNull(t *testing.T) {
 
 func TestBool(t *testing.T) {
 	expected := "true\n(false '123'::true)\n'false'::false"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBool(true)
 
 		w.BeginSexp()
@@ -176,7 +174,7 @@ func TestBool(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	expected := "(zero::0 1 -1 (9223372036854775807 -9223372036854775808))"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
 
 		w.TypeAnnotation("zero"); w.WriteInt(0)
@@ -194,7 +192,7 @@ func TestInt(t *testing.T) {
 
 func TestBigInt(t *testing.T) {
 	expected := "[0,big::18446744073709551616]"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginList()
 
 		w.WriteBigInt(big.NewInt(0))
@@ -212,7 +210,7 @@ func TestBigInt(t *testing.T) {
 
 func TestFloat(t *testing.T) {
 	expected := "{z:0e+0,nz:-0e+0,s:1.234e+1,l:1.234e-55,n:nan,i:+inf,ni:-inf}"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
 
 		w.FieldName("z"); w.WriteFloat(0.0)
@@ -231,15 +229,15 @@ func TestFloat(t *testing.T) {
 
 func TestDecimal(t *testing.T) {
 	expected := "0.\n-1.23d-98"
-	testTextWriter(t, expected, func(w ion.Writer) {
-		w.WriteDecimal(ion.NewDecimal(big.NewInt(0)))
-		w.WriteDecimal(ion.NewDecimalWithScale(big.NewInt(-123), 100))
+	testTextWriter(t, expected, func(w Writer) {
+		w.WriteDecimal(MustParseDecimal("0"))
+		w.WriteDecimal(MustParseDecimal("-123d-100"))
 	})
 }
 
 func TestTimestamp(t *testing.T) {
 	expected := "1970-01-01T00:00:00.001Z\n1970-01-01T01:23:00+01:23"
-	testTextWriter(t, expected, func (w ion.Writer) {
+	testTextWriter(t, expected, func (w Writer) {
 		w.WriteTimestamp(time.Unix(0, 1000000).In(time.UTC))
 		w.WriteTimestamp(time.Unix(0, 0).In(time.FixedZone("wtf", 4980)))
 	})
@@ -247,7 +245,7 @@ func TestTimestamp(t *testing.T) {
 
 func TestSymbol(t *testing.T) {
 	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸'}"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
 
 		w.FieldName("foo"); w.WriteSymbol("bar")
@@ -264,7 +262,7 @@ func TestSymbol(t *testing.T) {
 
 func TestString(t *testing.T) {
 	expected := `("hello" "" ("\\\"\n\"\\" zany::"🤪"))`
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
 		w.WriteString("hello")
 		w.WriteString("")
@@ -280,7 +278,7 @@ func TestString(t *testing.T) {
 
 func TestBlob(t *testing.T) {
 	expected := "{{AAEC/f7/}}\n{{SGVsbG8gV29ybGQ=}}\nempty::{{}}"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBlob([]byte{ 0, 1, 2, 0xFD, 0xFE, 0xFF })
 		w.WriteBlob([]byte("Hello World"))
 		w.TypeAnnotation("empty"); w.WriteBlob(nil)
@@ -289,7 +287,7 @@ func TestBlob(t *testing.T) {
 
 func TestClob(t *testing.T) {
 	expected := "{hello:{{\"world\"}},bits:{{\"\\0\\x01\\xFE\\xFF\"}}}"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
 		w.FieldName("hello"); w.WriteClob([]byte("world"))
 		w.FieldName("bits"); w.WriteClob([]byte{0,1,0xFE,0xFF})
@@ -299,7 +297,7 @@ func TestClob(t *testing.T) {
 
 func TestFinish(t *testing.T) {
 	expected := "1\nfoo\n\"bar\"\n{}\n"
-	testTextWriter(t, expected, func(w ion.Writer) {
+	testTextWriter(t, expected, func(w Writer) {
 		w.WriteInt(1)
 		w.WriteSymbol("foo")
 		w.WriteString("bar")
@@ -312,7 +310,7 @@ func TestFinish(t *testing.T) {
 
 func TestBadFinish(t *testing.T) {
 	buf := strings.Builder{}
-	w := NewWriter(&buf)
+	w := NewTextWriter(&buf)
 
 	w.BeginStruct()
 	err := w.Finish()
@@ -322,16 +320,16 @@ func TestBadFinish(t *testing.T) {
 	}
 }
 
-func testTextWriter(t *testing.T, expected string, f func(ion.Writer)) {
+func testTextWriter(t *testing.T, expected string, f func(Writer)) {
 	actual := writeText(f)
 	if actual != expected {
 		t.Errorf("expected: %v, actual: %v", expected, actual)
 	}
 }
 
-func writeText(f func(ion.Writer)) string {
+func writeText(f func(Writer)) string {
 	buf := strings.Builder{}
-	w := NewWriter(&buf)
+	w := NewTextWriter(&buf)
 
 	f(w)
 
