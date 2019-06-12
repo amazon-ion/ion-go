@@ -16,11 +16,11 @@ const (
 
 // writer holds shared stuff for all writers.
 type writer struct {
-	out io.Writer
+	out    io.Writer
 	ctxArr []ctxType
-	err error
+	err    error
 
-	fieldName string
+	fieldName       string
 	typeAnnotations []string
 }
 
@@ -43,7 +43,6 @@ func (w *writer) InSexp() bool {
 func (w *writer) Err() error {
 	return w.err
 }
-
 
 // FieldName sets the field name for the next value written.
 // It may only be called while writing a struct.

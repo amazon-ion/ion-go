@@ -104,7 +104,7 @@ func writeEscapedSymbol(sym string, out io.Writer) error {
 
 // Write the given string out, escaping any characters that need escaping.
 func writeEscapedString(str string, out io.Writer) error {
-	for i := 0; i<len(str); i++ {
+	for i := 0; i < len(str); i++ {
 		c := str[i]
 		if c < 32 || c == '\\' || c == '"' {
 			if err := writeEscapedChar(c, out); err != nil {

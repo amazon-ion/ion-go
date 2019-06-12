@@ -14,7 +14,7 @@ import (
 // textWriter is a writer that writes human-readable text
 type textWriter struct {
 	writer
-	needsSeparator  bool
+	needsSeparator bool
 }
 
 // NewTextWriter returns a new text writer.
@@ -279,10 +279,14 @@ func (w *textWriter) WriteFloat(val float64) {
 		str := strconv.FormatFloat(val, 'e', -1, 64)
 
 		switch str {
-		case "NaN": return "nan"
-		case "+Inf": return "+inf"
-		case "-Inf": return "-inf"
-		default: break
+		case "NaN":
+			return "nan"
+		case "+Inf":
+			return "+inf"
+		case "-Inf":
+			return "-inf"
+		default:
+			break
 		}
 
 		idx := strings.Index(str, "e")
