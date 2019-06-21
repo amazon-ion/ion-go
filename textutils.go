@@ -14,12 +14,12 @@ func symbolNeedsQuoting(sym string) bool {
 		return true
 	}
 
-	if !isIdentifierStart(sym[0]) {
+	if !isIdentifierStart(int(sym[0])) {
 		return true
 	}
 
 	for i := 1; i < len(sym); i++ {
-		if !isIdentifierPart(sym[i]) {
+		if !isIdentifierPart(int(sym[i])) {
 			return true
 		}
 	}
@@ -38,7 +38,7 @@ func isSymbolRef(sym string) bool {
 	}
 
 	for i := 1; i < len(sym); i++ {
-		if !isDigit(sym[i]) {
+		if !isDigit(int(sym[i])) {
 			return false
 		}
 	}
@@ -47,7 +47,7 @@ func isSymbolRef(sym string) bool {
 }
 
 // Is this a valid first character for an identifier?
-func isIdentifierStart(c byte) bool {
+func isIdentifierStart(c int) bool {
 	if c >= 'a' && c <= 'z' {
 		return true
 	}
@@ -61,13 +61,63 @@ func isIdentifierStart(c byte) bool {
 }
 
 // Is this a valid character for later in an identifier?
-func isIdentifierPart(c byte) bool {
+func isIdentifierPart(c int) bool {
 	return isIdentifierStart(c) || isDigit(c)
 }
 
+// Is this a valid hex digit?
+func isHexDigit(c int) bool {
+	if isDigit(c) {
+		return true
+	}
+	if c >= 'a' && c <= 'f' {
+		return true
+	}
+	if c >= 'A' && c <= 'F' {
+		return true
+	}
+	return false
+}
+
 // Is this a digit?
-func isDigit(c byte) bool {
+func isDigit(c int) bool {
 	return c >= '0' && c <= '9'
+}
+
+// Is this a valid part of an operator symbol?
+func isOperatorChar(c int) bool {
+	switch c {
+	case '!', '#', '%', '&', '*', '+', '-', '.', '/', ';', '<', '=':
+		return true
+	case '>', '?', '@', '^', '`', '|', '~':
+		return true
+	default:
+		return false
+	}
+}
+
+// Does this character mark the end of a normal (unquoted) value? Does
+// *not* check for the start of a comment, because that requires two
+// characters. Use tokenizer.isStopChar(c) or check for it yourself.
+func isStopChar(c int) bool {
+	switch c {
+	case -1, '{', '}', '[', ']', '(', ')', ',', '"', '\'':
+		return true
+	case ' ', '\t', '\n', '\r':
+		return true
+	default:
+		return false
+	}
+}
+
+// Is this character whitespace?
+func isWhitespace(c int) bool {
+	switch c {
+	case ' ', '\t', '\n', '\r':
+		return true
+	default:
+		return false
+	}
 }
 
 // Write the given symbol out, quoting and encoding if necessary.
