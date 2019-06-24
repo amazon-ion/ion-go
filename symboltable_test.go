@@ -58,7 +58,7 @@ func TestLocalSymbolTable(t *testing.T) {
 }
 
 func TestLocalSymbolTableWithImports(t *testing.T) {
-	imports := []*SharedSymbolTable{V1SystemSymbolTable}
+	imports := []SharedSymbolTable{V1SystemSymbolTable}
 	st := NewLocalSymbolTable(imports, []string{
 		"foo",
 		"bar",

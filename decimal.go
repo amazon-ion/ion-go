@@ -87,6 +87,7 @@ func ParseDecimal(in string) (*Decimal, error) {
 	return NewDecimalWithScale(n, -shift), nil
 }
 
+// Abs returns the absolute value of this Decimal.
 func (d *Decimal) Abs() *Decimal {
 	return &Decimal{
 		n:     new(big.Int).Abs(d.n),
@@ -94,6 +95,7 @@ func (d *Decimal) Abs() *Decimal {
 	}
 }
 
+// Add returns the result of adding this Decimal to another Decimal.
 func (d *Decimal) Add(o *Decimal) *Decimal {
 	// a*10^x + b*10^y = (a*10^(x-y) + b) * 10^y
 	dd, oo := rescale(d, o)
@@ -103,6 +105,7 @@ func (d *Decimal) Add(o *Decimal) *Decimal {
 	}
 }
 
+// Sub returns the result of substrating another Decimal from this Decimal.
 func (d *Decimal) Sub(o *Decimal) *Decimal {
 	dd, oo := rescale(d, o)
 	return &Decimal{
@@ -111,6 +114,7 @@ func (d *Decimal) Sub(o *Decimal) *Decimal {
 	}
 }
 
+// Neg returns the negative of this Decimal.
 func (d *Decimal) Neg() *Decimal {
 	return &Decimal{
 		n:     new(big.Int).Neg(d.n),

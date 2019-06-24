@@ -130,9 +130,8 @@ func writeSymbol(sym string, out io.Writer) error {
 			return err
 		}
 		return writeRawChar('\'', out)
-	} else {
-		return writeRawString(sym, out)
 	}
+	return writeRawString(sym, out)
 }
 
 // Write the given symbol out, escaping any characters that need escaping.

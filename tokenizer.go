@@ -174,9 +174,8 @@ func (t *tokenizer) Next() error {
 		if c2 == ':' {
 			t.read()
 			return t.finish(tokenDoubleColon, false)
-		} else {
-			return t.finish(tokenColon, false)
 		}
+		return t.finish(tokenColon, false)
 
 	case c == '{':
 		c2, err := t.peek()
@@ -186,9 +185,8 @@ func (t *tokenizer) Next() error {
 		if c2 == '{' {
 			t.read()
 			return t.finish(tokenOpenDoubleBrace, true)
-		} else {
-			return t.finish(tokenOpenBrace, true)
 		}
+		return t.finish(tokenOpenBrace, true)
 
 	case c == '}':
 		return t.finish(tokenCloseBrace, false)
@@ -216,9 +214,8 @@ func (t *tokenizer) Next() error {
 		if isOperatorChar(c2) {
 			t.unread(c)
 			return t.finish(tokenSymbolOperator, true)
-		} else {
-			return t.finish(tokenDot, false)
 		}
+		return t.finish(tokenDot, false)
 
 	case c == '\'':
 		ok, err := t.isTripleQuote()
@@ -227,9 +224,8 @@ func (t *tokenizer) Next() error {
 		}
 		if ok {
 			return t.finish(tokenLongString, true)
-		} else {
-			return t.finish(tokenSymbolQuoted, true)
 		}
+		return t.finish(tokenSymbolQuoted, true)
 
 	case c == '+':
 		ok, err := t.isInf(c)
@@ -238,10 +234,9 @@ func (t *tokenizer) Next() error {
 		}
 		if ok {
 			return t.finish(tokenFloatInf, false)
-		} else {
-			t.unread(c)
-			return t.finish(tokenSymbolOperator, true)
 		}
+		t.unread(c)
+		return t.finish(tokenSymbolOperator, true)
 
 	case isOperatorChar(c):
 		t.unread(c)

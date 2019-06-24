@@ -21,17 +21,22 @@ type SymbolTable interface {
 
 // A SharedSymbolTable is distributed out-of-band and referenced from
 // a LocalSymbolTable to save space.
-type SharedSymbolTable struct {
+type SharedSymbolTable interface {
+	SymbolTable
+
+	Name() string
+	Version() int
+}
+
+type sharedSymbolTable struct {
 	name    string
 	version int
 	symbols []string
 	index   map[string]int
 }
 
-var _ SymbolTable = &SharedSymbolTable{}
-
 // NewSharedSymbolTable creates a new shared symbol table.
-func NewSharedSymbolTable(name string, version int, symbols []string) *SharedSymbolTable {
+func NewSharedSymbolTable(name string, version int, symbols []string) SharedSymbolTable {
 	if name == "" {
 		panic("name must be non-empty")
 	}
@@ -41,7 +46,7 @@ func NewSharedSymbolTable(name string, version int, symbols []string) *SharedSym
 
 	index, copy := buildIndex(symbols, 0)
 
-	return &SharedSymbolTable{
+	return &sharedSymbolTable{
 		name:    name,
 		version: version,
 		symbols: copy,
@@ -63,31 +68,31 @@ func buildIndex(symbols []string, offset int) (map[string]int, []string) {
 	return index, copy
 }
 
-func (s *SharedSymbolTable) Name() string {
+func (s *sharedSymbolTable) Name() string {
 	return s.name
 }
 
-func (s *SharedSymbolTable) Version() int {
+func (s *sharedSymbolTable) Version() int {
 	return s.version
 }
 
-func (s *SharedSymbolTable) MaxID() int {
+func (s *sharedSymbolTable) MaxID() int {
 	return len(s.symbols)
 }
 
-func (s *SharedSymbolTable) FindByName(sym string) (int, bool) {
+func (s *sharedSymbolTable) FindByName(sym string) (int, bool) {
 	id, ok := s.index[sym]
 	return id, ok
 }
 
-func (s *SharedSymbolTable) FindByID(id int) (string, bool) {
+func (s *sharedSymbolTable) FindByID(id int) (string, bool) {
 	if id <= 0 || id > len(s.symbols) {
 		return "", false
 	}
 	return s.symbols[id-1], true
 }
 
-func (s *SharedSymbolTable) WriteTo(w Writer) error {
+func (s *sharedSymbolTable) WriteTo(w Writer) error {
 	w.TypeAnnotation("$ion_shared_symbol_table")
 	w.BeginStruct()
 
@@ -110,7 +115,7 @@ func (s *SharedSymbolTable) WriteTo(w Writer) error {
 	return w.Err()
 }
 
-func (s *SharedSymbolTable) String() string {
+func (s *sharedSymbolTable) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
@@ -119,7 +124,7 @@ func (s *SharedSymbolTable) String() string {
 	return buf.String()
 }
 
-// The (implied) system symbol table for Ion v1.0.
+// V1SystemSymbolTable is the (implied) system symbol table for Ion v1.0.
 var V1SystemSymbolTable = NewSharedSymbolTable("$ion", 1, []string{
 	"$ion",
 	"$ion_1_0",
@@ -134,8 +139,8 @@ var V1SystemSymbolTable = NewSharedSymbolTable("$ion", 1, []string{
 
 // A LocalSymbolTable is transmitted in-band along with the binary data
 // it describes. It may include SharedSymbolTables by reference.
-type LocalSymbolTable struct {
-	imports     []*SharedSymbolTable
+type localSymbolTable struct {
+	imports     []SharedSymbolTable
 	offsets     []int
 	maxImportID int
 
@@ -143,14 +148,12 @@ type LocalSymbolTable struct {
 	index   map[string]int
 }
 
-var _ SymbolTable = &LocalSymbolTable{}
-
 // NewLocalSymbolTable creates a new local symbol table.
-func NewLocalSymbolTable(imports []*SharedSymbolTable, symbols []string) *LocalSymbolTable {
+func NewLocalSymbolTable(imports []SharedSymbolTable, symbols []string) SymbolTable {
 	imps, offsets, maxID := processImports(imports)
 	index, copy := buildIndex(symbols, maxID)
 
-	return &LocalSymbolTable{
+	return &localSymbolTable{
 		imports:     imps,
 		offsets:     offsets,
 		maxImportID: maxID,
@@ -159,8 +162,8 @@ func NewLocalSymbolTable(imports []*SharedSymbolTable, symbols []string) *LocalS
 	}
 }
 
-func processImports(imports []*SharedSymbolTable) ([]*SharedSymbolTable, []int, int) {
-	imps := append([]*SharedSymbolTable{}, imports...)
+func processImports(imports []SharedSymbolTable) ([]SharedSymbolTable, []int, int) {
+	imps := append([]SharedSymbolTable{}, imports...)
 
 	// TODO: Automatically add V1SystemSymbolTable?
 
@@ -174,11 +177,11 @@ func processImports(imports []*SharedSymbolTable) ([]*SharedSymbolTable, []int, 
 	return imps, offsets, maxID
 }
 
-func (t *LocalSymbolTable) MaxID() int {
+func (t *localSymbolTable) MaxID() int {
 	return t.maxImportID + len(t.symbols)
 }
 
-func (t *LocalSymbolTable) FindByName(s string) (int, bool) {
+func (t *localSymbolTable) FindByName(s string) (int, bool) {
 	for i, imp := range t.imports {
 		if id, ok := imp.FindByName(s); ok {
 			return t.offsets[i] + id, true
@@ -192,7 +195,7 @@ func (t *LocalSymbolTable) FindByName(s string) (int, bool) {
 	return 0, false
 }
 
-func (t *LocalSymbolTable) FindByID(id int) (string, bool) {
+func (t *localSymbolTable) FindByID(id int) (string, bool) {
 	if id <= 0 {
 		return "", false
 	}
@@ -209,7 +212,7 @@ func (t *LocalSymbolTable) FindByID(id int) (string, bool) {
 	return "", false
 }
 
-func (t *LocalSymbolTable) findByIDInImports(id int) (string, bool) {
+func (t *localSymbolTable) findByIDInImports(id int) (string, bool) {
 	i := 1
 	off := 0
 
@@ -223,7 +226,7 @@ func (t *LocalSymbolTable) findByIDInImports(id int) (string, bool) {
 	return t.imports[i-1].FindByID(id - off)
 }
 
-func (t *LocalSymbolTable) WriteTo(w Writer) error {
+func (t *localSymbolTable) WriteTo(w Writer) error {
 	w.TypeAnnotation("$ion_symbol_table")
 	w.BeginStruct()
 
@@ -262,7 +265,7 @@ func (t *LocalSymbolTable) WriteTo(w Writer) error {
 	return w.Err()
 }
 
-func (t *LocalSymbolTable) String() string {
+func (t *localSymbolTable) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
@@ -278,17 +281,18 @@ type SymbolTableBuilder interface {
 	// Add adds a symbol to this symbol table.
 	Add(symbol string) (int, bool)
 	// Build creates an immutable local symbol table.
-	Build() *LocalSymbolTable
+	Build() SymbolTable
 }
 
 type symbolTableBuilder struct {
-	LocalSymbolTable
+	localSymbolTable
 }
 
-func NewSymbolTableBuilder(imports ...*SharedSymbolTable) SymbolTableBuilder {
+// NewSymbolTableBuilder creates a new symbol table builder with the given imports.
+func NewSymbolTableBuilder(imports ...SharedSymbolTable) SymbolTableBuilder {
 	imps, offsets, maxID := processImports(imports)
 	return &symbolTableBuilder{
-		LocalSymbolTable{
+		localSymbolTable{
 			imports:     imps,
 			offsets:     offsets,
 			maxImportID: maxID,
@@ -309,14 +313,14 @@ func (b *symbolTableBuilder) Add(symbol string) (int, bool) {
 	return id, true
 }
 
-func (b *symbolTableBuilder) Build() *LocalSymbolTable {
+func (b *symbolTableBuilder) Build() SymbolTable {
 	symbols := append([]string{}, b.symbols...)
 	index := make(map[string]int)
 	for s, i := range b.index {
 		index[s] = i
 	}
 
-	return &LocalSymbolTable{
+	return &localSymbolTable{
 		imports:     b.imports,
 		offsets:     b.offsets,
 		maxImportID: b.maxImportID,
