@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,11 @@ func NewTextReader(in io.Reader) Reader {
 		},
 		state: trsBeforeTypeAnnotations,
 	}
+}
+
+// NewTextReaderString creates a new text reader from a string.
+func NewTextReaderString(str string) Reader {
+	return NewTextReader(strings.NewReader(str))
 }
 
 func (t *textReader) SymbolTable() SymbolTable {
@@ -101,6 +107,8 @@ func (t *textReader) Next() bool {
 	}
 }
 
+// NextAfterValue moves to the next value when we're in the
+// AfterValue state.
 func (t *textReader) nextAfterValue() (bool, error) {
 	tok := t.tok.Token()
 	switch tok {
@@ -138,6 +146,8 @@ func (t *textReader) nextAfterValue() (bool, error) {
 	}
 }
 
+// NextBeforeFieldName moves to the next value when we're in the
+// BeforeFieldName state.
 func (t *textReader) nextBeforeFieldName() (bool, error) {
 	tok := t.tok.Token()
 	switch tok {
@@ -151,6 +161,11 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
+		}
+		if tok == tokenSymbol {
+			if err := verifyUnquotedSymbol(val, "field name"); err != nil {
+				return false, err
+			}
 		}
 
 		// Skip over the following colon.
@@ -171,6 +186,8 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 	}
 }
 
+// NextBeforeTypeAnnotations moves to the next value when we're in the
+// BeforeTypeAnnotations state.
 func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 	tok := t.tok.Token()
 	switch tok {
@@ -187,18 +204,30 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, err
 		}
 
+		ws, err := t.tok.skipWhitespaceHelper()
+		if err != nil {
+			return false, err
+		}
+
 		ok, err := t.tok.skipDoubleColon()
 		if err != nil {
 			return false, err
 		}
 		if ok {
 			// val was a type annotation; remember it and keep going.
+			if tok == tokenSymbol {
+				if err := verifyUnquotedSymbol(val, "type annotation"); err != nil {
+					return false, err
+				}
+			}
 			t.typeAnnotations = append(t.typeAnnotations, val)
 			return false, nil
 		}
 
 		// val was a legit symbol value.
-		t.onSymbol(val, tok)
+		if err := t.onSymbol(val, tok, ws); err != nil {
+			return false, err
+		}
 		return true, nil
 
 	default:
@@ -206,15 +235,26 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 	}
 }
 
-func (t *textReader) onSymbol(val string, tok tokenType) {
+func verifyUnquotedSymbol(val string, ctx string) error {
+	switch val {
+	case "null", "true", "false", "nan":
+		return fmt.Errorf("cannot use unquoted keyword %v as %v", val, ctx)
+	}
+	return nil
+}
+
+func (t *textReader) onSymbol(val string, tok tokenType, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
 	if tok == tokenSymbol {
 		switch val {
 		case "null":
-			// TODO: Deal with potential '.type'.
-			valueType = NullType
+			vt, err := t.onNull(ws)
+			if err != nil {
+				return err
+			}
+			valueType = vt
 			value = nil
 
 		case "true":
@@ -234,6 +274,67 @@ func (t *textReader) onSymbol(val string, tok tokenType) {
 	t.state = t.stateAfterValue()
 	t.valueType = valueType
 	t.value = value
+
+	return nil
+}
+
+func (t *textReader) onNull(ws bool) (Type, error) {
+	if !ws {
+		ok, err := t.tok.skipDot()
+		if err != nil {
+			return NoType, err
+		}
+		if ok {
+			return t.readNullType()
+		}
+	}
+
+	return NullType, nil
+}
+
+func (t *textReader) readNullType() (Type, error) {
+	if err := t.tok.Next(); err != nil {
+		return NoType, err
+	}
+	if t.tok.Token() != tokenSymbol {
+		return NoType, fmt.Errorf("unexpected token %v after null", t.tok.Token())
+	}
+
+	val, err := t.tok.ReadValue(tokenSymbol)
+	if err != nil {
+		return NoType, err
+	}
+
+	switch val {
+	case "null":
+		return NullType, nil
+	case "bool":
+		return BoolType, nil
+	case "int":
+		return IntType, nil
+	case "float":
+		return FloatType, nil
+	case "decimal":
+		return DecimalType, nil
+	case "timestamp":
+		return TimestampType, nil
+	case "symbol":
+		return SymbolType, nil
+	case "string":
+		return StringType, nil
+	case "blob":
+		return BlobType, nil
+	case "clob":
+		return ClobType, nil
+	case "list":
+		return ListType, nil
+	case "struct":
+		return StructType, nil
+	case "sexp":
+		return SexpType, nil
+	default:
+		return NoType, fmt.Errorf("invalid symbol null.%v", val)
+	}
 }
 
 func (t *textReader) Type() Type {
@@ -253,7 +354,7 @@ func (t *textReader) TypeAnnotations() []string {
 }
 
 func (t *textReader) IsNull() bool {
-	return false
+	return t.value == nil
 }
 
 func (t *textReader) StepIn() error {
@@ -320,7 +421,10 @@ func (t *textReader) StepOut() error {
 }
 
 func (t *textReader) BoolValue() (bool, error) {
-	return false, errors.New("not implemented yet")
+	if t.valueType == BoolType {
+		return t.value.(bool), nil
+	}
+	return false, errors.New("value is not a bool")
 }
 
 func (t *textReader) IntValue() (int, error) {
@@ -336,7 +440,11 @@ func (t *textReader) BigIntValue() (*big.Int, error) {
 }
 
 func (t *textReader) FloatValue() (float64, error) {
-	return 0.0, errors.New("not implemented yet")
+	if t.valueType == FloatType {
+		return t.value.(float64), nil
+	}
+	// TODO: Cast ints/decimals?
+	return 0.0, errors.New("value is not a float")
 }
 
 func (t *textReader) DecimalValue() (*Decimal, error) {

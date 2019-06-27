@@ -684,6 +684,17 @@ func (t *tokenizer) skipWhitespace() (int, bool, error) {
 	return t.skipWhitespaceWith(t.skipCommentsHandler)
 }
 
+// SkipWhitespaceHelper is a 'helper' form of SkipWhitespace that
+// unreads the first non-whitespace char instead of returning it.
+func (t *tokenizer) skipWhitespaceHelper() (bool, error) {
+	c, ok, err := t.skipWhitespace()
+	if err != nil {
+		return false, err
+	}
+	t.unread(c)
+	return ok, err
+}
+
 // SkipLobWhitespace skips whitespace when we're inside a large
 // object ({{  ///=  }} or {{ '''///=''' }}) where comments are
 // not allowed.
@@ -797,29 +808,33 @@ func (t *tokenizer) skipBlockComment() error {
 // Peeks ahead to see if the next token is a double colon, and
 // if so skips it. If not, leaves the next token unconsumed.
 func (t *tokenizer) skipDoubleColon() (bool, error) {
-	// Read whitespace and first non-whitespace char.
-	c, _, err := t.skipWhitespace()
+	cs, err := t.peekN(2)
+	if err == io.EOF {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	if c != ':' {
-		// Not followed by a double-colon; put it back.
-		t.unread(c)
-		return false, nil
+
+	if cs[0] == ':' && cs[1] == ':' {
+		t.skipN(2)
+		return true, nil
 	}
 
-	// Peek to see if it's a double colon.
-	c, err = t.peek()
+	return false, nil
+}
+
+// Peeks ahead to see if the next token is a dot, and
+// if so skips it. If not, leaves the next token unconsumed.
+func (t *tokenizer) skipDot() (bool, error) {
+	c, err := t.peek()
 	if err != nil {
 		return false, err
 	}
-	if c != ':' {
-		// Nope; put back the first ':'.
-		t.unread(':')
+	if c != '.' {
 		return false, nil
 	}
 
-	// Yep; eat it and return true.
 	t.read()
 	return true, nil
 }
