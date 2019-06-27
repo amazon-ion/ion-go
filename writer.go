@@ -5,20 +5,11 @@ import (
 	"io"
 )
 
-type ctxType byte
-
-const (
-	atTopLevelCtx ctxType = iota
-	inStructCtx
-	inListCtx
-	inSexpCtx
-)
-
 // writer holds shared stuff for all writers.
 type writer struct {
-	out    io.Writer
-	ctxArr []ctxType
-	err    error
+	out io.Writer
+	ctx ctx
+	err error
 
 	fieldName       string
 	typeAnnotations []string
@@ -26,17 +17,17 @@ type writer struct {
 
 // InStruct returns true if we're currently writing a struct.
 func (w *writer) InStruct() bool {
-	return w.ctx() == inStructCtx
+	return w.ctx.peek() == ctxInStruct
 }
 
 // InList returns true if we're currently writing a list.
 func (w *writer) InList() bool {
-	return w.ctx() == inListCtx
+	return w.ctx.peek() == ctxInList
 }
 
 // InSexp returns true if we're currently writing an s-expression.
 func (w *writer) InSexp() bool {
-	return w.ctx() == inSexpCtx
+	return w.ctx.peek() == ctxInSexp
 }
 
 // Err returns the current error, or nil if there are none yet.
@@ -72,25 +63,4 @@ func (w *writer) TypeAnnotations(val ...string) {
 		return
 	}
 	w.typeAnnotations = append(w.typeAnnotations, val...)
-}
-
-// ctx returns the current writing context
-func (w *writer) ctx() ctxType {
-	if len(w.ctxArr) == 0 {
-		return atTopLevelCtx
-	}
-	return w.ctxArr[len(w.ctxArr)-1]
-}
-
-// push pushes a new writing context when a new container is begun.
-func (w *writer) push(ctx ctxType) {
-	w.ctxArr = append(w.ctxArr, ctx)
-}
-
-// pop pops the writing context when a container is ended.
-func (w *writer) pop() {
-	if len(w.ctxArr) == 0 {
-		panic("pop called at top level")
-	}
-	w.ctxArr = w.ctxArr[:len(w.ctxArr)-1]
 }

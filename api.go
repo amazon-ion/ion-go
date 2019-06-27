@@ -1,6 +1,7 @@
 package ion
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 )
@@ -39,19 +40,55 @@ const (
 	SexpType
 )
 
+func (t Type) String() string {
+	switch t {
+	case NoType:
+		return "<no type>"
+	case NullType:
+		return "null"
+	case BoolType:
+		return "bool"
+	case IntType:
+		return "int"
+	case FloatType:
+		return "float"
+	case DecimalType:
+		return "decimal"
+	case TimestampType:
+		return "timestamp"
+	case StringType:
+		return "string"
+	case SymbolType:
+		return "symbol"
+	case BlobType:
+		return "blob"
+	case ClobType:
+		return "clob"
+	case StructType:
+		return "struct"
+	case ListType:
+		return "list"
+	case SexpType:
+		return "sexp"
+	default:
+		return fmt.Sprintf("<unknown type %v>", uint8(t))
+	}
+}
+
 // A Reader reads Ion values from an input stream.
 type Reader interface {
 	SymbolTable() SymbolTable
 
-	Next() (Type, error)
+	Next() bool
 	Type() Type
+	Err() error
+
+	FieldName() string
+	TypeAnnotations() []string
 	IsNull() bool
 
 	StepIn() error
 	StepOut() error
-
-	FieldName() (string, error)
-	TypeAnnotations() ([]string, error)
 
 	BoolValue() (bool, error)
 	IntValue() (int, error)

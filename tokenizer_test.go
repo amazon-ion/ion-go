@@ -22,9 +22,114 @@ func TestNext(t *testing.T) {
 	next(tokenSymbolQuoted)
 	next(tokenColon)
 	next(tokenOpenBracket)
-	next(tokenNumeric)
+	next(tokenNumber)
 	next(tokenComma)
 	next(tokenOpenBrace)
+}
+
+func TestReadSymbol(t *testing.T) {
+	test := func(str string, expected string, next tokenType) {
+		t.Run(str, func(t *testing.T) {
+			tok := tokenizeString(str)
+			if err := tok.Next(); err != nil {
+				t.Fatal(err)
+			}
+
+			if tok.Token() != tokenSymbol {
+				t.Fatal("not a symbol")
+			}
+
+			actual, err := tok.readSymbol()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if actual != expected {
+				t.Errorf("expected '%v', got '%v'", expected, actual)
+			}
+
+			if err := tok.Next(); err != nil {
+				t.Fatal(err)
+			}
+			if tok.Token() != next {
+				t.Errorf("expected next=%v, got next=%v", next, tok.Token())
+			}
+		})
+	}
+
+	test("a", "a", tokenEOF)
+	test("abc", "abc", tokenEOF)
+	test("null +inf", "null", tokenFloatInf)
+	test("false,", "false", tokenComma)
+	test("nan]", "nan", tokenCloseBracket)
+}
+
+func TestReadSymbols(t *testing.T) {
+	tok := tokenizeString("foo bar baz beep boop null")
+	expected := []string{"foo", "bar", "baz", "beep", "boop", "null"}
+
+	for i := 0; i < len(expected); i++ {
+		if err := tok.Next(); err != nil {
+			t.Fatal(err)
+		}
+		if tok.Token() != tokenSymbol {
+			t.Fatalf("expected %v, got %v", tokenSymbol, tok.Token())
+		}
+
+		val, err := tok.readSymbol()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if val != expected[i] {
+			t.Errorf("expected %v, got %v", expected[i], val)
+		}
+	}
+}
+
+func TestReadQuotedSymbol(t *testing.T) {
+	test := func(str string, expected string, next int) {
+		t.Run(str, func(t *testing.T) {
+			tok := tokenizeString(str)
+			if err := tok.Next(); err != nil {
+				t.Fatal(err)
+			}
+
+			if tok.Token() != tokenSymbolQuoted {
+				t.Fatal("not a quoted symbol")
+			}
+
+			actual, err := tok.readQuotedSymbol()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if actual != expected {
+				t.Errorf("expected '%v', got '%v'", expected, actual)
+			}
+
+			c, err := tok.read()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c != next {
+				t.Errorf("expected next=%q, got next=%q", next, c)
+			}
+		})
+	}
+
+	test("'a'", "a", -1)
+	test("'a b c'", "a b c", -1)
+	test("'null' ", "null", ' ')
+	test("'false',", "false", ',')
+	test("'nan']", "nan", ']')
+
+	test("'a\\'b'", "a'b", -1)
+	test("'a\\\nb'", "ab", -1)
+	test("'a\\\\b'", "a\\b", -1)
+	test("'a\x20b'", "a b", -1)
+	test("'a\\u2248b'", "a≈b", -1)
+	test("'a\\U0001F44Db'", "a👍b", -1)
 }
 
 func TestIsTripleQuote(t *testing.T) {
@@ -129,16 +234,16 @@ func TestScanForNumericType(t *testing.T) {
 	test("0000-00-00", tokenTimestamp)
 	test("0000T", tokenTimestamp)
 
-	test("0", tokenNumeric)
-	test("1b0101", tokenNumeric)
-	test("1B", tokenNumeric)
-	test("1x0101", tokenNumeric)
-	test("1X", tokenNumeric)
-	test("1234", tokenNumeric)
-	test("12345", tokenNumeric)
-	test("1,23T", tokenNumeric)
-	test("12,3T", tokenNumeric)
-	test("123,T", tokenNumeric)
+	test("0", tokenNumber)
+	test("1b0101", tokenNumber)
+	test("1B", tokenNumber)
+	test("1x0101", tokenNumber)
+	test("1X", tokenNumber)
+	test("1234", tokenNumber)
+	test("12345", tokenNumber)
+	test("1,23T", tokenNumber)
+	test("12,3T", tokenNumber)
+	test("123,T", tokenNumber)
 }
 
 func TestSkipWhitespace(t *testing.T) {

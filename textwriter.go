@@ -32,10 +32,10 @@ func NewTextWriter(out io.Writer) Writer {
 func (w *textWriter) beginValue() error {
 	if w.needsSeparator {
 		var sep byte
-		switch w.ctx() {
-		case inStructCtx, inListCtx:
+		switch w.ctx.peek() {
+		case ctxInStruct, ctxInList:
 			sep = ','
-		case inSexpCtx:
+		case ctxInSexp:
 			sep = ' '
 		default:
 			sep = '\n'
@@ -89,7 +89,7 @@ func (w *textWriter) begin(t ctxType, c byte) error {
 		return err
 	}
 
-	w.push(t)
+	w.ctx.push(t)
 	w.needsSeparator = false
 
 	return writeRawChar(c, w.out)
@@ -97,7 +97,7 @@ func (w *textWriter) begin(t ctxType, c byte) error {
 
 // end finishes writing a container of the given type
 func (w *textWriter) end(t ctxType, c byte) error {
-	if w.ctx() != t {
+	if w.ctx.peek() != t {
 		return errors.New("not in that kind of container")
 	}
 
@@ -107,7 +107,7 @@ func (w *textWriter) end(t ctxType, c byte) error {
 
 	w.fieldName = ""
 	w.typeAnnotations = nil
-	w.pop()
+	w.ctx.pop()
 	w.endValue()
 
 	return nil
@@ -118,7 +118,7 @@ func (w *textWriter) BeginStruct() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.begin(inStructCtx, '{')
+	w.err = w.begin(ctxInStruct, '{')
 }
 
 // EndStruct finishes writing a struct.
@@ -126,7 +126,7 @@ func (w *textWriter) EndStruct() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.end(inStructCtx, '}')
+	w.err = w.end(ctxInStruct, '}')
 }
 
 // BeginList begins writing a list.
@@ -134,7 +134,7 @@ func (w *textWriter) BeginList() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.begin(inListCtx, '[')
+	w.err = w.begin(ctxInList, '[')
 }
 
 // EndList finishes writing a list.
@@ -142,7 +142,7 @@ func (w *textWriter) EndList() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.end(inListCtx, ']')
+	w.err = w.end(ctxInList, ']')
 }
 
 // BeginSexp begins writing an s-expression.
@@ -150,7 +150,7 @@ func (w *textWriter) BeginSexp() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.begin(inSexpCtx, '(')
+	w.err = w.begin(ctxInSexp, '(')
 }
 
 // EndSexp finishes writing an s-expression.
@@ -158,7 +158,7 @@ func (w *textWriter) EndSexp() {
 	if w.err != nil {
 		return
 	}
-	w.err = w.end(inSexpCtx, ')')
+	w.err = w.end(ctxInSexp, ')')
 }
 
 // writeValue writes a value whose raw encoding is produced by the
@@ -397,7 +397,7 @@ func (w *textWriter) Finish() error {
 	if w.err != nil {
 		return w.err
 	}
-	if w.ctx() != atTopLevelCtx {
+	if w.ctx.peek() != ctxAtTopLevel {
 		w.err = errors.New("not at top level")
 		return w.err
 	}

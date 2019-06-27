@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type tokenType int
@@ -15,12 +16,9 @@ const (
 
 	tokenEOF // End of input
 
-	tokenNumeric       // Haven't seen enough to know which, yet
-	tokenInt           // [0-9]+
+	tokenNumber        // Haven't seen enough to know which, yet
 	tokenBinary        // 0b[01]+
 	tokenHex           // 0x[0-9a-fA-F]+
-	tokenDecimal       // [0-9]+.[0-9]+d[0-9]+
-	tokenFloat         // [0-9]+.[0-9]+e[0-9]+
 	tokenFloatInf      // +inf
 	tokenFloatMinusInf // -inf
 	tokenTimestamp     // 2001-01-01T00:00:00.000Z
@@ -50,66 +48,61 @@ const (
 func (t tokenType) String() string {
 	switch t {
 	case tokenError:
-		return "error"
+		return "<error>"
 	case tokenEOF:
-		return "EOF"
-	case tokenNumeric:
-		return "numeric"
-	case tokenInt:
-		return "int"
+		return "<EOF>"
+	case tokenNumber:
+		return "<number>"
 	case tokenBinary:
-		return "binary"
+		return "<binary>"
 	case tokenHex:
-		return "hex"
-	case tokenDecimal:
-		return "decimal"
-	case tokenFloat:
-		return "float"
+		return "<hex>"
 	case tokenFloatInf:
 		return "+inf"
 	case tokenFloatMinusInf:
 		return "-inf"
 	case tokenTimestamp:
-		return "timestamp"
+		return "<timestamp>"
 	case tokenSymbol:
-		return "symbol"
+		return "<symbol>"
 	case tokenSymbolQuoted:
-		return "symbolQuoted"
+		return "<quoted-symbol>"
 	case tokenSymbolOperator:
-		return "symbolOperator"
+		return "<operator>"
 
 	case tokenString:
-		return "string"
+		return "<string>"
 	case tokenLongString:
-		return "longstring"
+		return "<long-string>"
 
 	case tokenDot:
-		return "dot"
+		return "."
 	case tokenComma:
-		return "comma"
+		return ","
 	case tokenColon:
-		return "colon"
+		return ":"
 	case tokenDoubleColon:
-		return "doublecolon"
+		return "::"
 
 	case tokenOpenParen:
-		return "openparen"
+		return "("
 	case tokenCloseParen:
-		return "closeparen"
+		return ")"
 
 	case tokenOpenBrace:
-		return "openbrace"
+		return "{"
 	case tokenCloseBrace:
-		return "closebrace"
+		return "}"
 
 	case tokenOpenBracket:
-		return "openbracket"
+		return "["
 	case tokenCloseBracket:
-		return "closebracket"
+		return "]"
+
 	case tokenOpenDoubleBrace:
-		return "opendoublebrace"
+		return "{{"
 	case tokenCloseDoubleBrace:
-		return "closedoublebrace"
+		return "}}"
 
 	default:
 		return "<???>"
@@ -300,6 +293,155 @@ func (t *tokenizer) finish(token tokenType, more bool) error {
 	return nil
 }
 
+// ReadValue reads the value of a token of the given type.
+func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
+	var str string
+	var err error
+
+	switch tok {
+	case tokenSymbol:
+		str, err = t.readSymbol()
+	case tokenSymbolQuoted:
+		str, err = t.readQuotedSymbol()
+	default:
+		panic("unsupported token type")
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	t.unfinished = false
+	return str, nil
+}
+
+// ReadSymbol reads an unquoted symbol value.
+func (t *tokenizer) readSymbol() (string, error) {
+	ret := strings.Builder{}
+
+	c, err := t.peek()
+	if err != nil {
+		return "", err
+	}
+
+	for isIdentifierPart(c) {
+		ret.WriteByte(byte(c))
+		t.read()
+		c, err = t.peek()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return ret.String(), nil
+}
+
+// ReadQuotedSymbol reads a quoted symbol.
+func (t *tokenizer) readQuotedSymbol() (string, error) {
+	ret := strings.Builder{}
+
+	for {
+		c, err := t.read()
+		if err != nil {
+			return "", err
+		}
+
+		switch c {
+		case -1, '\n':
+			return "", invalidChar(c)
+
+		case '\'':
+			return ret.String(), nil
+
+		case '\\':
+			c, err = t.peek()
+			if err != nil {
+				return "", err
+			}
+
+			if c == '\n' {
+				t.read()
+				continue
+			}
+
+			r, err := t.readEscapedChar(false)
+			if err != nil {
+				return "", err
+			}
+			ret.WriteRune(r)
+
+		default:
+			ret.WriteByte(byte(c))
+		}
+	}
+}
+
+// ReadEscapedChar reads an escaped character.
+func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
+	// We just read the '\', grab the next char.
+	c, err := t.read()
+	if err != nil {
+		return 0, err
+	}
+
+	switch c {
+	case '0':
+		return '\x00', nil
+	case 'a':
+		return '\a', nil
+	case 'b':
+		return '\b', nil
+	case 't':
+		return '\t', nil
+	case 'n':
+		return '\n', nil
+	case 'f':
+		return '\f', nil
+	case 'r':
+		return '\r', nil
+	case 'v':
+		return '\v', nil
+	case '\'':
+		return '\'', nil
+	case '"':
+		return '"', nil
+	case '\\':
+		return '\\', nil
+	case 'U':
+		if clob {
+			return 0, invalidChar('U')
+		}
+		return t.readHexEscapeSeq(8)
+	case 'u':
+		return t.readHexEscapeSeq(4)
+	case 'x':
+		return t.readHexEscapeSeq(2)
+	}
+
+	return 0, fmt.Errorf("bad escape sequence '\\%q'", c)
+}
+
+func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
+	val := rune(0)
+
+	for len > 0 {
+		c, err := t.read()
+		if err != nil {
+			return 0, err
+		}
+
+		d, err := fromHex(c)
+		if err != nil {
+			return 0, err
+		}
+
+		val = (val << 4) | rune(d)
+		len--
+	}
+
+	return val, nil
+}
+
 // IsTripleQuote returns true if this is a triple-quote sequence (''').
 func (t *tokenizer) isTripleQuote() (bool, error) {
 	// We've just read a '\'', check if the next two are too.
@@ -385,7 +527,7 @@ func (t *tokenizer) scanForNumericType(c int) (tokenType, error) {
 	}
 
 	// Can't tell yet; wait until actually reading it to find out.
-	return tokenNumeric, nil
+	return tokenNumber, nil
 }
 
 // Is this character a valid way to end a 'normal' (unquoted) value?

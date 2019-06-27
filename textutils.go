@@ -168,6 +168,19 @@ func writeEscapedString(str string, out io.Writer) error {
 	return nil
 }
 
+func fromHex(c int) (int, error) {
+	if c >= '0' && c <= '9' {
+		return c - '0', nil
+	}
+	if c >= 'a' && c <= 'f' {
+		return 10 + (c - 'a'), nil
+	}
+	if c >= 'A' && c <= 'F' {
+		return 10 + (c - 'A'), nil
+	}
+	return 0, invalidChar(c)
+}
+
 var hexChars = []byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
 
 // Write out the given character in escaped form.

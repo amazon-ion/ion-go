@@ -5,6 +5,20 @@ import (
 	"io"
 )
 
+// FinishValue skips to the end of the current value if (and only if)
+// we're currently in the middle of reading it.
+func (t *tokenizer) finishValue() error {
+	if t.unfinished {
+		c, err := t.skipValue()
+		if err != nil {
+			return err
+		}
+		t.unread(c)
+		t.unfinished = false
+	}
+	return nil
+}
+
 // SkipValue skips to the end of the current value, if the caller
 // didn't bother to consume it before calling Next again.
 func (t *tokenizer) skipValue() (int, error) {
@@ -12,7 +26,7 @@ func (t *tokenizer) skipValue() (int, error) {
 	var err error
 
 	switch t.token {
-	case tokenNumeric, tokenInt, tokenDecimal, tokenFloat:
+	case tokenNumber:
 		c, err = t.skipNumber()
 	case tokenBinary:
 		c, err = t.skipBinary()
@@ -547,14 +561,26 @@ func (t *tokenizer) skipStruct() (int, error) {
 	return t.skipContainer('}')
 }
 
+func (t *tokenizer) skipStructHelper() error {
+	return t.skipContainerHelper('}')
+}
+
 func (t *tokenizer) skipSexp() (int, error) {
 	return t.skipContainer(')')
+}
+
+func (t *tokenizer) skipSexpHelper() error {
+	return t.skipContainerHelper(')')
 }
 
 // SkipList skips forward past a list that the caller doesn't care to
 // step in to.
 func (t *tokenizer) skipList() (int, error) {
 	return t.skipContainer(']')
+}
+
+func (t *tokenizer) skipListHelper() error {
+	return t.skipContainerHelper(']')
 }
 
 // SkipContainer skips a container terminated by the given char and
@@ -766,4 +792,34 @@ func (t *tokenizer) skipBlockComment() error {
 
 		star = (c == '*')
 	}
+}
+
+// Peeks ahead to see if the next token is a double colon, and
+// if so skips it. If not, leaves the next token unconsumed.
+func (t *tokenizer) skipDoubleColon() (bool, error) {
+	// Read whitespace and first non-whitespace char.
+	c, _, err := t.skipWhitespace()
+	if err != nil {
+		return false, err
+	}
+	if c != ':' {
+		// Not followed by a double-colon; put it back.
+		t.unread(c)
+		return false, nil
+	}
+
+	// Peek to see if it's a double colon.
+	c, err = t.peek()
+	if err != nil {
+		return false, err
+	}
+	if c != ':' {
+		// Nope; put back the first ':'.
+		t.unread(':')
+		return false, nil
+	}
+
+	// Yep; eat it and return true.
+	t.read()
+	return true, nil
 }
