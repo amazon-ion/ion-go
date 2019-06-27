@@ -1,7 +1,10 @@
 package ion
 
 import (
+	"errors"
 	"io"
+	"math/big"
+	"strconv"
 )
 
 // Does this symbol need to be quoted in text form?
@@ -230,4 +233,56 @@ func writeRawChars(cs []byte, out io.Writer) error {
 func writeRawChar(c byte, out io.Writer) error {
 	_, err := out.Write([]byte{c})
 	return err
+}
+
+func parseFloat(str string) (float64, error) {
+	return 0, errors.New("not implemented yet")
+}
+
+func parseDecimal(str string) (*Decimal, error) {
+	return nil, errors.New("not implemented yet")
+}
+
+func parseInt(str string, radix int) (interface{}, error) {
+	digits := str
+
+	switch radix {
+	case 10:
+		// All set.
+
+	case 2, 16:
+		neg := false
+		if digits[0] == '-' {
+			neg = true
+			digits = digits[1:]
+		}
+
+		// Skip over the '0x' prefix.
+		digits = digits[2:]
+		if neg {
+			digits = "-" + digits
+		}
+
+	default:
+		panic("unsupported radix")
+	}
+
+	i, err := strconv.ParseInt(digits, radix, 64)
+	if err == nil {
+		return i, nil
+	}
+	if err.(*strconv.NumError).Err != strconv.ErrRange {
+		return nil, err
+	}
+
+	bi, ok := (&big.Int{}).SetString(digits, radix)
+	if !ok {
+		return nil, &strconv.NumError{
+			Func: "ParseInt",
+			Num:  str,
+			Err:  strconv.ErrSyntax,
+		}
+	}
+
+	return bi, nil
 }

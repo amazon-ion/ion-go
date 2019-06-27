@@ -230,6 +230,23 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return true, nil
 
+	case tokenString, tokenLongString:
+		val, err := t.tok.ReadValue(tok)
+		if err != nil {
+			return false, err
+		}
+
+		t.state = t.stateAfterValue()
+		t.valueType = StringType
+		t.value = val
+		return true, nil
+
+	case tokenBinary, tokenHex, tokenNumber:
+		if err := t.onNumber(tok); err != nil {
+			return false, err
+		}
+		return true, nil
+
 	default:
 		return false, fmt.Errorf("unexpected token '%v'", tok)
 	}
@@ -337,6 +354,69 @@ func (t *textReader) readNullType() (Type, error) {
 	}
 }
 
+func (t *textReader) onNumber(tok tokenType) error {
+	var valueType Type
+	var value interface{}
+
+	switch tok {
+	case tokenBinary:
+		val, err := t.tok.ReadValue(tok)
+		if err != nil {
+			return err
+		}
+
+		valueType = IntType
+		value, err = parseInt(val, 2)
+		if err != nil {
+			return err
+		}
+
+	case tokenHex:
+		val, err := t.tok.ReadValue(tok)
+		if err != nil {
+			return err
+		}
+
+		valueType = IntType
+		value, err = parseInt(val, 16)
+		if err != nil {
+			return err
+		}
+
+	case tokenNumber:
+		val, tt, err := t.tok.ReadNumber()
+		if err != nil {
+			return err
+		}
+
+		valueType = tt
+
+		switch tt {
+		case IntType:
+			value, err = parseInt(val, 10)
+		case FloatType:
+			value, err = parseFloat(val)
+		case DecimalType:
+			value, err = parseDecimal(val)
+		default:
+			panic("unexpected type")
+		}
+
+		if err != nil {
+			return err
+		}
+
+	default:
+		panic("unexpected token type")
+	}
+
+	t.state = t.stateAfterValue()
+	t.valueType = valueType
+	t.value = value
+
+	return nil
+}
+
 func (t *textReader) Type() Type {
 	return t.valueType
 }
@@ -422,25 +502,63 @@ func (t *textReader) StepOut() error {
 
 func (t *textReader) BoolValue() (bool, error) {
 	if t.valueType == BoolType {
+		if t.value == nil {
+			return false, nil
+		}
 		return t.value.(bool), nil
 	}
 	return false, errors.New("value is not a bool")
 }
 
 func (t *textReader) IntValue() (int, error) {
-	return 0, errors.New("not implemented yet")
+	i, err := t.Int64Value()
+	if err != nil {
+		return 0, err
+	}
+	if i > math.MaxInt32 || i < math.MinInt32 {
+		return 0, errors.New("value out of bounds")
+	}
+	return int(i), nil
 }
 
 func (t *textReader) Int64Value() (int64, error) {
-	return 0, errors.New("not implemented yet")
+	if t.valueType == IntType {
+		if t.value == nil {
+			return 0, nil
+		}
+
+		if i, ok := t.value.(int64); ok {
+			return i, nil
+		}
+
+		bi := t.value.(*big.Int)
+		if bi.IsInt64() {
+			return bi.Int64(), nil
+		}
+
+		return 0, errors.New("value out of bounds")
+	}
+	return 0, errors.New("value is not an int")
 }
 
 func (t *textReader) BigIntValue() (*big.Int, error) {
-	return nil, errors.New("not implemented yet")
+	if t.valueType == IntType {
+		if t.value == nil {
+			return nil, nil
+		}
+		if i, ok := t.value.(int64); ok {
+			return big.NewInt(i), nil
+		}
+		return t.value.(*big.Int), nil
+	}
+	return nil, errors.New("value is not an int")
 }
 
 func (t *textReader) FloatValue() (float64, error) {
 	if t.valueType == FloatType {
+		if t.value == nil {
+			return 0.0, nil
+		}
 		return t.value.(float64), nil
 	}
 	// TODO: Cast ints/decimals?
@@ -458,6 +576,9 @@ func (t *textReader) TimeValue() (time.Time, error) {
 func (t *textReader) StringValue() (string, error) {
 	switch t.valueType {
 	case StringType, SymbolType:
+		if t.value == nil {
+			return "", nil
+		}
 		return t.value.(string), nil
 
 	default:

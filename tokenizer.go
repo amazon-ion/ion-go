@@ -231,6 +231,38 @@ func (t *tokenizer) Next() error {
 		t.unread(c)
 		return t.finish(tokenSymbolOperator, true)
 
+	case c == '-':
+		c2, err := t.peek()
+		if err != nil {
+			return err
+		}
+
+		if isDigit(c2) {
+			t.read()
+			tt, err := t.scanForNumericType(c2)
+			if err != nil {
+				return err
+			}
+			if tt == tokenTimestamp {
+				// can't have negative timestamps.
+				return invalidChar(c2)
+			}
+			t.unread(c2)
+			t.unread(c)
+			return t.finish(tt, true)
+		}
+
+		ok, err := t.isInf(c)
+		if err != nil {
+			return err
+		}
+		if ok {
+			return t.finish(tokenFloatMinusInf, false)
+		}
+
+		t.unread(c)
+		return t.finish(tokenSymbolOperator, true)
+
 	case isOperatorChar(c):
 		t.unread(c)
 		return t.finish(tokenSymbolOperator, true)
@@ -250,37 +282,6 @@ func (t *tokenizer) Next() error {
 
 		t.unread(c)
 		return t.finish(tt, true)
-
-	case c == '-':
-		c2, err := t.peek()
-		if err != nil {
-			return err
-		}
-
-		if isDigit(c2) {
-			t.read()
-			tt, err := t.scanForNumericType(c2)
-			if err != nil {
-				return err
-			}
-			if tt == tokenTimestamp {
-				// can't have negative timestamps.
-				return invalidChar(c2)
-			}
-			t.unread(c2)
-			return t.finish(tt, true)
-		}
-
-		ok, err := t.isInf(c)
-		if err != nil {
-			return err
-		}
-		if ok {
-			return t.finish(tokenFloatMinusInf, false)
-		}
-
-		t.unread(c)
-		return t.finish(tokenSymbolOperator, true)
 
 	default:
 		return invalidChar(c)
@@ -303,6 +304,14 @@ func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
 		str, err = t.readSymbol()
 	case tokenSymbolQuoted:
 		str, err = t.readQuotedSymbol()
+	case tokenString:
+		str, err = t.readString()
+	case tokenLongString:
+		str, err = t.readLongString()
+	case tokenBinary:
+		str, err = t.readBinary()
+	case tokenHex:
+		str, err = t.readHex()
 	default:
 		panic("unsupported token type")
 	}
@@ -313,6 +322,106 @@ func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
 
 	t.unfinished = false
 	return str, nil
+}
+
+// ReadNumber reads a number and determines the type.
+func (t *tokenizer) ReadNumber() (string, Type, error) {
+	w := strings.Builder{}
+
+	c, err := t.read()
+	if err != nil {
+		return "", NoType, err
+	}
+
+	if c == '-' {
+		w.WriteByte('-')
+		c, err = t.read()
+		if err != nil {
+			return "", NoType, err
+		}
+	}
+
+	first := c
+	oldlen := w.Len()
+
+	c, err = t.readDigits(c, &w)
+	if err != nil {
+		return "", NoType, err
+	}
+
+	if first == '0' {
+		if w.Len()-oldlen > 1 {
+			return "", NoType, errors.New("invalid leading zeroes")
+		}
+	}
+
+	tt := IntType
+
+	if c == '.' {
+		w.WriteByte('.')
+		tt = DecimalType
+
+		if c, err = t.read(); err != nil {
+			return "", NoType, err
+		}
+		if c, err = t.readDigits(c, &w); err != nil {
+			return "", NoType, err
+		}
+	}
+
+	switch c {
+	case 'e', 'E':
+		tt = FloatType
+
+		w.WriteByte(byte(c))
+		if c, err = t.readExponent(&w); err != nil {
+			return "", NoType, err
+		}
+
+	case 'd', 'D':
+		tt = DecimalType
+
+		w.WriteByte(byte(c))
+		if c, err = t.readExponent(&w); err != nil {
+			return "", NoType, err
+		}
+	}
+
+	ok, err := t.isStopChar(c)
+	if err != nil {
+		return "", NoType, err
+	}
+	if !ok {
+		return "", NoType, invalidChar(c)
+	}
+	t.unread(c)
+
+	return w.String(), tt, nil
+}
+
+func (t *tokenizer) readExponent(w io.ByteWriter) (int, error) {
+	c, err := t.read()
+	if err != nil {
+		return 0, err
+	}
+
+	if c == '+' || c == '-' {
+		w.WriteByte(byte(c))
+		if c, err = t.read(); err != nil {
+			return 0, err
+		}
+	}
+
+	return t.readDigits(c, w)
+}
+
+func (t *tokenizer) readDigits(c int, w io.ByteWriter) (int, error) {
+	if !isDigit(c) {
+		return 0, invalidChar(c)
+	}
+	w.WriteByte(byte(c))
+
+	return t.readRadixDigits(isDigit, w)
 }
 
 // ReadSymbol reads an unquoted symbol value.
@@ -352,6 +461,92 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 
 		case '\'':
 			return ret.String(), nil
+
+		case '\\':
+			c, err = t.peek()
+			if err != nil {
+				return "", err
+			}
+
+			if c == '\n' {
+				t.read()
+				continue
+			}
+
+			r, err := t.readEscapedChar(false)
+			if err != nil {
+				return "", err
+			}
+			ret.WriteRune(r)
+
+		default:
+			ret.WriteByte(byte(c))
+		}
+	}
+}
+
+// ReadString reads a quoted string.
+func (t *tokenizer) readString() (string, error) {
+	ret := strings.Builder{}
+
+	for {
+		c, err := t.read()
+		if err != nil {
+			return "", err
+		}
+
+		switch c {
+		case -1, '\n':
+			return "", invalidChar(c)
+
+		case '"':
+			return ret.String(), nil
+
+		case '\\':
+			c, err = t.peek()
+			if err != nil {
+				return "", err
+			}
+
+			if c == '\n' {
+				t.read()
+				continue
+			}
+
+			r, err := t.readEscapedChar(false)
+			if err != nil {
+				return "", err
+			}
+			ret.WriteRune(r)
+
+		default:
+			ret.WriteByte(byte(c))
+		}
+	}
+}
+
+// ReadLongString reads a triple-quoted string.
+func (t *tokenizer) readLongString() (string, error) {
+	ret := strings.Builder{}
+
+	for {
+		c, err := t.read()
+		if err != nil {
+			return "", err
+		}
+
+		switch c {
+		case -1:
+			return "", invalidChar(c)
+
+		case '\'':
+			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
+			if err != nil {
+				return "", err
+			}
+			if ok {
+				return ret.String(), nil
+			}
 
 		case '\\':
 			c, err = t.peek()
@@ -440,6 +635,86 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 	}
 
 	return val, nil
+}
+
+func (t *tokenizer) readBinary() (string, error) {
+	isB := func(c int) bool {
+		return c == 'b' || c == 'B'
+	}
+	isDigit := func(c int) bool {
+		return c == '0' || c == '1'
+	}
+	return t.readRadix(isB, isDigit)
+}
+
+func (t *tokenizer) readHex() (string, error) {
+	isX := func(c int) bool {
+		return c == 'x' || c == 'X'
+	}
+	return t.readRadix(isX, isHexDigit)
+}
+
+func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
+	w := strings.Builder{}
+
+	c, err := t.read()
+	if err != nil {
+		return "", err
+	}
+
+	if c == '-' {
+		w.WriteByte('-')
+		c, err = t.read()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if c != '0' {
+		return "", invalidChar(c)
+	}
+	w.WriteByte('0')
+
+	c, err = t.read()
+	if err != nil {
+		return "", err
+	}
+	if !pok(c) {
+		return "", invalidChar(c)
+	}
+	w.WriteByte(byte(c))
+
+	c, err = t.readRadixDigits(dok, &w)
+	if err != nil {
+		return "", err
+	}
+
+	ok, err := t.isStopChar(c)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", invalidChar(c)
+	}
+	t.unread(c)
+
+	return w.String(), nil
+}
+
+func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
+	var c int
+	var err error
+
+	for {
+		c, err = t.read()
+		if err != nil {
+			return 0, err
+		}
+		if !dok(c) {
+			return c, nil
+		}
+		w.WriteByte(byte(c))
+	}
 }
 
 // IsTripleQuote returns true if this is a triple-quote sequence (''').
