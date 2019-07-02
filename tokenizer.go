@@ -312,6 +312,8 @@ func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
 		str, err = t.readBinary()
 	case tokenHex:
 		str, err = t.readHex()
+	case tokenTimestamp:
+		str, err = t.readTimestamp()
 	default:
 		panic("unsupported token type")
 	}
@@ -417,7 +419,7 @@ func (t *tokenizer) readExponent(w io.ByteWriter) (int, error) {
 
 func (t *tokenizer) readDigits(c int, w io.ByteWriter) (int, error) {
 	if !isDigit(c) {
-		return 0, invalidChar(c)
+		return c, nil
 	}
 	w.WriteByte(byte(c))
 
@@ -715,6 +717,160 @@ func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
 		}
 		w.WriteByte(byte(c))
 	}
+}
+
+func (t *tokenizer) readTimestamp() (string, error) {
+	w := strings.Builder{}
+
+	c, err := t.readTimestampDigits(4, &w)
+	if err != nil {
+		return "", err
+	}
+	if c == 'T' {
+		// yyyyT
+		w.WriteByte('T')
+		return w.String(), nil
+	}
+	if c != '-' {
+		return "", invalidChar(c)
+	}
+	w.WriteByte('-')
+
+	if c, err = t.readTimestampDigits(2, &w); err != nil {
+		return "", err
+	}
+	if c == 'T' {
+		// yyyy-mmT
+		w.WriteByte('T')
+		return w.String(), nil
+	}
+	if c != '-' {
+		return "", invalidChar(c)
+	}
+	w.WriteByte('-')
+
+	if c, err = t.readTimestampDigits(2, &w); err != nil {
+		return "", err
+	}
+	if c != 'T' {
+		// yyyy-mm-dd
+		return t.readTimestampFinish(c, &w)
+	}
+	w.WriteByte('T')
+
+	if c, err = t.read(); err != nil {
+		return "", err
+	}
+	if !isDigit(c) {
+		// yyyy-mm-ddT(+hh:mm)?
+		if c, err = t.readTimestampOffset(c, &w); err != nil {
+			return "", err
+		}
+		return t.readTimestampFinish(c, &w)
+	}
+	w.WriteByte(byte(c))
+
+	if c, err = t.readTimestampDigits(1, &w); err != nil {
+		return "", err
+	}
+	if c != ':' {
+		return "", invalidChar(c)
+	}
+	w.WriteByte(':')
+
+	if c, err = t.readTimestampDigits(2, &w); err != nil {
+		return "", err
+	}
+	if c != ':' {
+		// yyyy-mm-ddThh:mmZ
+		if c, err = t.readTimestampOffsetOrZ(c, &w); err != nil {
+			return "", err
+		}
+		return t.readTimestampFinish(c, &w)
+	}
+	w.WriteByte(':')
+
+	if c, err = t.readTimestampDigits(2, &w); err != nil {
+		return "", err
+	}
+	if c != '.' {
+		// yyyy-mm-ddThh:mm:ssZ
+		if c, err = t.readTimestampOffsetOrZ(c, &w); err != nil {
+			return "", err
+		}
+		return t.readTimestampFinish(c, &w)
+	}
+	w.WriteByte('.')
+
+	// yyyy-mm-ddThh:mm:ss.ssssZ
+	if c, err = t.read(); err != nil {
+		return "", err
+	}
+	if isDigit(c) {
+		if c, err = t.readDigits(c, &w); err != nil {
+			return "", err
+		}
+	}
+
+	if c, err = t.readTimestampOffsetOrZ(c, &w); err != nil {
+		return "", err
+	}
+	return t.readTimestampFinish(c, &w)
+}
+
+func (t *tokenizer) readTimestampOffsetOrZ(c int, w io.ByteWriter) (int, error) {
+	if c == '-' || c == '+' {
+		return t.readTimestampOffset(c, w)
+	}
+	if c == 'z' || c == 'Z' {
+		w.WriteByte(byte(c))
+		return t.read()
+	}
+	return 0, invalidChar(c)
+}
+
+func (t *tokenizer) readTimestampOffset(c int, w io.ByteWriter) (int, error) {
+	if c != '-' && c != '+' {
+		return c, nil
+	}
+	w.WriteByte(byte(c))
+
+	c, err := t.readTimestampDigits(2, w)
+	if err != nil {
+		return 0, err
+	}
+	if c != ':' {
+		return 0, invalidChar(c)
+	}
+	w.WriteByte(':')
+	return t.readTimestampDigits(2, w)
+}
+
+func (t *tokenizer) readTimestampDigits(n int, w io.ByteWriter) (int, error) {
+	for n > 0 {
+		c, err := t.read()
+		if err != nil {
+			return 0, err
+		}
+		if !isDigit(c) {
+			return 0, invalidChar(c)
+		}
+		w.WriteByte(byte(c))
+		n--
+	}
+	return t.read()
+}
+
+func (t *tokenizer) readTimestampFinish(c int, w fmt.Stringer) (string, error) {
+	ok, err := t.isStopChar(c)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", invalidChar(c)
+	}
+	t.unread(c)
+	return w.String(), nil
 }
 
 // IsTripleQuote returns true if this is a triple-quote sequence (''').

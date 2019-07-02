@@ -132,6 +132,51 @@ func TestReadQuotedSymbol(t *testing.T) {
 	test("'a\\U0001F44Db'", "a👍b", -1)
 }
 
+func TestReadTimestamp(t *testing.T) {
+	test := func(str string, eval string, next int) {
+		t.Run(str, func(t *testing.T) {
+			tok := tokenizeString(str)
+			if err := tok.Next(); err != nil {
+				t.Fatal(err)
+			}
+			if tok.Token() != tokenTimestamp {
+				t.Fatalf("unexpected token %v", tok.Token())
+			}
+
+			val, err := tok.ReadValue(tokenTimestamp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if val != eval {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+
+			c, err := tok.read()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c != next {
+				t.Errorf("expected %q, got %q", next, c)
+			}
+		})
+	}
+
+	test("2001T", "2001T", -1)
+	test("2001-01T,", "2001-01T", ',')
+	test("2001-01-02}", "2001-01-02", '}')
+	test("2001-01-02T ", "2001-01-02T", ' ')
+	test("2001-01-02T+00:00\t", "2001-01-02T+00:00", '\t')
+	test("2001-01-02T-00:00\n", "2001-01-02T-00:00", '\n')
+	test("2001-01-02T03:04+00:00 ", "2001-01-02T03:04+00:00", ' ')
+	test("2001-01-02T03:04-00:00 ", "2001-01-02T03:04-00:00", ' ')
+	test("2001-01-02T03:04Z ", "2001-01-02T03:04Z", ' ')
+	test("2001-01-02T03:04z ", "2001-01-02T03:04z", ' ')
+	test("2001-01-02T03:04:05Z ", "2001-01-02T03:04:05Z", ' ')
+	test("2001-01-02T03:04:05+00:00 ", "2001-01-02T03:04:05+00:00", ' ')
+	test("2001-01-02T03:04:05.666Z ", "2001-01-02T03:04:05.666Z", ' ')
+	test("2001-01-02T03:04:05.666666z ", "2001-01-02T03:04:05.666666z", ' ')
+}
+
 func TestIsTripleQuote(t *testing.T) {
 	test := func(str string, eok bool, next int) {
 		t.Run(str, func(t *testing.T) {

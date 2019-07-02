@@ -1,10 +1,11 @@
 package ion
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"strconv"
+	"time"
 )
 
 // Does this symbol need to be quoted in text form?
@@ -236,11 +237,11 @@ func writeRawChar(c byte, out io.Writer) error {
 }
 
 func parseFloat(str string) (float64, error) {
-	return 0, errors.New("not implemented yet")
+	return strconv.ParseFloat(str, 64)
 }
 
 func parseDecimal(str string) (*Decimal, error) {
-	return nil, errors.New("not implemented yet")
+	return ParseDecimal(str)
 }
 
 func parseInt(str string, radix int) (interface{}, error) {
@@ -285,4 +286,69 @@ func parseInt(str string, radix int) (interface{}, error) {
 	}
 
 	return bi, nil
+}
+
+func parseTimestamp(val string) (time.Time, error) {
+	if len(val) < 5 {
+		return invalidTimestamp(val)
+	}
+
+	year, err := strconv.ParseInt(val[:4], 10, 32)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
+		// yyyyT
+		return time.Date(int(year), 1, 1, 0, 0, 0, 0, time.UTC), nil
+	}
+	if val[4] != '-' {
+		return invalidTimestamp(val)
+	}
+
+	if len(val) < 8 {
+		return invalidTimestamp(val)
+	}
+
+	month, err := strconv.ParseInt(val[5:7], 10, 32)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
+		// yyyy-mmT
+		return time.Date(int(year), time.Month(month), 1, 0, 0, 0, 0, time.UTC), nil
+	}
+	if val[7] != '-' {
+		return invalidTimestamp(val)
+	}
+
+	if len(val) < 10 {
+		return invalidTimestamp(val)
+	}
+
+	day, err := strconv.ParseInt(val[8:10], 10, 32)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
+		// yyyy-mm-dd or yyyy-mm-ddT
+		return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC), nil
+	}
+	if val[10] != 't' && val[10] != 'T' {
+		return invalidTimestamp(val)
+	}
+
+	if len(val) < 17 {
+		return invalidTimestamp(val)
+	}
+	if val[16] != ':' {
+		return time.Parse("2006-01-02T15:04Z07:00", val)
+	}
+
+	return time.Parse(time.RFC3339Nano, val)
+}
+
+func invalidTimestamp(val string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("invalid timestamp: %v", val)
 }

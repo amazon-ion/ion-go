@@ -6,7 +6,121 @@ import (
 	"math"
 	"math/big"
 	"testing"
+	"time"
 )
+
+func TestTimestamps(t *testing.T) {
+	test := func(str string, eval time.Time) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Error("next returned false")
+				t.Fatal(r.Err())
+			}
+			if r.Type() != TimestampType {
+				t.Errorf("expected type=TimestampType, got %v", r.Type())
+			}
+
+			val, err := r.TimeValue()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !val.Equal(eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+
+			if r.Next() {
+				t.Error("next returned true")
+			}
+			if r.Err() != nil {
+				t.Error(r.Err())
+			}
+		})
+	}
+
+	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
+	test("2001T", et)
+	test("2001-01T", et)
+	test("2001-01-01", et)
+	test("2001-01-01T", et)
+	test("2001-01-01T00:00Z", et)
+	test("2001-01-01T00:00:00Z", et)
+	test("2001-01-01T00:00:00.000Z", et)
+	test("2001-01-01T00:00:00.000+00:00", et)
+}
+
+func TestDoubles(t *testing.T) {
+	test := func(str string, eval string) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Error("next returned false")
+			}
+			if r.Type() != DecimalType {
+				t.Errorf("expected type=DecimalType, got %v", r.Type())
+			}
+
+			ee := MustParseDecimal(eval)
+
+			val, err := r.DecimalValue()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !ee.Equal(val) {
+				t.Errorf("expected %v, got %v", ee, val)
+			}
+
+			if r.Next() {
+				t.Error("next returned true")
+			}
+			if r.Err() != nil {
+				t.Error(r.Err())
+			}
+		})
+	}
+
+	test("123.", "123")
+	test("123.0", "123")
+	test("123.456", "123.456")
+	test("123d2", "12300")
+	test("123d+2", "12300")
+	test("123d-2", "1.23")
+}
+
+func TestFloats(t *testing.T) {
+	test := func(str string, eval float64) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Error("next returned false")
+			}
+			if r.Type() != FloatType {
+				t.Errorf("expected type=FloatType, got %v", r.Type())
+			}
+
+			val, err := r.FloatValue()
+			if err != nil {
+				t.Error(err)
+			}
+			if val != eval {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+
+			if r.Next() {
+				t.Error("next returned true")
+			}
+			if r.Err() != nil {
+				t.Error(r.Err())
+			}
+		})
+	}
+
+	test("1e100\n", 1e100)
+	test("1.2e+0", 1.2)
+	test("-123.456e-78", -123.456e-78)
+	test("+inf", math.Inf(1))
+	test("-inf", math.Inf(-1))
+}
 
 func TestInts(t *testing.T) {
 	test := func(str string, m func(Reader) error) {

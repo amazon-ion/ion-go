@@ -241,8 +241,14 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.value = val
 		return true, nil
 
-	case tokenBinary, tokenHex, tokenNumber:
+	case tokenBinary, tokenHex, tokenNumber, tokenFloatInf, tokenFloatMinusInf:
 		if err := t.onNumber(tok); err != nil {
+			return false, err
+		}
+		return true, nil
+
+	case tokenTimestamp:
+		if err := t.onTimestamp(); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -406,12 +412,38 @@ func (t *textReader) onNumber(tok tokenType) error {
 			return err
 		}
 
+	case tokenFloatInf:
+		valueType = FloatType
+		value = math.Inf(1)
+
+	case tokenFloatMinusInf:
+		valueType = FloatType
+		value = math.Inf(-1)
+
 	default:
 		panic("unexpected token type")
 	}
 
 	t.state = t.stateAfterValue()
 	t.valueType = valueType
+	t.value = value
+
+	return nil
+}
+
+func (t *textReader) onTimestamp() error {
+	val, err := t.tok.ReadValue(tokenTimestamp)
+	if err != nil {
+		return err
+	}
+
+	value, err := parseTimestamp(val)
+	if err != nil {
+		return err
+	}
+
+	t.state = t.stateAfterValue()
+	t.valueType = TimestampType
 	t.value = value
 
 	return nil
@@ -566,11 +598,26 @@ func (t *textReader) FloatValue() (float64, error) {
 }
 
 func (t *textReader) DecimalValue() (*Decimal, error) {
-	return nil, errors.New("not implemented yet")
+	switch t.valueType {
+	case DecimalType:
+		if t.value == nil {
+			return nil, nil
+		}
+		return t.value.(*Decimal), nil
+	}
+	// TODO: Cast floats/ints?
+	return nil, errors.New("value is not a decimal")
 }
 
 func (t *textReader) TimeValue() (time.Time, error) {
-	return time.Time{}, errors.New("not implemented yet")
+	switch t.valueType {
+	case TimestampType:
+		if t.value == nil {
+			return time.Time{}, nil
+		}
+		return t.value.(time.Time), nil
+	}
+	return time.Time{}, errors.New("value is not a timestamp")
 }
 
 func (t *textReader) StringValue() (string, error) {
