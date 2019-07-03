@@ -1,6 +1,7 @@
 package ion
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -8,6 +9,75 @@ import (
 	"testing"
 	"time"
 )
+
+func TestClobs(t *testing.T) {
+	test := func(str string, eval []byte) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Error("next returned false")
+				t.Fatal(r.Err())
+			}
+			if r.Type() != ClobType {
+				t.Errorf("expected type=ClobType, got %v", r.Type())
+			}
+
+			val, err := r.ByteValue()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+
+			if r.Next() {
+				t.Error("next returned true")
+			}
+			if r.Err() != nil {
+				t.Error(r.Err())
+			}
+		})
+	}
+
+	test("{{\"\"}}", []byte{})
+	test("{{ \"hello world\" }}", []byte("hello world"))
+	test("{{'''hello world'''}}", []byte("hello world"))
+	test("{{'''hello'''\n'''world'''}}", []byte("helloworld"))
+}
+
+func TestBlobs(t *testing.T) {
+	test := func(str string, eval []byte) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Error("next returned false")
+				t.Fatal(r.Err())
+			}
+			if r.Type() != BlobType {
+				t.Errorf("expected type=BlobType, got %v", r.Type())
+			}
+
+			val, err := r.ByteValue()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+
+			if r.Next() {
+				t.Error("next returned true")
+			}
+			if r.Err() != nil {
+				t.Error(r.Err())
+			}
+		})
+	}
+
+	test("{{}}", []byte{})
+	test("{{AA==}}", []byte{0})
+	test("{{  SGVsbG8g\r\nV29ybGQ=  }}", []byte("Hello World"))
+}
 
 func TestTimestamps(t *testing.T) {
 	test := func(str string, eval time.Time) {

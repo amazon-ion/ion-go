@@ -873,6 +873,88 @@ func (t *tokenizer) readTimestampFinish(c int, w fmt.Stringer) (string, error) {
 	return w.String(), nil
 }
 
+func (t *tokenizer) ReadBlob() (string, error) {
+	w := strings.Builder{}
+
+	var (
+		c   int
+		err error
+	)
+
+	for {
+		if c, _, err = t.skipLobWhitespace(); err != nil {
+			return "", err
+		}
+		if c == -1 {
+			return "", invalidChar(c)
+		}
+		if c == '}' {
+			break
+		}
+		w.WriteByte(byte(c))
+	}
+
+	if c, err = t.read(); err != nil {
+		return "", err
+	}
+	if c != '}' {
+		return "", invalidChar(c)
+	}
+
+	t.unfinished = false
+	return w.String(), nil
+}
+
+func (t *tokenizer) ReadShortClob() (string, error) {
+	str, err := t.readString()
+	if err != nil {
+		return "", err
+	}
+
+	c, _, err := t.skipLobWhitespace()
+	if err != nil {
+		return "", err
+	}
+	if c != '}' {
+		return "", invalidChar(c)
+	}
+
+	if c, err = t.read(); err != nil {
+		return "", err
+	}
+	if c != '}' {
+		return "", invalidChar(c)
+	}
+
+	t.unfinished = false
+	return str, nil
+}
+
+func (t *tokenizer) ReadLongClob() (string, error) {
+	str, err := t.readLongString()
+	if err != nil {
+		return "", err
+	}
+
+	c, _, err := t.skipLobWhitespace()
+	if err != nil {
+		return "", err
+	}
+	if c != '}' {
+		return "", invalidChar(c)
+	}
+
+	if c, err = t.read(); err != nil {
+		return "", err
+	}
+	if c != '}' {
+		return "", invalidChar(c)
+	}
+
+	t.unfinished = false
+	return str, nil
+}
+
 // IsTripleQuote returns true if this is a triple-quote sequence (''').
 func (t *tokenizer) isTripleQuote() (bool, error) {
 	// We've just read a '\'', check if the next two are too.

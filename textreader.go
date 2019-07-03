@@ -2,6 +2,7 @@ package ion
 
 import (
 	"bufio"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -253,6 +254,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return true, nil
 
+	case tokenOpenDoubleBrace:
+		if err := t.onLob(); err != nil {
+			return false, err
+		}
+		return true, nil
+
 	default:
 		return false, fmt.Errorf("unexpected token '%v'", tok)
 	}
@@ -449,6 +456,73 @@ func (t *textReader) onTimestamp() error {
 	return nil
 }
 
+func (t *textReader) onLob() error {
+	c, _, err := t.tok.skipLobWhitespace()
+	if err != nil {
+		return err
+	}
+
+	var (
+		valType Type
+		val     []byte
+	)
+
+	// TODO: Peek for clobs.
+	if c == '"' {
+
+		// Short clob.
+		valType = ClobType
+
+		str, err := t.tok.ReadShortClob()
+		if err != nil {
+			return err
+		}
+
+		val = []byte(str)
+
+	} else if c == '\'' {
+
+		// Long clob.
+		ok, err := t.tok.isTripleQuote()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return invalidChar(c)
+		}
+
+		valType = ClobType
+
+		str, err := t.tok.ReadLongClob()
+		if err != nil {
+			return err
+		}
+
+		val = []byte(str)
+
+	} else {
+		// Normal blob.
+		valType = BlobType
+		t.tok.unread(c)
+
+		b64, err := t.tok.ReadBlob()
+		if err != nil {
+			return err
+		}
+
+		val, err = base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return err
+		}
+	}
+
+	t.state = t.stateAfterValue()
+	t.valueType = valType
+	t.value = val
+
+	return nil
+}
+
 func (t *textReader) Type() Type {
 	return t.valueType
 }
@@ -634,7 +708,14 @@ func (t *textReader) StringValue() (string, error) {
 }
 
 func (t *textReader) ByteValue() ([]byte, error) {
-	return nil, errors.New("not implemented yet")
+	switch t.valueType {
+	case BlobType, ClobType:
+		if t.value == nil {
+			return nil, nil
+		}
+		return t.value.([]byte), nil
+	}
+	return nil, errors.New("value is not a byte array")
 }
 
 // FinishValue finishes reading the current value, if there is one.
