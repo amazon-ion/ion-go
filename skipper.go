@@ -7,16 +7,17 @@ import (
 
 // FinishValue skips to the end of the current value if (and only if)
 // we're currently in the middle of reading it.
-func (t *tokenizer) finishValue() error {
+func (t *tokenizer) finishValue() (bool, error) {
 	if t.unfinished {
 		c, err := t.skipValue()
 		if err != nil {
-			return err
+			return true, err
 		}
 		t.unread(c)
 		t.unfinished = false
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 // SkipValue skips to the end of the current value, if the caller

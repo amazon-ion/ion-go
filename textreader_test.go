@@ -10,6 +10,181 @@ import (
 	"time"
 )
 
+func TestIgnoreValues(t *testing.T) {
+	r := NewTextReaderString("{skip: me, please: true}\n[skip, me, please]\nfoo")
+
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.Type() != StructType {
+		t.Fatalf("expected StructType, got %v", r.Type())
+	}
+
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.Type() != ListType {
+		t.Fatalf("expected ListType, got %v", r.Type())
+	}
+
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.Type() != SymbolType {
+		t.Fatalf("expected SymbolType, got %v", r.Type())
+	}
+
+	val, err := r.StringValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != "foo" {
+		t.Errorf("expected foo, got %v", val)
+	}
+
+	if r.Next() {
+		t.Error("next returned true")
+	}
+}
+
+func TestStructs(t *testing.T) {
+	test := func(str string, f func(r Reader, t *testing.T)) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Fatal(r.Err())
+			}
+			if r.Type() != StructType {
+				t.Errorf("expected type=StructType, got %v", r.Type())
+			}
+
+			if err := r.StepIn(); err != nil {
+				t.Fatal(err)
+			}
+
+			f(r, t)
+
+			if err := r.StepOut(); err != nil {
+				t.Fatal(err)
+			}
+
+			if r.Next() {
+				t.Errorf("next returned true")
+			}
+			if r.Err() != nil {
+				t.Fatal(r.Err())
+			}
+		})
+	}
+
+	test("{\r\n}", func(r Reader, t *testing.T) {
+		if r.Next() {
+			t.Errorf("next returned true")
+		}
+		if r.Err() != nil {
+			t.Fatal(r.Err())
+		}
+	})
+
+	test("{foo: bar}", func(r Reader, t *testing.T) {
+		symbol(t, r, "bar")
+		if r.FieldName() != "foo" {
+			t.Errorf("expected foo, got %v", r.FieldName())
+		}
+	})
+
+	test("{foo: a, bar: b, baz: c}", func(r Reader, t *testing.T) {
+		symbol(t, r, "a")
+		if r.FieldName() != "foo" {
+			t.Errorf("expected foo, got %v", r.FieldName())
+		}
+
+		symbol(t, r, "b")
+		if r.FieldName() != "bar" {
+			t.Errorf("expected bar, got %v", r.FieldName())
+		}
+
+		symbol(t, r, "c")
+		if r.FieldName() != "baz" {
+			t.Errorf("expected baz, got %v", r.FieldName())
+		}
+	})
+}
+
+func TestLists(t *testing.T) {
+	test := func(str string, f func(r Reader, t *testing.T)) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			if !r.Next() {
+				t.Fatal(r.Err())
+			}
+			if r.Type() != ListType {
+				t.Errorf("expected type=ListType, got %v", r.Type())
+			}
+
+			if err := r.StepIn(); err != nil {
+				t.Fatal(err)
+			}
+
+			f(r, t)
+
+			if err := r.StepOut(); err != nil {
+				t.Fatal(err)
+			}
+
+			if r.Next() {
+				t.Errorf("next returned true")
+			}
+			if r.Err() != nil {
+				t.Fatal(r.Err())
+			}
+		})
+	}
+
+	test("[    ]", func(r Reader, t *testing.T) {
+		if r.Next() {
+			t.Fatal("next returned true")
+		}
+	})
+
+	test("[foo]", func(r Reader, t *testing.T) {
+		symbol(t, r, "foo")
+		if r.Next() {
+			t.Fatal("next returned true")
+		}
+	})
+
+	test("[foo, bar, baz]", func(r Reader, t *testing.T) {
+		symbol(t, r, "foo")
+		symbol(t, r, "bar")
+		symbol(t, r, "baz")
+		if r.Next() {
+			t.Fatal("next returned true")
+		}
+	})
+}
+
+func symbol(t *testing.T, r Reader, eval string) {
+	next(t, r, SymbolType)
+
+	val, err := r.StringValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func next(t *testing.T, r Reader, et Type) {
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.Type() != et {
+		t.Fatalf("expected %v, got %v", et, r.Type())
+	}
+}
+
 func TestClobs(t *testing.T) {
 	test := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,6 +24,23 @@ const (
 	trsInValue
 	trsAfterValue
 )
+
+func (s textReaderState) String() string {
+	switch s {
+	case trsDone:
+		return "<done>"
+	case trsBeforeFieldName:
+		return "<beforeFieldName>"
+	case trsBeforeTypeAnnotations:
+		return "<beforeTypeAnnotations>"
+	case trsBeforeContainer:
+		return "<beforeContainer>"
+	case trsAfterValue:
+		return "<afterValue>"
+	default:
+		return strconv.Itoa(int(s))
+	}
+}
 
 type textReader struct {
 	tok   tokenizer
@@ -260,6 +278,37 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return true, nil
 
+	case tokenOpenBrace:
+		t.state = trsBeforeContainer
+		t.valueType = StructType
+		return true, nil
+
+	case tokenOpenBracket:
+		t.state = trsBeforeContainer
+		t.valueType = ListType
+		return true, nil
+
+	case tokenOpenParen:
+		t.state = trsBeforeContainer
+		t.valueType = SexpType
+		return true, nil
+
+	case tokenCloseBrace:
+		// No more values in this struct.
+		if t.ctx.peek() == ctxInStruct {
+			t.eof = true
+			return true, nil
+		}
+		return false, errors.New("unexpected token '}'")
+
+	case tokenCloseBracket:
+		// No more values in this list.
+		if t.ctx.peek() == ctxInList {
+			t.eof = true
+			return true, nil
+		}
+		return false, errors.New("unexpected token ']'")
+
 	default:
 		return false, fmt.Errorf("unexpected token '%v'", tok)
 	}
@@ -467,9 +516,7 @@ func (t *textReader) onLob() error {
 		val     []byte
 	)
 
-	// TODO: Peek for clobs.
 	if c == '"' {
-
 		// Short clob.
 		valType = ClobType
 
@@ -481,7 +528,6 @@ func (t *textReader) onLob() error {
 		val = []byte(str)
 
 	} else if c == '\'' {
-
 		// Long clob.
 		ok, err := t.tok.isTripleQuote()
 		if err != nil {
@@ -544,6 +590,9 @@ func (t *textReader) IsNull() bool {
 }
 
 func (t *textReader) StepIn() error {
+	if t.err != nil {
+		return t.err
+	}
 	if t.state != trsBeforeContainer {
 		return errors.New("invalid state")
 	}
@@ -567,39 +616,49 @@ func (t *textReader) StepIn() error {
 		t.state = trsBeforeTypeAnnotations
 	}
 
+	// TODO: Make this less hacky.
+	t.tok.unfinished = false
 	return nil
 }
 
 func (t *textReader) StepOut() error {
+	if t.err != nil {
+		return t.err
+	}
+
 	ctx := t.ctx.peek()
 	if ctx == ctxAtTopLevel {
 		return errors.New("invalid state")
 	}
 
-	err := t.tok.finishValue()
+	_, err := t.tok.finishValue()
 	if err != nil {
 		t.explode(err)
 		return err
 	}
 
-	switch t.ctx.peek() {
-	case ctxInStruct:
-		err = t.tok.skipStructHelper()
-	case ctxInList:
-		err = t.tok.skipListHelper()
-	case ctxInSexp:
-		err = t.tok.skipSexpHelper()
-	default:
-		panic("invalid ctx")
-	}
+	if !t.eof {
+		// Haven't seen the end of the container yet; skip until we
+		// find it.
+		switch t.ctx.peek() {
+		case ctxInStruct:
+			err = t.tok.skipStructHelper()
+		case ctxInList:
+			err = t.tok.skipListHelper()
+		case ctxInSexp:
+			err = t.tok.skipSexpHelper()
+		default:
+			panic("invalid ctx")
+		}
 
-	if err != nil {
-		t.explode(err)
-		return err
+		if err != nil {
+			t.explode(err)
+			return err
+		}
 	}
 
 	t.ctx.pop()
-	t.state = trsAfterValue
+	t.state = t.stateAfterValue()
 	t.valueType = NoType
 	t.value = nil
 
@@ -720,12 +779,15 @@ func (t *textReader) ByteValue() ([]byte, error) {
 
 // FinishValue finishes reading the current value, if there is one.
 func (t *textReader) finishValue() error {
-	err := t.tok.finishValue()
+	ok, err := t.tok.finishValue()
 	if err != nil {
 		return err
 	}
 
-	t.state = t.stateAfterValue()
+	if ok {
+		t.state = t.stateAfterValue()
+	}
+
 	return nil
 }
 
