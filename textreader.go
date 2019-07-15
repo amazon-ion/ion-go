@@ -309,6 +309,14 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return false, errors.New("unexpected token ']'")
 
+	case tokenCloseParen:
+		// No more values in this sexp.
+		if t.ctx.peek() == ctxInSexp {
+			t.eof = true
+			return true, nil
+		}
+		return false, errors.New("unexpected token ')'")
+
 	default:
 		return false, fmt.Errorf("unexpected token '%v'", tok)
 	}

@@ -121,7 +121,7 @@ func TestNestedLists(t *testing.T) {
 	})
 }
 
-func TestSexps(t *testing.T) {
+func TestWriteSexps(t *testing.T) {
 	testTextWriter(t, "()\n(())\n(() ())", func(w Writer) {
 		w.BeginSexp()
 		w.EndSexp()
