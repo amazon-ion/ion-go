@@ -47,7 +47,7 @@ func TestIgnoreValues(t *testing.T) {
 	}
 }
 
-func TestSexps(t *testing.T) {
+func TestReadSexps(t *testing.T) {
 	test := func(str string, f func(r Reader, t *testing.T)) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
@@ -159,6 +159,56 @@ func TestStructs(t *testing.T) {
 			t.Errorf("expected baz, got %v", r.FieldName())
 		}
 	})
+}
+
+func TestMultipleStructs(t *testing.T) {
+	r := NewTextReaderString("{} {} {}")
+
+	for i := 0; i < 3; i++ {
+		if !r.Next() {
+			t.Error("next returned false")
+			t.Fatal(r.Err())
+		}
+		if r.Type() != StructType {
+			t.Fatalf("expected struct, got %v", r.Type())
+		}
+
+		if err := r.StepIn(); err != nil {
+			t.Fatal(err)
+		}
+		if r.Next() {
+			t.Fatal("next returned true")
+		}
+		if err := r.StepOut(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if r.Next() {
+		t.Fatal("next returned true")
+	}
+}
+
+func TestNullStructs(t *testing.T) {
+	r := NewTextReaderString("null.struct {}")
+
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if !r.IsNull() {
+		t.Error("expected null, got not-null")
+	}
+
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.IsNull() {
+		t.Error("expected not-null, got null")
+	}
+
+	if r.Next() {
+		t.Fatal("next returned true")
+	}
 }
 
 func TestLists(t *testing.T) {
@@ -471,12 +521,12 @@ func TestInts(t *testing.T) {
 	}
 
 	testInt("0", 0)
-	testInt("12345", 12345)
-	testInt("-12345", -12345)
-	testInt("0b000101", 5)
-	testInt("-0b000101", -5)
-	testInt("0x01020e0F", 0x01020e0f)
-	testInt("-0x01020e0F", -0x01020e0f)
+	testInt("12_345", 12345)
+	testInt("-1_2_3_4_5", -12345)
+	testInt("0b00_0101", 5)
+	testInt("-0b00_0101", -5)
+	testInt("0x01_02_0e_0F", 0x01020e0f)
+	testInt("-0x0102_0e0F", -0x01020e0f)
 
 	testInt64 := func(str string, eval int64) {
 		test(str, func(r Reader) error {
@@ -491,17 +541,17 @@ func TestInts(t *testing.T) {
 		})
 	}
 
-	testInt64("0x123FFFFFFFF", 0x123FFFFFFFF)
-	testInt64("-0x123FFFFFFFF", -0x123FFFFFFFF)
+	testInt64("0x123_FFFF_FFFF", 0x123FFFFFFFF)
+	testInt64("-0x123_FFFF_FFFF", -0x123FFFFFFFF)
 
-	testBigInt := func(str string) {
+	testBigInt := func(str string, estr string) {
 		test(str, func(r Reader) error {
 			val, err := r.BigIntValue()
 			if err != nil {
 				return err
 			}
 
-			eval, _ := (&big.Int{}).SetString(str, 0)
+			eval, _ := (&big.Int{}).SetString(estr, 0)
 			if eval.Cmp(val) != 0 {
 				return fmt.Errorf("expected %v, got %v", eval, val)
 			}
@@ -510,9 +560,9 @@ func TestInts(t *testing.T) {
 		})
 	}
 
-	testBigInt("0xEFFFFFFFFFFFFFFF")
-	testBigInt("0xFFFFFFFFFFFFFFFF")
-	testBigInt("-0x1FFFFFFFFFFFFFFFF")
+	testBigInt("0xEFFF_FFFF_FFFF_FFFF", "0xEFFFFFFFFFFFFFFF")
+	testBigInt("0xFFFF_FFFF_FFFF_FFFF", "0xFFFFFFFFFFFFFFFF")
+	testBigInt("-0x1_FFFF_FFFF_FFFF_FFFF", "-0x1FFFFFFFFFFFFFFFF")
 }
 
 func TestStrings(t *testing.T) {

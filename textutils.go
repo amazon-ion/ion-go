@@ -237,7 +237,16 @@ func writeRawChar(c byte, out io.Writer) error {
 }
 
 func parseFloat(str string) (float64, error) {
-	return strconv.ParseFloat(str, 64)
+	val, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		if ne, ok := err.(*strconv.NumError); ok {
+			if ne.Err == strconv.ErrRange {
+				// Ignore me, val will be +-inf which is fine.
+				return val, nil
+			}
+		}
+	}
+	return val, err
 }
 
 func parseDecimal(str string) (*Decimal, error) {

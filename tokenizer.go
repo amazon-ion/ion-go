@@ -304,6 +304,8 @@ func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
 		str, err = t.readSymbol()
 	case tokenSymbolQuoted:
 		str, err = t.readQuotedSymbol()
+	case tokenSymbolOperator, tokenDot:
+		str, err = t.readOperator()
 	case tokenString:
 		str, err = t.readString()
 	case tokenLongString:
@@ -487,6 +489,26 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 	}
 }
 
+func (t *tokenizer) readOperator() (string, error) {
+	ret := strings.Builder{}
+
+	c, err := t.peek()
+	if err != nil {
+		return "", err
+	}
+
+	for isOperatorChar(c) {
+		ret.WriteByte(byte(c))
+		t.read()
+		c, err = t.peek()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return ret.String(), nil
+}
+
 // ReadString reads a quoted string.
 func (t *tokenizer) readString() (string, error) {
 	ret := strings.Builder{}
@@ -598,6 +620,10 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 		return '\r', nil
 	case 'v':
 		return '\v', nil
+	case '?':
+		return '?', nil
+	case '/':
+		return '/', nil
 	case '\'':
 		return '\'', nil
 	case '"':
@@ -615,7 +641,7 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 		return t.readHexEscapeSeq(2)
 	}
 
-	return 0, fmt.Errorf("bad escape sequence '\\%q'", c)
+	return 0, fmt.Errorf("bad escape sequence '\\%c'", c)
 }
 
 func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
@@ -711,6 +737,9 @@ func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
 		c, err = t.read()
 		if err != nil {
 			return 0, err
+		}
+		if c == '_' {
+			continue
 		}
 		if !dok(c) {
 			return c, nil

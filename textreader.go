@@ -53,6 +53,8 @@ type textReader struct {
 	typeAnnotations []string
 	valueType       Type
 	value           interface{}
+
+	debug bool
 }
 
 // NewTextReader creates a new text reader.
@@ -80,10 +82,18 @@ func (t *textReader) Next() bool {
 		return false
 	}
 
+	if t.debug {
+		fmt.Println("state:", t.state)
+	}
+
 	err := t.finishValue()
 	if err != nil {
 		t.explode(err)
 		return false
+	}
+
+	if t.debug {
+		fmt.Println("state after finish:", t.state)
 	}
 
 	t.fieldName = ""
@@ -94,6 +104,10 @@ func (t *textReader) Next() bool {
 	if err := t.tok.Next(); err != nil {
 		t.explode(err)
 		return false
+	}
+
+	if t.debug {
+		fmt.Println("read token:", t.tok.Token())
 	}
 
 	for {
@@ -107,7 +121,7 @@ func (t *textReader) Next() bool {
 		case trsBeforeTypeAnnotations:
 			f = t.nextBeforeTypeAnnotations
 		default:
-			panic("invalid state")
+			panic(fmt.Sprintf("invalid state: %v", t.state))
 		}
 
 		done, err := f()
@@ -140,7 +154,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 		case ctxInList:
 			t.state = trsBeforeTypeAnnotations
 		default:
-			panic("invalid state")
+			panic(fmt.Sprintf("invalid state: %v", t.ctx.peek()))
 		}
 		return false, nil
 
@@ -175,7 +189,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		t.eof = true
 		return true, nil
 
-	case tokenSymbol, tokenSymbolQuoted:
+	case tokenSymbol, tokenSymbolQuoted, tokenString, tokenLongString:
 		// Read the field name.
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
@@ -217,7 +231,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return false, errors.New("unexpected EOF")
 
-	case tokenSymbol, tokenSymbolQuoted:
+	case tokenSymbol, tokenSymbolQuoted, tokenSymbolOperator, tokenDot:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
@@ -281,16 +295,19 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 	case tokenOpenBrace:
 		t.state = trsBeforeContainer
 		t.valueType = StructType
+		t.value = StructType
 		return true, nil
 
 	case tokenOpenBracket:
 		t.state = trsBeforeContainer
 		t.valueType = ListType
+		t.value = ListType
 		return true, nil
 
 	case tokenOpenParen:
 		t.state = trsBeforeContainer
 		t.valueType = SexpType
+		t.value = SexpType
 		return true, nil
 
 	case tokenCloseBrace:
@@ -602,7 +619,7 @@ func (t *textReader) StepIn() error {
 		return t.err
 	}
 	if t.state != trsBeforeContainer {
-		return errors.New("invalid state")
+		return fmt.Errorf("stepin called in invalid state %v", t.state)
 	}
 
 	var ctx ctxType
@@ -636,7 +653,7 @@ func (t *textReader) StepOut() error {
 
 	ctx := t.ctx.peek()
 	if ctx == ctxAtTopLevel {
-		return errors.New("invalid state")
+		return errors.New("stepout called at top level")
 	}
 
 	_, err := t.tok.finishValue()
@@ -669,6 +686,7 @@ func (t *textReader) StepOut() error {
 	t.state = t.stateAfterValue()
 	t.valueType = NoType
 	t.value = nil
+	t.eof = false
 
 	return nil
 }
