@@ -155,10 +155,6 @@ func (t *tokenizer) Next() error {
 	case c == -1:
 		return t.finish(tokenEOF, true)
 
-	case c == '/':
-		t.unread(c)
-		return t.finish(tokenSymbolOperator, true)
-
 	case c == ':':
 		c2, err := t.peek()
 		if err != nil {

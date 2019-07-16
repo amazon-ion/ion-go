@@ -2,8 +2,6 @@ package ion
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -11,73 +9,26 @@ import (
 )
 
 func TestIgnoreValues(t *testing.T) {
-	r := NewTextReaderString("{skip: me, please: true}\n[skip, me, please]\nfoo")
+	r := NewTextReaderString("(skip ++ me / please) {skip: me, please: 0}\n[skip, me, please]\nfoo")
 
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.Type() != StructType {
-		t.Fatalf("expected StructType, got %v", r.Type())
-	}
+	_next(t, r, SexpType)
+	_next(t, r, StructType)
+	_next(t, r, ListType)
 
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.Type() != ListType {
-		t.Fatalf("expected ListType, got %v", r.Type())
-	}
-
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.Type() != SymbolType {
-		t.Fatalf("expected SymbolType, got %v", r.Type())
-	}
-
-	val, err := r.StringValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != "foo" {
-		t.Errorf("expected foo, got %v", val)
-	}
-
-	if r.Next() {
-		t.Error("next returned true")
-	}
+	_symbol(t, r, "foo")
+	_eof(t, r)
 }
 
 func TestReadSexps(t *testing.T) {
-	test := func(str string, f func(r Reader, t *testing.T)) {
+	test := func(str string, f containerhandler) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Fatal(r.Err())
-			}
-			if r.Type() != SexpType {
-				t.Errorf("expected type=SexpType, got %v", r.Type())
-			}
-
-			if err := r.StepIn(); err != nil {
-				t.Fatal(err)
-			}
-
-			f(r, t)
-
-			if err := r.StepOut(); err != nil {
-				t.Fatal(err)
-			}
-
-			if r.Next() {
-				t.Errorf("next returned true")
-			}
-			if r.Err() != nil {
-				t.Fatal(r.Err())
-			}
+			_sexp(t, r, f)
+			_eof(t, r)
 		})
 	}
 
-	test("(\t)", func(r Reader, t *testing.T) {
+	test("(\t)", func(t *testing.T, r Reader) {
 		if r.Next() {
 			t.Errorf("next returned true")
 		}
@@ -86,78 +37,38 @@ func TestReadSexps(t *testing.T) {
 		}
 	})
 
-	test("(foo)", func(r Reader, t *testing.T) {
-		symbol(t, r, "foo")
+	test("(foo)", func(t *testing.T, r Reader) {
+		_symbol(t, r, "foo")
 	})
 
-	test("(foo bar baz)", func(r Reader, t *testing.T) {
-		symbol(t, r, "foo")
-		symbol(t, r, "bar")
-		symbol(t, r, "baz")
+	test("(foo bar baz :: boop)", func(t *testing.T, r Reader) {
+		_symbol(t, r, "foo")
+		_symbol(t, r, "bar")
+		_symbolAF(t, r, "", []string{"baz"}, "boop")
 	})
 }
 
 func TestStructs(t *testing.T) {
-	test := func(str string, f func(r Reader, t *testing.T)) {
+	test := func(str string, f containerhandler) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Fatal(r.Err())
-			}
-			if r.Type() != StructType {
-				t.Errorf("expected type=StructType, got %v", r.Type())
-			}
-
-			if err := r.StepIn(); err != nil {
-				t.Fatal(err)
-			}
-
-			f(r, t)
-
-			if err := r.StepOut(); err != nil {
-				t.Fatal(err)
-			}
-
-			if r.Next() {
-				t.Errorf("next returned true")
-			}
-			if r.Err() != nil {
-				t.Fatal(r.Err())
-			}
+			_struct(t, r, f)
+			_eof(t, r)
 		})
 	}
 
-	test("{\r\n}", func(r Reader, t *testing.T) {
-		if r.Next() {
-			t.Errorf("next returned true")
-		}
-		if r.Err() != nil {
-			t.Fatal(r.Err())
-		}
+	test("{\r\n}", func(t *testing.T, r Reader) {
+		_eof(t, r)
 	})
 
-	test("{foo: bar}", func(r Reader, t *testing.T) {
-		symbol(t, r, "bar")
-		if r.FieldName() != "foo" {
-			t.Errorf("expected foo, got %v", r.FieldName())
-		}
+	test("{foo : bar :: baz}", func(t *testing.T, r Reader) {
+		_symbolAF(t, r, "foo", []string{"bar"}, "baz")
 	})
 
-	test("{foo: a, bar: b, baz: c}", func(r Reader, t *testing.T) {
-		symbol(t, r, "a")
-		if r.FieldName() != "foo" {
-			t.Errorf("expected foo, got %v", r.FieldName())
-		}
-
-		symbol(t, r, "b")
-		if r.FieldName() != "bar" {
-			t.Errorf("expected bar, got %v", r.FieldName())
-		}
-
-		symbol(t, r, "c")
-		if r.FieldName() != "baz" {
-			t.Errorf("expected baz, got %v", r.FieldName())
-		}
+	test("{foo: a, bar: b, baz: c}", func(t *testing.T, r Reader) {
+		_symbolAF(t, r, "foo", nil, "a")
+		_symbolAF(t, r, "bar", nil, "b")
+		_symbolAF(t, r, "baz", nil, "c")
 	})
 }
 
@@ -165,137 +76,73 @@ func TestMultipleStructs(t *testing.T) {
 	r := NewTextReaderString("{} {} {}")
 
 	for i := 0; i < 3; i++ {
-		if !r.Next() {
-			t.Error("next returned false")
-			t.Fatal(r.Err())
-		}
-		if r.Type() != StructType {
-			t.Fatalf("expected struct, got %v", r.Type())
-		}
-
-		if err := r.StepIn(); err != nil {
-			t.Fatal(err)
-		}
-		if r.Next() {
-			t.Fatal("next returned true")
-		}
-		if err := r.StepOut(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if r.Next() {
-		t.Fatal("next returned true")
-	}
-}
-
-func TestNullStructs(t *testing.T) {
-	r := NewTextReaderString("null.struct {}")
-
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if !r.IsNull() {
-		t.Error("expected null, got not-null")
-	}
-
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.IsNull() {
-		t.Error("expected not-null, got null")
-	}
-
-	if r.Next() {
-		t.Fatal("next returned true")
-	}
-}
-
-func TestLists(t *testing.T) {
-	test := func(str string, f func(r Reader, t *testing.T)) {
-		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Fatal(r.Err())
-			}
-			if r.Type() != ListType {
-				t.Errorf("expected type=ListType, got %v", r.Type())
-			}
-
-			if err := r.StepIn(); err != nil {
-				t.Fatal(err)
-			}
-
-			f(r, t)
-
-			if err := r.StepOut(); err != nil {
-				t.Fatal(err)
-			}
-
-			if r.Next() {
-				t.Errorf("next returned true")
-			}
-			if r.Err() != nil {
-				t.Fatal(r.Err())
-			}
+		_struct(t, r, func(t *testing.T, r Reader) {
+			_eof(t, r)
 		})
 	}
 
-	test("[    ]", func(r Reader, t *testing.T) {
-		if r.Next() {
-			t.Fatal("next returned true")
-		}
+	_eof(t, r)
+}
+
+func TestNullStructs(t *testing.T) {
+	r := NewTextReaderString("null.struct 'null'::{foo:bar}")
+
+	_null(t, r, StructType)
+	_nextAF(t, r, StructType, "", []string{"null"})
+	_eof(t, r)
+}
+
+func TestLists(t *testing.T) {
+	test := func(str string, f containerhandler) {
+		t.Run(str, func(t *testing.T) {
+			r := NewTextReaderString(str)
+			_list(t, r, f)
+			_eof(t, r)
+		})
+	}
+
+	test("[    ]", func(t *testing.T, r Reader) {
+		_eof(t, r)
 	})
 
-	test("[foo]", func(r Reader, t *testing.T) {
-		symbol(t, r, "foo")
-		if r.Next() {
-			t.Fatal("next returned true")
-		}
+	test("[foo]", func(t *testing.T, r Reader) {
+		_symbol(t, r, "foo")
+		_eof(t, r)
 	})
 
-	test("[foo, bar, baz]", func(r Reader, t *testing.T) {
-		symbol(t, r, "foo")
-		symbol(t, r, "bar")
-		symbol(t, r, "baz")
-		if r.Next() {
-			t.Fatal("next returned true")
-		}
+	test("[foo, bar, baz::boop]", func(t *testing.T, r Reader) {
+		_symbol(t, r, "foo")
+		_symbol(t, r, "bar")
+		_symbolAF(t, r, "", []string{"baz"}, "boop")
+		_eof(t, r)
 	})
 }
 
-func symbol(t *testing.T, r Reader, eval string) {
-	next(t, r, SymbolType)
+func TestReadNestedLists(t *testing.T) {
+	empty := func(t *testing.T, r Reader) {
+		_eof(t, r)
+	}
 
-	val, err := r.StringValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
-}
+	r := NewTextReaderString("[[], [[]]]")
 
-func next(t *testing.T, r Reader, et Type) {
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.Type() != et {
-		t.Fatalf("expected %v, got %v", et, r.Type())
-	}
+	_list(t, r, func(t *testing.T, r Reader) {
+		_list(t, r, empty)
+
+		_list(t, r, func(t *testing.T, r Reader) {
+			_list(t, r, empty)
+		})
+
+		_eof(t, r)
+	})
+
+	_eof(t, r)
 }
 
 func TestClobs(t *testing.T) {
 	test := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-				t.Fatal(r.Err())
-			}
-			if r.Type() != ClobType {
-				t.Errorf("expected type=ClobType, got %v", r.Type())
-			}
+			_next(t, r, ClobType)
 
 			val, err := r.ByteValue()
 			if err != nil {
@@ -305,12 +152,7 @@ func TestClobs(t *testing.T) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_eof(t, r)
 		})
 	}
 
@@ -324,13 +166,7 @@ func TestBlobs(t *testing.T) {
 	test := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-				t.Fatal(r.Err())
-			}
-			if r.Type() != BlobType {
-				t.Errorf("expected type=BlobType, got %v", r.Type())
-			}
+			_next(t, r, BlobType)
 
 			val, err := r.ByteValue()
 			if err != nil {
@@ -340,12 +176,7 @@ func TestBlobs(t *testing.T) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_eof(t, r)
 		})
 	}
 
@@ -355,16 +186,10 @@ func TestBlobs(t *testing.T) {
 }
 
 func TestTimestamps(t *testing.T) {
-	test := func(str string, eval time.Time) {
+	testA := func(str string, etas []string, eval time.Time) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-				t.Fatal(r.Err())
-			}
-			if r.Type() != TimestampType {
-				t.Errorf("expected type=TimestampType, got %v", r.Type())
-			}
+			_nextAF(t, r, TimestampType, "", etas)
 
 			val, err := r.TimeValue()
 			if err != nil {
@@ -374,13 +199,12 @@ func TestTimestamps(t *testing.T) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_eof(t, r)
 		})
+	}
+
+	test := func(str string, eval time.Time) {
+		testA(str, nil, eval)
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -392,20 +216,17 @@ func TestTimestamps(t *testing.T) {
 	test("2001-01-01T00:00:00Z", et)
 	test("2001-01-01T00:00:00.000Z", et)
 	test("2001-01-01T00:00:00.000+00:00", et)
+
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
 }
 
 func TestDoubles(t *testing.T) {
-	test := func(str string, eval string) {
+	testA := func(str string, etas []string, eval string) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-			}
-			if r.Type() != DecimalType {
-				t.Errorf("expected type=DecimalType, got %v", r.Type())
-			}
-
 			ee := MustParseDecimal(eval)
+
+			r := NewTextReaderString(str)
+			_nextAF(t, r, DecimalType, "", etas)
 
 			val, err := r.DecimalValue()
 			if err != nil {
@@ -415,13 +236,12 @@ func TestDoubles(t *testing.T) {
 				t.Errorf("expected %v, got %v", ee, val)
 			}
 
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_eof(t, r)
 		})
+	}
+
+	test := func(str string, eval string) {
+		testA(str, nil, eval)
 	}
 
 	test("123.", "123")
@@ -430,34 +250,21 @@ func TestDoubles(t *testing.T) {
 	test("123d2", "12300")
 	test("123d+2", "12300")
 	test("123d-2", "1.23")
+
+	testA("  foo :: 'bar' :: 123.  ", []string{"foo", "bar"}, "123")
 }
 
 func TestFloats(t *testing.T) {
-	test := func(str string, eval float64) {
+	testA := func(str string, etas []string, eval float64) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-			}
-			if r.Type() != FloatType {
-				t.Errorf("expected type=FloatType, got %v", r.Type())
-			}
-
-			val, err := r.FloatValue()
-			if err != nil {
-				t.Error(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
-
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_floatAF(t, r, "", etas, eval)
+			_eof(t, r)
 		})
+	}
+
+	test := func(str string, eval float64) {
+		testA(str, nil, eval)
 	}
 
 	test("1e100\n", 1e100)
@@ -465,58 +272,37 @@ func TestFloats(t *testing.T) {
 	test("-123.456e-78", -123.456e-78)
 	test("+inf", math.Inf(1))
 	test("-inf", math.Inf(-1))
+
+	testA("foo::'bar'::1e100", []string{"foo", "bar"}, 1e100)
 }
 
 func TestInts(t *testing.T) {
-	test := func(str string, m func(Reader) error) {
+	test := func(str string, f func(*testing.T, Reader)) {
 		t.Run(str, func(t *testing.T) {
 			r := NewTextReaderString(str)
-			if !r.Next() {
-				t.Error("next returned false")
-			}
-			if r.Type() != IntType {
-				t.Errorf("expected type=IntType, got %v", r.Type())
-			}
+			_next(t, r, IntType)
 
-			if err := m(r); err != nil {
-				t.Error(err)
-			}
+			f(t, r)
 
-			if r.Next() {
-				t.Error("next returned true")
-			}
-			if r.Err() != nil {
-				t.Error(r.Err())
-			}
+			_eof(t, r)
 		})
 	}
 
-	test("null.int", func(r Reader) error {
+	test("null.int", func(t *testing.T, r Reader) {
 		if !r.IsNull() {
-			return errors.New("expected isnull=true, got false")
+			t.Fatal("expected isnull=true, got false")
 		}
-
-		val, err := r.IntValue()
-		if err != nil {
-			return err
-		}
-		if val != 0 {
-			return fmt.Errorf("expected 0, got %v", val)
-		}
-
-		return nil
 	})
 
 	testInt := func(str string, eval int) {
-		test(str, func(r Reader) error {
+		test(str, func(t *testing.T, r Reader) {
 			val, err := r.IntValue()
 			if err != nil {
-				return err
+				t.Fatal(err)
 			}
 			if val != eval {
-				return fmt.Errorf("expected %v, got %v", eval, val)
+				t.Errorf("expected %v, got %v", eval, val)
 			}
-			return nil
 		})
 	}
 
@@ -529,15 +315,14 @@ func TestInts(t *testing.T) {
 	testInt("-0x0102_0e0F", -0x01020e0f)
 
 	testInt64 := func(str string, eval int64) {
-		test(str, func(r Reader) error {
+		test(str, func(t *testing.T, r Reader) {
 			val, err := r.Int64Value()
 			if err != nil {
-				return err
+				t.Fatal(err)
 			}
 			if val != eval {
-				return fmt.Errorf("expected %v, got %v", eval, val)
+				t.Errorf("expected %v, got %v", eval, val)
 			}
-			return nil
 		})
 	}
 
@@ -545,18 +330,16 @@ func TestInts(t *testing.T) {
 	testInt64("-0x123_FFFF_FFFF", -0x123FFFFFFFF)
 
 	testBigInt := func(str string, estr string) {
-		test(str, func(r Reader) error {
+		test(str, func(t *testing.T, r Reader) {
 			val, err := r.BigIntValue()
 			if err != nil {
-				return err
+				t.Fatal(err)
 			}
 
 			eval, _ := (&big.Int{}).SetString(estr, 0)
 			if eval.Cmp(val) != 0 {
-				return fmt.Errorf("expected %v, got %v", eval, val)
+				t.Errorf("expected %v, got %v", eval, val)
 			}
-
-			return nil
 		})
 	}
 
@@ -568,82 +351,222 @@ func TestInts(t *testing.T) {
 func TestStrings(t *testing.T) {
 	r := NewTextReaderString(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
 
-	test := func(etas []string, eval string) {
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
+	_stringAF(t, r, "", []string{"foo"}, "bar")
+	_string(t, r, "baz")
+	_stringAF(t, r, "", []string{"a", "b"}, "beepboop")
+	_null(t, r, StringType)
 
-		if r.Type() != StringType {
-			t.Fatalf("expected type=string, got type=%v", r.Type())
-		}
-
-		if !strequals(r.TypeAnnotations(), etas) {
-			t.Errorf("expected tas=%v, got tas=%v", etas, r.TypeAnnotations())
-		}
-
-		val, err := r.StringValue()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if val != eval {
-			t.Errorf("expected val=%v, got val=%v", eval, val)
-		}
-	}
-
-	test([]string{"foo"}, "bar")
-	test(nil, "baz")
-	test([]string{"a", "b"}, "beepboop")
-	test(nil, "")
-
-	if r.Next() {
-		t.Errorf("next unexpectedly returned true")
-	}
-	if r.Err() != nil {
-		t.Error(r.Err())
-	}
+	_eof(t, r)
 }
 
 func TestSymbols(t *testing.T) {
 	r := NewTextReaderString("'null'::foo bar a::b::'baz' null.symbol")
 
-	test := func(etas []string, eval string) {
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
+	_symbolAF(t, r, "", []string{"null"}, "foo")
+	_symbol(t, r, "bar")
+	_symbolAF(t, r, "", []string{"a", "b"}, "baz")
+	_null(t, r, SymbolType)
 
-		if r.Type() != SymbolType {
-			t.Fatalf("expected type=symbol, got type=%v", r.Type())
-		}
+	_eof(t, r)
+}
 
-		if !strequals(r.TypeAnnotations(), etas) {
-			t.Errorf("expected tas=%v, got tas=%v", etas, r.TypeAnnotations())
-		}
+func TestSpecialSymbols(t *testing.T) {
+	r := NewTextReaderString("null\nnull.struct\ntrue\nfalse\nnan")
 
-		val, err := r.StringValue()
-		if err != nil {
-			t.Fatal(err)
-		}
+	_null(t, r, NullType)
+	_null(t, r, StructType)
 
-		if val != eval {
-			t.Errorf("expected val=%v, got val=%v", eval, val)
-		}
-	}
+	_bool(t, r, true)
+	_bool(t, r, false)
+	_float(t, r, math.NaN())
+	_eof(t, r)
+}
 
-	test([]string{"null"}, "foo")
-	test(nil, "bar")
-	test([]string{"a", "b"}, "baz")
-	test(nil, "")
+func TestOperators(t *testing.T) {
+	r := NewTextReaderString("(a*(b+c))")
+
+	_sexp(t, r, func(t *testing.T, r Reader) {
+		_symbol(t, r, "a")
+		_symbol(t, r, "*")
+		_sexp(t, r, func(t *testing.T, r Reader) {
+			_symbol(t, r, "b")
+			_symbol(t, r, "+")
+			_symbol(t, r, "c")
+			_eof(t, r)
+		})
+		_eof(t, r)
+	})
+}
+
+func TestTopLevelOperators(t *testing.T) {
+	r := NewTextReaderString("a + b")
+
+	_symbol(t, r, "a")
 
 	if r.Next() {
-		t.Errorf("next unexpectedly returned true")
+		t.Errorf("next returned true")
 	}
-	if r.Err() != nil {
-		t.Error(r.Err())
+	if r.Err() == nil {
+		t.Error("no error")
 	}
 }
 
-func strequals(a, b []string) bool {
+type containerhandler func(t *testing.T, r Reader)
+
+func _sexp(t *testing.T, r Reader, f containerhandler) {
+	_sexpAF(t, r, "", nil, f)
+}
+
+func _sexpAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+	_containerAF(t, r, SexpType, efn, etas, f)
+}
+
+func _struct(t *testing.T, r Reader, f containerhandler) {
+	_structAF(t, r, "", nil, f)
+}
+
+func _structAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+	_containerAF(t, r, StructType, efn, etas, f)
+}
+
+func _list(t *testing.T, r Reader, f containerhandler) {
+	_listAF(t, r, "", nil, f)
+}
+
+func _listAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+	_containerAF(t, r, ListType, efn, etas, f)
+}
+
+func _containerAF(t *testing.T, r Reader, et Type, efn string, etas []string, f containerhandler) {
+	_nextAF(t, r, et, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.%v", et, et)
+	}
+
+	if err := r.StepIn(); err != nil {
+		t.Fatal(err)
+	}
+
+	f(t, r)
+
+	if err := r.StepOut(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func _float(t *testing.T, r Reader, eval float64) {
+	_floatAF(t, r, "", nil, eval)
+}
+
+func _floatAF(t *testing.T, r Reader, efn string, etas []string, eval float64) {
+	_nextAF(t, r, FloatType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.float", eval)
+	}
+
+	val, err := r.FloatValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if math.IsNaN(eval) {
+		if !math.IsNaN(val) {
+			t.Errorf("expected %v, got %v", eval, val)
+		}
+	} else if eval != val {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _string(t *testing.T, r Reader, eval string) {
+	_stringAF(t, r, "", nil, eval)
+}
+
+func _stringAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
+	_nextAF(t, r, StringType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.string", eval)
+	}
+
+	val, err := r.StringValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _symbol(t *testing.T, r Reader, eval string) {
+	_symbolAF(t, r, "", nil, eval)
+}
+
+func _symbolAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
+	_nextAF(t, r, SymbolType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.symbol", eval)
+	}
+
+	val, err := r.StringValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _bool(t *testing.T, r Reader, eval bool) {
+	_boolAF(t, r, "", nil, eval)
+}
+
+func _boolAF(t *testing.T, r Reader, efn string, etas []string, eval bool) {
+	_nextAF(t, r, BoolType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.bool", eval)
+	}
+
+	val, err := r.BoolValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _null(t *testing.T, r Reader, et Type) {
+	_nullAF(t, r, et, "", nil)
+}
+
+func _nullAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
+	_nextAF(t, r, et, efn, etas)
+	if !r.IsNull() {
+		t.Error("isnull returned false")
+	}
+}
+
+func _next(t *testing.T, r Reader, et Type) {
+	_nextAF(t, r, et, "", nil)
+}
+
+func _nextAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
+	if !r.Next() {
+		t.Fatal(r.Err())
+	}
+	if r.Type() != et {
+		t.Fatalf("expected %v, got %v", et, r.Type())
+	}
+
+	if efn != r.FieldName() {
+		t.Errorf("expected fieldname=%v, got %v", efn, r.FieldName())
+	}
+	if !_strequals(etas, r.TypeAnnotations()) {
+		t.Errorf("expected type annotations=%v, got %v", etas, r.TypeAnnotations())
+	}
+}
+
+func _strequals(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -657,87 +580,11 @@ func strequals(a, b []string) bool {
 	return true
 }
 
-func TestSpecialSymbols(t *testing.T) {
-	r := NewTextReaderString("null\nnull.struct\ntrue\nfalse\nnan")
-
-	// null
-	{
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
-		if r.Type() != NullType {
-			t.Errorf("expected type=NullType, got %v", r.Type())
-		}
-		if !r.IsNull() {
-			t.Error("expected isNull=true, got false")
-		}
-	}
-
-	// null.struct
-	{
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
-		if r.Type() != StructType {
-			t.Errorf("expected type=StructType, got %v", r.Type())
-		}
-		if !r.IsNull() {
-			t.Error("expected isNull=true, got false")
-		}
-	}
-
-	// true
-	{
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
-		if r.Type() != BoolType {
-			t.Errorf("expected type=BoolType, got %v", r.Type())
-		}
-		val, err := r.BoolValue()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !val {
-			t.Error("expected value=true, got false")
-		}
-	}
-
-	// false
-	{
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
-		if r.Type() != BoolType {
-			t.Errorf("expected type=BoolType, got %v", r.Type())
-		}
-		val, err := r.BoolValue()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if val {
-			t.Error("expected value=false, got true")
-		}
-	}
-
-	// nan
-	{
-		if !r.Next() {
-			t.Fatal("next returned false")
-		}
-		if r.Type() != FloatType {
-			t.Errorf("expected type=FloatType, got %v", r.Type())
-		}
-		val, err := r.FloatValue()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !math.IsNaN(val) {
-			t.Errorf("expected value=NaN, got %v", val)
-		}
-	}
-
+func _eof(t *testing.T, r Reader) {
 	if r.Next() {
-		t.Error("next returned true")
+		t.Fatal("next returned true")
+	}
+	if r.Err() != nil {
+		t.Fatal(r.Err())
 	}
 }

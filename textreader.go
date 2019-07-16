@@ -231,7 +231,14 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return false, errors.New("unexpected EOF")
 
-	case tokenSymbol, tokenSymbolQuoted, tokenSymbolOperator, tokenDot:
+	case tokenSymbolOperator, tokenDot:
+		if t.ctx.peek() != ctxInSexp {
+			// Operators can only appear inside an sexp.
+			return false, fmt.Errorf("unexpected token '%v'", tok)
+		}
+		fallthrough
+
+	case tokenSymbol, tokenSymbolQuoted:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
