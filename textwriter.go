@@ -11,18 +11,35 @@ import (
 	"time"
 )
 
+// TextWriterOpts defines a set of bit flag options for text writers.
+type TextWriterOpts uint8
+
+const (
+	// OptQuietFinish disables emiting a newline in Finish(). Convenient if you know
+	// you're only emiting one datagram; dangerous if there's a chance you're going to
+	// emit another datagram using the same Writer.
+	OptQuietFinish TextWriterOpts = 1
+)
+
 // textWriter is a writer that writes human-readable text
 type textWriter struct {
 	writer
 	needsSeparator bool
+	opts           TextWriterOpts
 }
 
 // NewTextWriter returns a new text writer.
 func NewTextWriter(out io.Writer) Writer {
+	return NewTextWriterOpts(out, 0)
+}
+
+// NewTextWriterOpts returns a new text writer with the given options.
+func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	return &textWriter{
 		writer: writer{
 			out: out,
 		},
+		opts: opts,
 	}
 }
 
@@ -204,7 +221,7 @@ func (w *textWriter) WriteNullWithType(t Type) {
 	}
 	w.err = w.writeValue(func() string {
 		switch t {
-		case NullType:
+		case NoType, NullType:
 			return "null"
 		case BoolType:
 			return "null.bool"
@@ -231,7 +248,7 @@ func (w *textWriter) WriteNullWithType(t Type) {
 		case SexpType:
 			return "null.sexp"
 		default:
-			panic("invalid type")
+			panic(fmt.Sprintf("invalid type: %v", t))
 		}
 	})
 }
@@ -402,8 +419,10 @@ func (w *textWriter) Finish() error {
 		return w.err
 	}
 
-	if w.err = writeRawChar('\n', w.out); w.err != nil {
-		return w.err
+	if w.opts&OptQuietFinish == 0 {
+		if w.err = writeRawChar('\n', w.out); w.err != nil {
+			return w.err
+		}
 	}
 
 	w.fieldName = ""
