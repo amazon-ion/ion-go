@@ -16,10 +16,6 @@ var blacklist = map[string]bool{
 	"ion-tests/iontestdata/good/utf32.ion":                true,
 	"ion-tests/iontestdata/good/whitespace.ion":           true,
 	"ion-tests/iontestdata/good/item1.10n":                true,
-
-	// timestamps too long for time.Parse(); FIXME
-	"ion-tests/iontestdata/good/equivs/timestampsLargeFractionalPrecision.ion": true,
-	"ion-tests/iontestdata/good/timestamp/equivTimeline/timestamps.ion":        true,
 }
 
 func print(level int, obj interface{}) {

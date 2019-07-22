@@ -216,6 +216,9 @@ func TestTimestamps(t *testing.T) {
 	test("2001-01-01T00:00:00Z", et)
 	test("2001-01-01T00:00:00.000Z", et)
 	test("2001-01-01T00:00:00.000+00:00", et)
+	test("2001-01-01T00:00:00.000000Z", et)
+	test("2001-01-01T00:00:00.000000000Z", et)
+	test("2001-01-01T00:00:00.000000000999Z", et) // We truncate, at least for now.
 
 	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
 }

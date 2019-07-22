@@ -355,6 +355,19 @@ func parseTimestamp(val string) (time.Time, error) {
 		return time.Parse("2006-01-02T15:04Z07:00", val)
 	}
 
+	if len(val) > 19 && val[19] == '.' {
+		i := 20
+		for i < len(val) && isDigit(int(val[i])) {
+			i++
+		}
+
+		if i >= 29 {
+			// Too much precision for a go Time.
+			// TODO: We should probably round instead of truncating? Ah well.
+			return time.Parse(time.RFC3339Nano, val[:29]+val[i:])
+		}
+	}
+
 	return time.Parse(time.RFC3339Nano, val)
 }
 
