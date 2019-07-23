@@ -409,6 +409,14 @@ func (w *textWriter) WriteClob(val []byte) {
 	})
 }
 
+func (w *textWriter) WriteValue(val interface{}) {
+	m := Marshaller{
+		w:    w,
+		opts: optSortStructs,
+	}
+	m.Marshal(val)
+}
+
 // Finish finishes the current datagram.
 func (w *textWriter) Finish() error {
 	if w.err != nil {

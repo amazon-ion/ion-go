@@ -141,5 +141,7 @@ type Writer interface {
 	WriteBlob(val []byte)
 	WriteClob(val []byte)
 
+	WriteValue(val interface{})
+
 	Finish() error
 }
