@@ -38,23 +38,69 @@ func TestMarshalText(t *testing.T) {
 	test(struct {
 		A int `json:"val,ignoreme"`
 		B int `json:"-"`
-	}{42, 0}, "{val:42}")
+		C int `json:",omitempty"`
+		d int
+	}{42, 0, 0, 0}, "{val:42}")
 
-	test(struct{ v interface{} }{}, "{v:null}")
-	test(struct{ v interface{} }{"42"}, "{v:\"42\"}")
+	test(struct{ V interface{} }{}, "{V:null}")
+	test(struct{ V interface{} }{"42"}, "{V:\"42\"}")
 
 	fourtytwo := 42
 
-	test(struct{ v *int }{}, "{v:null}")
-	test(struct{ v *int }{&fourtytwo}, "{v:42}")
+	test(struct{ V *int }{}, "{V:null}")
+	test(struct{ V *int }{&fourtytwo}, "{V:42}")
 
 	test(map[string]int{"b": 2, "a": 1}, "{a:1,b:2}")
 
-	test(struct{ v []int }{}, "{v:null}")
-	test(struct{ v []int }{[]int{4, 2}}, "{v:[4,2]}")
+	test(struct{ V []int }{}, "{V:null}")
+	test(struct{ V []int }{[]int{4, 2}}, "{V:[4,2]}")
 
-	test(struct{ v []byte }{}, "{v:null}")
-	test(struct{ v []byte }{[]byte{4, 2}}, "{v:{{BAI=}}}")
+	test(struct{ V []byte }{}, "{V:null}")
+	test(struct{ V []byte }{[]byte{4, 2}}, "{V:{{BAI=}}}")
 
-	test(struct{ v [2]byte }{[2]byte{4, 2}}, "{v:[4,2]}")
+	test(struct{ V [2]byte }{[2]byte{4, 2}}, "{V:[4,2]}")
+}
+
+func TestMarshalNestedStructs(t *testing.T) {
+	type gp struct {
+		A int `json:"a"`
+	}
+
+	type gp2 struct {
+		B int `json:"b"`
+	}
+
+	type parent struct {
+		gp
+		*gp2
+		C int `json:"c"`
+	}
+
+	type root struct {
+		parent
+		D int `json:"d"`
+	}
+
+	v := root{
+		parent: parent{
+			gp: gp{
+				A: 1,
+			},
+			gp2: &gp2{
+				B: 2,
+			},
+			C: 3,
+		},
+		D: 4,
+	}
+
+	val, err := MarshalText(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eval := "{a:1,b:2,c:3,d:4}"
+	if string(val) != eval {
+		t.Errorf("expected %v, got %v", eval, string(val))
+	}
 }

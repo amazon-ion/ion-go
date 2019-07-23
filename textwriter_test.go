@@ -316,13 +316,13 @@ func TestClob(t *testing.T) {
 }
 
 func TestWriteValue(t *testing.T) {
-	expected := "{s:{b:2,a:1}}"
+	expected := "{s:{B:2,A:1}}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
 		w.FieldName("s")
 		w.WriteValue(struct {
-			b int
-			a int
+			B int
+			A int
 		}{2, 1})
 		w.EndStruct()
 	})

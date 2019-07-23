@@ -10,21 +10,15 @@ import (
 	"strings"
 )
 
-type marshallerOpts uint8
-
-const (
-	optSortStructs marshallerOpts = 1
-)
-
 // MarshalText marshals values to text ion.
 func MarshalText(v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
-	m := Marshaller{
-		w:    NewTextWriterOpts(&buf, OptQuietFinish),
-		opts: optSortStructs,
+	m := Encoder{
+		w:        NewTextWriterOpts(&buf, OptQuietFinish),
+		sortMaps: true,
 	}
 
-	if err := m.Marshal(v); err != nil {
+	if err := m.Encode(v); err != nil {
 		return nil, err
 	}
 	if err := m.Finish(); err != nil {
@@ -34,112 +28,112 @@ func MarshalText(v interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// A Marshaller marshals golang values to Ion.
-type Marshaller struct {
-	w    Writer
-	opts marshallerOpts
+// An Encoder writes Ion values to an output stream.
+type Encoder struct {
+	w        Writer
+	sortMaps bool
 }
 
-// NewMarshaller creates a new marshaller that marshals to the given writer.
-func NewMarshaller(w Writer) *Marshaller {
-	return &Marshaller{
+// NewEncoder creates a new encoder.
+func NewEncoder(w Writer) *Encoder {
+	return &Encoder{
 		w: w,
 	}
 }
 
-// NewTextMarshaller creates a new marshaller that marshals text Ion to the given writer.
-func NewTextMarshaller(w io.Writer) *Marshaller {
-	return &Marshaller{
-		w:    NewTextWriter(w),
-		opts: optSortStructs,
+// NewTextEncoder creates a new Encoder that marshals text Ion to the given writer.
+func NewTextEncoder(w io.Writer) *Encoder {
+	return &Encoder{
+		w:        NewTextWriter(w),
+		sortMaps: true,
 	}
 }
 
-// Marshal marshals the given value to Ion, writing it to the underlying writer.
-func (m *Marshaller) Marshal(v interface{}) error {
+// Encode marshals the given value to Ion, writing it to the underlying writer.
+func (m *Encoder) Encode(v interface{}) error {
 	return m.marshalValue(reflect.ValueOf(v))
 }
 
 // Finish finishes writing the current Ion datagram.
-func (m *Marshaller) Finish() error {
+func (m *Encoder) Finish() error {
 	return m.w.Finish()
 }
 
-func (m *Marshaller) marshalValue(r reflect.Value) error {
-	if !r.IsValid() {
+func (m *Encoder) marshalValue(v reflect.Value) error {
+	if !v.IsValid() {
 		m.w.WriteNull()
 		return nil
 	}
 
-	t := r.Type()
+	t := v.Type()
 	switch t.Kind() {
 	case reflect.Bool:
-		m.w.WriteBool(r.Bool())
+		m.w.WriteBool(v.Bool())
 		return m.w.Err()
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		m.w.WriteInt(r.Int())
+		m.w.WriteInt(v.Int())
 		return m.w.Err()
 
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
-		m.w.WriteInt(int64(r.Uint()))
+		m.w.WriteInt(int64(v.Uint()))
 		return m.w.Err()
 
 	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
 		i := big.Int{}
-		i.SetUint64(r.Uint())
+		i.SetUint64(v.Uint())
 		m.w.WriteBigInt(&i)
 		return m.w.Err()
 
 	case reflect.Float32, reflect.Float64:
-		m.w.WriteFloat(r.Float())
+		m.w.WriteFloat(v.Float())
 		return m.w.Err()
 
 		// TODO: Decimal
 		// TODO: Time
 
 	case reflect.String:
-		m.w.WriteString(r.String())
+		m.w.WriteString(v.String())
 		return m.w.Err()
 
 	case reflect.Interface, reflect.Ptr:
-		return m.marshalInterfaceOrPtr(r)
+		return m.marshalPtr(v)
 
 	case reflect.Struct:
-		return m.marshalStruct(r)
+		return m.marshalStruct(v)
 
 	case reflect.Map:
-		return m.marshalMap(r)
+		return m.marshalMap(v)
 
 	case reflect.Slice:
-		return m.marshalSlice(r)
+		return m.marshalSlice(v)
 
 	case reflect.Array:
-		return m.marshalArray(r)
+		return m.marshalArray(v)
 
 	default:
-		return fmt.Errorf("unsupported type %v", r.Type())
+		return fmt.Errorf("ion: unsupported type: %v", v.Type().String())
 	}
 }
 
-func (m *Marshaller) marshalInterfaceOrPtr(r reflect.Value) error {
-	if r.IsNil() {
+func (m *Encoder) marshalPtr(v reflect.Value) error {
+	if v.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
 	}
-	return m.marshalValue(r.Elem())
+	return m.marshalValue(v.Elem())
 }
 
-func (m *Marshaller) marshalMap(r reflect.Value) error {
-	if r.IsNil() {
+func (m *Encoder) marshalMap(v reflect.Value) error {
+	if v.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
 	}
 
 	m.w.BeginStruct()
 
-	keys := getKeys(r)
-	if m.opts&optSortStructs != 0 {
+	keys := getKeys(v)
+	if m.sortMaps {
 		// We do this for text Ion because json.Marshal does, and it's useful for testing.
 		// For binary Ion, skip it and write things in whatever order they come back from
 		// the map.
@@ -148,7 +142,7 @@ func (m *Marshaller) marshalMap(r reflect.Value) error {
 
 	for _, key := range keys {
 		m.w.FieldName(key.s)
-		value := r.MapIndex(key.v)
+		value := v.MapIndex(key.v)
 		if err := m.marshalValue(value); err != nil {
 			return err
 		}
@@ -163,8 +157,8 @@ type mapkey struct {
 	s string
 }
 
-func getKeys(r reflect.Value) []mapkey {
-	keys := r.MapKeys()
+func getKeys(v reflect.Value) []mapkey {
+	keys := v.MapKeys()
 	res := make([]mapkey, len(keys))
 
 	for i, key := range keys {
@@ -181,33 +175,33 @@ func getKeys(r reflect.Value) []mapkey {
 	return res
 }
 
-func (m *Marshaller) marshalSlice(r reflect.Value) error {
-	if r.Type().Elem().Kind() == reflect.Uint8 {
-		return m.marshalBlob(r)
+func (m *Encoder) marshalSlice(v reflect.Value) error {
+	if v.Type().Elem().Kind() == reflect.Uint8 {
+		return m.marshalBlob(v)
 	}
 
-	if r.IsNil() {
+	if v.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
 	}
 
-	return m.marshalArray(r)
+	return m.marshalArray(v)
 }
 
-func (m *Marshaller) marshalBlob(r reflect.Value) error {
-	if r.IsNil() {
+func (m *Encoder) marshalBlob(v reflect.Value) error {
+	if v.IsNil() {
 		m.w.WriteNull()
 	} else {
-		m.w.WriteBlob(r.Bytes())
+		m.w.WriteBlob(v.Bytes())
 	}
 	return m.w.Err()
 }
 
-func (m *Marshaller) marshalArray(r reflect.Value) error {
+func (m *Encoder) marshalArray(v reflect.Value) error {
 	m.w.BeginList()
 
-	for i := 0; i < r.Len(); i++ {
-		if err := m.marshalValue(r.Index(i)); err != nil {
+	for i := 0; i < v.Len(); i++ {
+		if err := m.marshalValue(v.Index(i)); err != nil {
 			return err
 		}
 	}
@@ -216,20 +210,32 @@ func (m *Marshaller) marshalArray(r reflect.Value) error {
 	return m.w.Err()
 }
 
-func (m *Marshaller) marshalStruct(r reflect.Value) error {
+func (m *Encoder) marshalStruct(v reflect.Value) error {
+	fields := fieldsFor(v.Type())
+
 	m.w.BeginStruct()
 
-	fields := getFields(r.Type())
-	if m.opts&optSortStructs != 0 {
-		// We do this for text Ion because json.Marshal does, and it's useful for testing.
-		// For binary Ion, skip it and write things in whatever order they happen to be in.
-		sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
-	}
-
+FieldLoop:
 	for i := range fields {
 		f := &fields[i]
+
+		fv := v
+		for _, i := range f.path {
+			if fv.Kind() == reflect.Ptr {
+				if fv.IsNil() {
+					continue FieldLoop
+				}
+				fv = fv.Elem()
+			}
+			fv = fv.Field(i)
+		}
+
+		if f.omitEmpty && emptyValue(fv) {
+			continue
+		}
+
 		m.w.FieldName(f.name)
-		if err := m.marshalValue(r.Field(f.index)); err != nil {
+		if err := m.marshalValue(fv); err != nil {
 			return err
 		}
 	}
@@ -238,69 +244,127 @@ func (m *Marshaller) marshalStruct(r reflect.Value) error {
 	return m.w.Err()
 }
 
-type field struct {
-	name  string
-	typ   reflect.Type
-	index int
-}
-
-func getFields(t reflect.Type) []field {
-	fields := []field{}
-
-	// current := []reflect.Type{}
-	// next := []reflect.Type{t}
-	// visited := map[reflect.Type]bool{}
-
-	// for len(next) > 0 {
-	// 	current, next = next, current[:0]
-	// 	for _, c := range current {
-	// 		if visited[c] {
-	// 			continue
-	// 		}
-	// 		visited[c] = true
-
-	c := t
-
-	for i := 0; i < c.NumField(); i++ {
-		f := c.Field(i)
-
-		tag := f.Tag.Get("json")
-		if tag == "-" {
-			continue
-		}
-		name := parseTag(tag)
-
-		fType := f.Type
-		if fType.Name() == "" && fType.Kind() == reflect.Ptr {
-			fType = fType.Elem()
-		}
-
-		if name == "" && f.Anonymous && fType.Kind() == reflect.Struct {
-			// next = append(next, fType)
-			continue
-		}
-
-		if name == "" {
-			name = f.Name
-		}
-
-		fields = append(fields, field{
-			name:  name,
-			typ:   fType,
-			index: i,
-		})
+func emptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
 	}
-
-	// 	}
-	// }
-
-	return fields
+	return false
 }
 
-func parseTag(tag string) string {
+type field struct {
+	name      string
+	typ       reflect.Type
+	path      []int
+	omitEmpty bool
+}
+
+type fielder struct {
+	fields []field
+	index  map[string]bool
+}
+
+func fieldsFor(t reflect.Type) []field {
+	fldr := fielder{index: map[string]bool{}}
+	fldr.inspect(t, nil)
+	return fldr.fields
+}
+
+func (f *fielder) inspect(t reflect.Type, path []int) {
+	for i := 0; i < t.NumField(); i++ {
+		sf := t.Field(i)
+		if !visible(&sf) {
+			// Skip non-visible fields.
+			continue
+		}
+
+		tag := sf.Tag.Get("json")
+		if tag == "-" {
+			// Skip fields that are explicitly hidden by tag.
+			continue
+		}
+		name, opts := parseTag(tag)
+
+		newpath := make([]int, len(path)+1)
+		copy(newpath, path)
+		newpath[len(path)] = i
+
+		ft := sf.Type
+		if ft.Name() == "" && ft.Kind() == reflect.Ptr {
+			ft = ft.Elem()
+		}
+
+		if name == "" && sf.Anonymous && ft.Kind() == reflect.Struct {
+			// Dig in to the embedded struct.
+			f.inspect(ft, newpath)
+		} else {
+			// Add this named field.
+			if name == "" {
+				name = sf.Name
+			}
+
+			if f.index[name] {
+				panic(fmt.Sprintf("too many fields named %v", name))
+			}
+			f.index[name] = true
+
+			f.fields = append(f.fields, field{
+				name:      name,
+				typ:       ft,
+				path:      newpath,
+				omitEmpty: omitEmpty(opts),
+			})
+		}
+	}
+}
+
+func visible(sf *reflect.StructField) bool {
+	exported := sf.PkgPath == ""
+	if sf.Anonymous {
+		t := sf.Type
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		if t.Kind() == reflect.Struct {
+			// Fields of embedded structs are visible even if the struct type itself is not.
+			return true
+		}
+	}
+	return exported
+}
+
+func parseTag(tag string) (string, string) {
 	if idx := strings.Index(tag, ","); idx != -1 {
 		// Ignore additional JSON options, at least for now.
-		return tag[:idx]
+		return tag[:idx], tag[idx+1:]
 	}
-	return tag
+	return tag, ""
+}
+
+func omitEmpty(opts string) bool {
+	for opts != "" {
+		var o string
+
+		i := strings.Index(opts, ",")
+		if i >= 0 {
+			o, opts = opts[:i], opts[i+1:]
+		} else {
+			o, opts = opts, ""
+		}
+
+		if o == "omitempty" {
+			return true
+		}
+	}
+	return false
 }
