@@ -3,42 +3,69 @@ package ion
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math/big"
 	"reflect"
 	"sort"
 	"strings"
 )
 
-type marshaller struct {
-	buf *bytes.Buffer
-	w   Writer
-}
+type marshallerOpts uint8
 
-func newTextMarshaller() *marshaller {
-	buf := &bytes.Buffer{}
-	return &marshaller{
-		buf: buf,
-		w:   NewTextWriterOpts(buf, OptQuietFinish),
-	}
-}
+const (
+	optSortStructs marshallerOpts = 1
+)
 
 // MarshalText marshals values to text ion.
 func MarshalText(v interface{}) ([]byte, error) {
-	m := newTextMarshaller()
-	if err := m.marshal(v); err != nil {
+	buf := bytes.Buffer{}
+	m := Marshaller{
+		w:    NewTextWriterOpts(&buf, OptQuietFinish),
+		opts: optSortStructs,
+	}
+
+	if err := m.Marshal(v); err != nil {
 		return nil, err
 	}
-	return m.buf.Bytes(), nil
+	if err := m.Finish(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func (m *marshaller) marshal(v interface{}) error {
-	if err := m.marshalValue(reflect.ValueOf(v)); err != nil {
-		return err
+// A Marshaller marshals golang values to Ion.
+type Marshaller struct {
+	w    Writer
+	opts marshallerOpts
+}
+
+// NewMarshaller creates a new marshaller that marshals to the given writer.
+func NewMarshaller(w Writer) *Marshaller {
+	return &Marshaller{
+		w: w,
 	}
+}
+
+// NewTextMarshaller creates a new marshaller that marshals text Ion to the given writer.
+func NewTextMarshaller(w io.Writer) *Marshaller {
+	return &Marshaller{
+		w:    NewTextWriter(w),
+		opts: optSortStructs,
+	}
+}
+
+// Marshal marshals the given value to Ion, writing it to the underlying writer.
+func (m *Marshaller) Marshal(v interface{}) error {
+	return m.marshalValue(reflect.ValueOf(v))
+}
+
+// Finish finishes writing the current Ion datagram.
+func (m *Marshaller) Finish() error {
 	return m.w.Finish()
 }
 
-func (m *marshaller) marshalValue(r reflect.Value) error {
+func (m *Marshaller) marshalValue(r reflect.Value) error {
 	if !r.IsValid() {
 		m.w.WriteNull()
 		return nil
@@ -95,7 +122,7 @@ func (m *marshaller) marshalValue(r reflect.Value) error {
 	}
 }
 
-func (m *marshaller) marshalInterfaceOrPtr(r reflect.Value) error {
+func (m *Marshaller) marshalInterfaceOrPtr(r reflect.Value) error {
 	if r.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
@@ -103,7 +130,7 @@ func (m *marshaller) marshalInterfaceOrPtr(r reflect.Value) error {
 	return m.marshalValue(r.Elem())
 }
 
-func (m *marshaller) marshalMap(r reflect.Value) error {
+func (m *Marshaller) marshalMap(r reflect.Value) error {
 	if r.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
@@ -111,7 +138,15 @@ func (m *marshaller) marshalMap(r reflect.Value) error {
 
 	m.w.BeginStruct()
 
-	for _, key := range getKeys(r) {
+	keys := getKeys(r)
+	if m.opts&optSortStructs != 0 {
+		// We do this for text Ion because json.Marshal does, and it's useful for testing.
+		// For binary Ion, skip it and write things in whatever order they come back from
+		// the map.
+		sort.Slice(keys, func(i, j int) bool { return keys[i].s < keys[j].s })
+	}
+
+	for _, key := range keys {
 		m.w.FieldName(key.s)
 		value := r.MapIndex(key.v)
 		if err := m.marshalValue(value); err != nil {
@@ -143,12 +178,10 @@ func getKeys(r reflect.Value) []mapkey {
 		}
 	}
 
-	sort.Slice(res, func(i, j int) bool { return res[i].s < res[j].s })
-
 	return res
 }
 
-func (m *marshaller) marshalSlice(r reflect.Value) error {
+func (m *Marshaller) marshalSlice(r reflect.Value) error {
 	if r.Type().Elem().Kind() == reflect.Uint8 {
 		return m.marshalBlob(r)
 	}
@@ -161,7 +194,7 @@ func (m *marshaller) marshalSlice(r reflect.Value) error {
 	return m.marshalArray(r)
 }
 
-func (m *marshaller) marshalBlob(r reflect.Value) error {
+func (m *Marshaller) marshalBlob(r reflect.Value) error {
 	if r.IsNil() {
 		m.w.WriteNull()
 	} else {
@@ -170,7 +203,7 @@ func (m *marshaller) marshalBlob(r reflect.Value) error {
 	return m.w.Err()
 }
 
-func (m *marshaller) marshalArray(r reflect.Value) error {
+func (m *Marshaller) marshalArray(r reflect.Value) error {
 	m.w.BeginList()
 
 	for i := 0; i < r.Len(); i++ {
@@ -183,10 +216,16 @@ func (m *marshaller) marshalArray(r reflect.Value) error {
 	return m.w.Err()
 }
 
-func (m *marshaller) marshalStruct(r reflect.Value) error {
+func (m *Marshaller) marshalStruct(r reflect.Value) error {
 	m.w.BeginStruct()
 
 	fields := getFields(r.Type())
+	if m.opts&optSortStructs != 0 {
+		// We do this for text Ion because json.Marshal does, and it's useful for testing.
+		// For binary Ion, skip it and write things in whatever order they happen to be in.
+		sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
+	}
+
 	for i := range fields {
 		f := &fields[i]
 		m.w.FieldName(f.name)
@@ -254,8 +293,6 @@ func getFields(t reflect.Type) []field {
 
 	// 	}
 	// }
-
-	sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
 
 	return fields
 }
