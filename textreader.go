@@ -708,6 +708,21 @@ func (t *textReader) BoolValue() (bool, error) {
 	return false, errors.New("value is not a bool")
 }
 
+func (t *textReader) IntSize() IntSize {
+	if t.valueType != IntType || t.value == nil {
+		return NullInt
+	}
+
+	if i, ok := t.value.(int64); ok {
+		if i > math.MaxInt32 || i < math.MinInt32 {
+			return Int64
+		}
+		return Int32
+	}
+
+	return BigInt
+}
+
 func (t *textReader) IntValue() (int, error) {
 	i, err := t.Int64Value()
 	if err != nil {

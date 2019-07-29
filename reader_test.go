@@ -18,12 +18,12 @@ var blacklist = map[string]bool{
 	"ion-tests/iontestdata/good/item1.10n":                true,
 }
 
-func print(level int, obj interface{}) {
-	fmt.Print(" > ")
-	for i := 0; i < level; i++ {
-		fmt.Print("  ")
-	}
-	fmt.Println(obj)
+type drainfunc func(t *testing.T, r Reader, f string)
+
+func TestReadFiles(t *testing.T) {
+	testReadDir(t, "ion-tests/iontestdata/good", func(t *testing.T, r Reader, f string) {
+		drain(t, r, 0)
+	})
 }
 
 func drain(t *testing.T, r Reader, level int) {
@@ -51,7 +51,65 @@ func drain(t *testing.T, r Reader, level int) {
 	}
 }
 
-func testReaderFile(t *testing.T, path string) {
+func print(level int, obj interface{}) {
+	fmt.Print(" > ")
+	for i := 0; i < level; i++ {
+		fmt.Print("  ")
+	}
+	fmt.Println(obj)
+}
+
+func TestDecodeFiles(t *testing.T) {
+	testReadDir(t, "ion-tests/iontestdata/good", func(t *testing.T, r Reader, f string) {
+		// fmt.Println(f)
+		d := NewDecoder(r)
+		for {
+			v, err := d.Decode()
+			if err == ErrNoInput {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			// fmt.Println(v)
+			_ = v
+		}
+	})
+}
+
+var emptyFiles = []string{
+	"ion-tests/iontestdata/good/blank.ion",
+	"ion-tests/iontestdata/good/empty.ion",
+}
+
+func isEmptyFile(f string) bool {
+	for _, s := range emptyFiles {
+		if f == s {
+			return true
+		}
+	}
+	return false
+}
+
+func testReadDir(t *testing.T, path string, d drainfunc) {
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, file := range files {
+		fp := filepath.Join(path, file.Name())
+		if file.IsDir() {
+			testReadDir(t, fp, d)
+		} else {
+			t.Run(fp, func(t *testing.T) {
+				testReadFile(t, fp, d)
+			})
+		}
+	}
+}
+
+func testReadFile(t *testing.T, path string, d drainfunc) {
 	if _, ok := blacklist[path]; ok {
 		return
 	}
@@ -76,35 +134,5 @@ func testReaderFile(t *testing.T, path string) {
 		t.Fatal("unexpected suffix on file", path)
 	}
 
-	drain(t, r, 0)
+	d(t, r, path)
 }
-
-func testReaderDir(t *testing.T, path string) {
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, file := range files {
-		fp := filepath.Join(path, file.Name())
-		if file.IsDir() {
-			testReaderDir(t, fp)
-		} else {
-			t.Run(fp, func(t *testing.T) {
-				testReaderFile(t, fp)
-			})
-		}
-	}
-}
-
-func TestReader(t *testing.T) {
-	testReaderDir(t, "ion-tests/iontestdata/good")
-}
-
-// func TestAllNulls(t *testing.T) {
-// 	testReaderFile(t, "ion-tests/iontestdata/good/allNulls.ion")
-// }
-
-// func TestStructWhitespace(t *testing.T) {
-// 	testReaderFile(t, "ion-tests/iontestdata/good/equivs/structWhitespace.ion")
-// }

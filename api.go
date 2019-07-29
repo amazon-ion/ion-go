@@ -75,6 +75,20 @@ func (t Type) String() string {
 	}
 }
 
+// IntSize is the size of an integer.
+type IntSize uint8
+
+const (
+	// NullInt is the size of null.int.
+	NullInt IntSize = iota
+	// Int32 is a 32-bit integer.
+	Int32
+	// Int64 is a 64-bit integer.
+	Int64
+	// BigInt is too big for a 64-bit integer.
+	BigInt
+)
+
 // A Reader reads Ion values from an input stream.
 type Reader interface {
 	SymbolTable() SymbolTable
@@ -86,6 +100,8 @@ type Reader interface {
 	FieldName() string
 	TypeAnnotations() []string
 	IsNull() bool
+
+	IntSize() IntSize
 
 	StepIn() error
 	StepOut() error
