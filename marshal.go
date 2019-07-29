@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 )
 
 // MarshalText marshals values to text ion.
@@ -88,9 +89,6 @@ func (m *Encoder) marshalValue(v reflect.Value) error {
 	case reflect.Float32, reflect.Float64:
 		m.w.WriteFloat(v.Float())
 		return m.w.Err()
-
-		// TODO: Decimal
-		// TODO: Time
 
 	case reflect.String:
 		m.w.WriteString(v.String())
@@ -210,7 +208,17 @@ func (m *Encoder) marshalArray(v reflect.Value) error {
 	return m.w.Err()
 }
 
+var decimalType = reflect.TypeOf(Decimal{})
+
 func (m *Encoder) marshalStruct(v reflect.Value) error {
+	t := v.Type()
+	if t == timeType {
+		return m.marshalTime(v)
+	}
+	if t == decimalType {
+		return m.marshalDecimal(v)
+	}
+
 	fields := fieldsFor(v.Type())
 
 	m.w.BeginStruct()
@@ -241,6 +249,18 @@ FieldLoop:
 	}
 
 	m.w.EndStruct()
+	return m.w.Err()
+}
+
+func (m *Encoder) marshalTime(v reflect.Value) error {
+	t := v.Interface().(time.Time)
+	m.w.WriteTimestamp(t)
+	return m.w.Err()
+}
+
+func (m *Encoder) marshalDecimal(v reflect.Value) error {
+	d := v.Addr().Interface().(*Decimal)
+	m.w.WriteDecimal(d)
 	return m.w.Err()
 }
 

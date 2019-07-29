@@ -338,6 +338,27 @@ func TestDecodeFloat(t *testing.T) {
 	test64("+inf", math.Inf(1))
 }
 
+func TestDecodeDecimal(t *testing.T) {
+	test := func(str string, eval *Decimal) {
+		t.Run(str, func(t *testing.T) {
+			d := NewDecoder(NewTextReaderString(str))
+
+			var val *Decimal
+			err := d.DecodeTo(&val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !val.Equal(eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("1e10", MustParseDecimal("1d10"))
+	test("1.20", MustParseDecimal("1.20"))
+}
+
 func TestDecodeTimeTo(t *testing.T) {
 	test := func(str string, eval time.Time) {
 		t.Run(str, func(t *testing.T) {

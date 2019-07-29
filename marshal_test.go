@@ -3,6 +3,7 @@ package ion
 import (
 	"math"
 	"testing"
+	"time"
 )
 
 func TestMarshalText(t *testing.T) {
@@ -31,6 +32,9 @@ func TestMarshalText(t *testing.T) {
 	test(math.Inf(1), "+inf")
 	test(math.Inf(-1), "-inf")
 	test(math.NaN(), "nan")
+
+	test(MustParseDecimal("1.20"), "1.20")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), "2010-01-01T00:00:00Z")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 

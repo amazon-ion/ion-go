@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -188,8 +189,8 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 	case FloatType:
 		return d.decodeFloatTo(v)
 
-		// TODO: Decimal
-		// TODO: Timestamp
+	case DecimalType:
+		return d.decodeDecimalTo(v)
 
 	case TimestampType:
 		return d.decodeTimestampTo(v)
@@ -310,7 +311,16 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 		v.SetFloat(val)
 		return nil
 
-	// TODO: Decimal
+	case reflect.Struct:
+		if v.Type() == decimalType {
+			flt := strconv.FormatFloat(val, 'g', -1, 64)
+			dec, err := ParseDecimal(strings.Replace(flt, "e", "d", 1))
+			if err != nil {
+				return err
+			}
+			v.Set(reflect.ValueOf(*dec))
+			return nil
+		}
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -319,6 +329,28 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 		}
 	}
 	return fmt.Errorf("ion: cannot decode float to %v", v.Type().String())
+}
+
+func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
+	val, err := d.r.DecimalValue()
+	if err != nil {
+		return err
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+		if v.Type() == decimalType {
+			v.Set(reflect.ValueOf(*val))
+			return nil
+		}
+
+	case reflect.Interface:
+		if v.NumMethod() == 0 {
+			v.Set(reflect.ValueOf(val))
+			return nil
+		}
+	}
+	return fmt.Errorf("ion: cannot decode decimal to %v", v.Type().String())
 }
 
 var timeType = reflect.TypeOf(time.Time{})

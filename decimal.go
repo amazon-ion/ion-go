@@ -81,7 +81,7 @@ func ParseDecimal(in string) (*Decimal, error) {
 	n, ok := new(big.Int).SetString(in, 10)
 	if !ok {
 		// Unfortunately this is all we get?
-		return nil, errors.New("not a valid number")
+		return nil, fmt.Errorf("not a valid number: %v", in)
 	}
 
 	return NewDecimalWithScale(n, -shift), nil
@@ -258,8 +258,6 @@ func (d *Decimal) String() string {
 	switch {
 	case d.scale == 0:
 		// Value is an unscaled integer. Just mark it as a decimal.
-		// TODO: If there are enough trailing zeros should we knock them
-		// off and do nnn'd'sss here? That'd technically erase precision.
 		return d.n.String() + "."
 
 	case d.scale < 0:
