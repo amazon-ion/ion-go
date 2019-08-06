@@ -40,37 +40,46 @@ func TestSharedSymbolTable(t *testing.T) {
 func TestLocalSymbolTable(t *testing.T) {
 	st := NewLocalSymbolTable(nil, []string{"foo", "bar"})
 
-	if st.MaxID() != 2 {
+	if st.MaxID() != 11 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
 
-	testFindByName(t, st, "$ion", 0)
-	testFindByName(t, st, "foo", 1)
-	testFindByName(t, st, "bar", 2)
+	testFindByName(t, st, "$ion", 1)
+	testFindByName(t, st, "foo", 10)
+	testFindByName(t, st, "bar", 11)
 	testFindByName(t, st, "bogus", 0)
 
 	testFindByID(t, st, 0, "")
-	testFindByID(t, st, 1, "foo")
-	testFindByID(t, st, 2, "bar")
-	testFindByID(t, st, 3, "")
+	testFindByID(t, st, 1, "$ion")
+	testFindByID(t, st, 10, "foo")
+	testFindByID(t, st, 11, "bar")
+	testFindByID(t, st, 12, "")
 
 	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar"]}`)
 }
 
 func TestLocalSymbolTableWithImports(t *testing.T) {
-	imports := []SharedSymbolTable{V1SystemSymbolTable}
-	st := NewLocalSymbolTable(imports, []string{
+	shared := NewSharedSymbolTable("shared", 1, []string{
 		"foo",
 		"bar",
 	})
+	imports := []SharedSymbolTable{shared}
 
-	if st.MaxID() != 11 { // 9 from $ion.1, 2 local.
+	st := NewLocalSymbolTable(imports, []string{
+		"foo2",
+		"bar2",
+	})
+
+	if st.MaxID() != 13 { // 9 from $ion.1, 2 from test.1, 2 local.
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "$ion_shared_symbol_table", 9)
 	testFindByName(t, st, "foo", 10)
+	testFindByName(t, st, "bar", 11)
+	testFindByName(t, st, "foo2", 12)
+	testFindByName(t, st, "bar2", 13)
 	testFindByName(t, st, "bogus", 0)
 
 	testFindByID(t, st, 0, "")
@@ -78,13 +87,15 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 9, "$ion_shared_symbol_table")
 	testFindByID(t, st, 10, "foo")
 	testFindByID(t, st, 11, "bar")
-	testFindByID(t, st, 12, "")
+	testFindByID(t, st, 12, "foo2")
+	testFindByID(t, st, 13, "bar2")
+	testFindByID(t, st, 14, "")
 
-	testString(t, st, `$ion_symbol_table::{imports:[{name:"$ion",version:1,max_id:9}],symbols:["foo","bar"]}`)
+	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
 }
 
 func TestSymbolTableBuilder(t *testing.T) {
-	b := NewSymbolTableBuilder(V1SystemSymbolTable)
+	b := NewSymbolTableBuilder()
 
 	id, ok := b.Add("name")
 	if ok {

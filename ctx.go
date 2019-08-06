@@ -14,7 +14,7 @@ type ctx struct {
 	stack []ctxType
 }
 
-// peek returns the current context
+// peek returns the current context.
 func (c *ctx) peek() ctxType {
 	if len(c.stack) == 0 {
 		return ctxAtTopLevel

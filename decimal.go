@@ -17,18 +17,11 @@ type Decimal struct {
 	scale int
 }
 
-// NewDecimal creates a new decimal whose value is equal to the given
-// (big) integer.
-func NewDecimal(n *big.Int) *Decimal {
-	return NewDecimalWithScale(n, 0)
-}
-
-// NewDecimalWithScale creates a new scaled decimal whose value is
-// equal to n * 10^-scale.
-func NewDecimalWithScale(n *big.Int, scale int) *Decimal {
+// NewDecimal creates a new decimal whose value is equal to n * 10^exp.
+func NewDecimal(n *big.Int, exp int) *Decimal {
 	return &Decimal{
 		n:     n,
-		scale: scale,
+		scale: -exp,
 	}
 }
 
@@ -49,7 +42,7 @@ func ParseDecimal(in string) (*Decimal, error) {
 		return nil, errors.New("empty string")
 	}
 
-	shift := 0
+	exponent := 0
 
 	d := strings.IndexAny(in, "Dd")
 	if d != -1 {
@@ -64,7 +57,7 @@ func ParseDecimal(in string) (*Decimal, error) {
 			return nil, err
 		}
 
-		shift = int(tmp)
+		exponent = int(tmp)
 		in = in[:d]
 	}
 
@@ -74,7 +67,7 @@ func ParseDecimal(in string) (*Decimal, error) {
 		ipart := in[:d]
 		fpart := in[d+1:]
 
-		shift -= len(fpart)
+		exponent -= len(fpart)
 		in = ipart + fpart
 	}
 
@@ -84,7 +77,12 @@ func ParseDecimal(in string) (*Decimal, error) {
 		return nil, fmt.Errorf("not a valid number: %v", in)
 	}
 
-	return NewDecimalWithScale(n, -shift), nil
+	return NewDecimal(n, exponent), nil
+}
+
+// CoEx returns this decimal's coefficient and exponent.
+func (d *Decimal) CoEx() (*big.Int, int) {
+	return d.n, -d.scale
 }
 
 // Abs returns the absolute value of this Decimal.
@@ -167,6 +165,12 @@ func (d *Decimal) ShiftR(shift int) *Decimal {
 }
 
 // TODO: Div, Exp, etc?
+
+// Sign returns -1 if the value is less than 0, 0 if it is equal to zero,
+// and +1 if it is greater than zero.
+func (d *Decimal) Sign() int {
+	return d.n.Sign()
+}
 
 // Cmp compares two decimals, returning -1 if d is smaller, +1 if d is
 // larger, and 0 if they are equal (ignoring precision).

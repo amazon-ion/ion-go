@@ -174,7 +174,7 @@ func TestBool(t *testing.T) {
 	})
 }
 
-func TestInt(t *testing.T) {
+func TestWriteTextInt(t *testing.T) {
 	expected := "(zero::0 1 -1 (9223372036854775807 -9223372036854775808))"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
@@ -193,7 +193,7 @@ func TestInt(t *testing.T) {
 	})
 }
 
-func TestBigInt(t *testing.T) {
+func TestWriteTextBigInt(t *testing.T) {
 	expected := "[0,big::18446744073709551616]"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginList()

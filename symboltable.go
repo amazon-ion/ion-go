@@ -163,9 +163,15 @@ func NewLocalSymbolTable(imports []SharedSymbolTable, symbols []string) SymbolTa
 }
 
 func processImports(imports []SharedSymbolTable) ([]SharedSymbolTable, []int, int) {
-	imps := append([]SharedSymbolTable{}, imports...)
-
-	// TODO: Automatically add V1SystemSymbolTable?
+	var imps []SharedSymbolTable
+	if len(imports) > 0 && imports[0].Name() == "$ion" {
+		imps = make([]SharedSymbolTable, len(imports))
+		copy(imps, imports)
+	} else {
+		imps = make([]SharedSymbolTable, len(imports)+1)
+		imps[0] = V1SystemSymbolTable
+		copy(imps[1:], imports)
+	}
 
 	maxID := 0
 	offsets := make([]int, len(imps))
@@ -230,10 +236,11 @@ func (t *localSymbolTable) WriteTo(w Writer) error {
 	w.TypeAnnotation("$ion_symbol_table")
 	w.BeginStruct()
 
-	if len(t.imports) > 0 {
+	if len(t.imports) > 1 {
 		w.FieldName("imports")
 		w.BeginList()
-		for _, imp := range t.imports {
+		for i := 1; i < len(t.imports); i++ {
+			imp := t.imports[i]
 			w.BeginStruct()
 
 			w.FieldName("name")
