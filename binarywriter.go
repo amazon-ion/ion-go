@@ -499,7 +499,11 @@ func (w *binaryWriterLST) WriteBlob(val []byte) {
 }
 
 func (w *binaryWriterLST) WriteValue(val interface{}) {
-	w.err = errors.New("not yet implemented")
+	m := Encoder{
+		w:        w,
+		sortMaps: true,
+	}
+	w.err = m.Encode(val)
 }
 
 func (w *binaryWriterLST) Finish() error {

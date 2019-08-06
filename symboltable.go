@@ -233,6 +233,10 @@ func (t *localSymbolTable) findByIDInImports(id int) (string, bool) {
 }
 
 func (t *localSymbolTable) WriteTo(w Writer) error {
+	if len(t.imports) == 1 && len(t.symbols) == 0 {
+		return nil
+	}
+
 	w.TypeAnnotation("$ion_symbol_table")
 	w.BeginStruct()
 

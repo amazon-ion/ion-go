@@ -414,7 +414,7 @@ func (w *textWriter) WriteValue(val interface{}) {
 		w:        w,
 		sortMaps: true,
 	}
-	m.Encode(val)
+	w.err = m.Encode(val)
 }
 
 // Finish finishes the current datagram.

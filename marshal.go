@@ -29,6 +29,21 @@ func MarshalText(v interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// MarshalBinary marshals values to binary ion.
+func MarshalBinary(v interface{}, lst SymbolTable) ([]byte, error) {
+	buf := bytes.Buffer{}
+	m := NewBinaryEncoder(&buf, lst)
+
+	if err := m.Encode(v); err != nil {
+		return nil, err
+	}
+	if err := m.Finish(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // An Encoder writes Ion values to an output stream.
 type Encoder struct {
 	w        Writer
@@ -47,6 +62,14 @@ func NewTextEncoder(w io.Writer) *Encoder {
 	return &Encoder{
 		w:        NewTextWriter(w),
 		sortMaps: true,
+	}
+}
+
+// NewBinaryEncoder creates a new Encoder that marshals binary Ion to the given writer.
+func NewBinaryEncoder(w io.Writer, lst SymbolTable) *Encoder {
+	return &Encoder{
+		w:        NewBinaryWriter(w, lst),
+		sortMaps: false,
 	}
 }
 

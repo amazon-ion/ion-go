@@ -1,6 +1,7 @@
 package ion
 
 import (
+	"bytes"
 	"math"
 	"testing"
 	"time"
@@ -63,6 +64,24 @@ func TestMarshalText(t *testing.T) {
 	test(struct{ V []byte }{[]byte{4, 2}}, "{V:{{BAI=}}}")
 
 	test(struct{ V [2]byte }{[2]byte{4, 2}}, "{V:[4,2]}")
+}
+
+func TestMarshalBinary(t *testing.T) {
+	lst := NewLocalSymbolTable(nil, nil)
+
+	test := func(v interface{}, name string, eval []byte) {
+		t.Run(name, func(t *testing.T) {
+			val, err := MarshalBinary(v, lst)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(val, eval) {
+				t.Errorf("expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
+			}
+		})
+	}
+
+	test(nil, "null", []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
 }
 
 func TestMarshalNestedStructs(t *testing.T) {
