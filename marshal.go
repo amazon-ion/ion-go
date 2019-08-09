@@ -68,7 +68,7 @@ func NewTextEncoder(w io.Writer) *Encoder {
 // NewBinaryEncoder creates a new Encoder that marshals binary Ion to the given writer.
 func NewBinaryEncoder(w io.Writer, lst SymbolTable) *Encoder {
 	return &Encoder{
-		w:        NewBinaryWriter(w, lst),
+		w:        NewBinaryWriterLST(w, lst),
 		sortMaps: false,
 	}
 }

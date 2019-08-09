@@ -24,20 +24,20 @@ const (
 	DecimalType
 	// TimestampType is the type of a timestamp.
 	TimestampType
-	// StringType is the type of a Unicode string.
-	StringType
 	// SymbolType is the type of an interned string.
 	SymbolType
-	// BlobType is the type of a binary large object.
-	BlobType
+	// StringType is the type of a Unicode string.
+	StringType
 	// ClobType is the type of a character large object.
 	ClobType
-	// StructType is the type of a structure.
-	StructType
+	// BlobType is the type of a binary large object.
+	BlobType
 	// ListType is the type of a list.
 	ListType
 	// SexpType is the type of an s-expression.
 	SexpType
+	// StructType is the type of a structure.
+	StructType
 )
 
 func (t Type) String() string {

@@ -15,62 +15,51 @@ import (
 // A bufnode is a node in the partially-serialized tree.
 type bufnode interface {
 	Len() uint64
-	WriteTo(w io.Writer) error
+	EmitTo(w io.Writer) error
 }
 
-// An atom is a value that has been fully serialized and can be written directly.
+// A bufseq is a bufnode that's also an appendable sequence of bufnodes.
+type bufseq interface {
+	bufnode
+	Append(n bufnode)
+}
+
+var _ bufnode = atom([]byte{})
+var _ bufseq = &datagram{}
+var _ bufseq = &container{}
+
+// An atom is a value that has been fully serialized and can be emitted directly.
 type atom []byte
 
 func (a atom) Len() uint64 {
 	return uint64(len(a))
 }
 
-func (a atom) WriteTo(w io.Writer) error {
+func (a atom) EmitTo(w io.Writer) error {
 	_, err := w.Write(a)
 	return err
 }
 
-// A fieldname is the symbol id of a field name inside a struct.
-type fieldname uint64
-
-func (f fieldname) Len() uint64 {
-	return varUintLen(uint64(f))
-}
-
-func (f fieldname) WriteTo(w io.Writer) error {
-	_, err := w.Write(packVarUint(uint64(f)))
-	return err
-}
-
-// A container holds multiple child values and serializes them together with a
-// tag and length on demand.
-type container struct {
-	code     byte
+// A datagram is a sequence of nodes that will be emitted one
+// after another. Most notably, used to buffer top-level values
+// when we haven't yet finalized the local symbol table.
+type datagram struct {
 	len      uint64
 	children []bufnode
 }
 
-func (c *container) Add(n bufnode) {
-	c.len += n.Len()
-	c.children = append(c.children, n)
+func (d *datagram) Append(n bufnode) {
+	d.len += n.Len()
+	d.children = append(d.children, n)
 }
 
-func (c *container) Len() uint64 {
-	if c.len < 0x0E {
-		// Short tag
-		return c.len + 1
-	}
-	// Long tag.
-	return c.len + varUintLen(c.len) + 1
+func (d *datagram) Len() uint64 {
+	return d.len
 }
 
-func (c *container) WriteTo(w io.Writer) error {
-	if err := writeTag(w, c.code, c.len); err != nil {
-		return nil
-	}
-
-	for _, child := range c.children {
-		if err := child.WriteTo(w); err != nil {
+func (d *datagram) EmitTo(w io.Writer) error {
+	for _, child := range d.children {
+		if err := child.EmitTo(w); err != nil {
 			return err
 		}
 	}
@@ -78,17 +67,53 @@ func (c *container) WriteTo(w io.Writer) error {
 	return nil
 }
 
-func writeTag(w io.Writer, code byte, len uint64) error {
-	if len < 0x0E {
-		// Short form, with length embedded in code byte.
-		_, err := w.Write([]byte{code | byte(len)})
-		return err
-	}
+// A container is a datagram that's preceeded by a code+length tag.
+type container struct {
+	code byte
+	datagram
+}
 
-	// Long form, with separate length.
-	if _, err := w.Write([]byte{code | 0x0E}); err != nil {
+func (c *container) Len() uint64 {
+	if c.len < 0x0E {
+		return c.len + 1
+	}
+	return c.len + (varUintLen(c.len) + 1)
+}
+
+func (c *container) EmitTo(w io.Writer) error {
+	var arr [11]byte
+	buf := arr[:0]
+	buf = appendTag(buf, c.code, c.len)
+
+	if _, err := w.Write(buf); err != nil {
 		return err
 	}
-	_, err := w.Write(packVarUint(uint64(len)))
-	return err
+	return c.datagram.EmitTo(w)
+}
+
+// A bufstack is a stack of bufseqs, more or less matching the
+// stack of BeginList/Sexp/Struct calls made on a binaryWriter.
+// The top of the stack is the sequence we're currently writing
+// values into; when it's popped off, it will be appended to the
+// bufseq below it.
+type bufstack struct {
+	arr []bufseq
+}
+
+func (s *bufstack) peek() bufseq {
+	if len(s.arr) == 0 {
+		return nil
+	}
+	return s.arr[len(s.arr)-1]
+}
+
+func (s *bufstack) push(b bufseq) {
+	s.arr = append(s.arr, b)
+}
+
+func (s *bufstack) pop() {
+	if len(s.arr) == 0 {
+		panic("pop called on an empty stack")
+	}
+	s.arr = s.arr[:len(s.arr)-1]
 }

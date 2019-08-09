@@ -347,7 +347,7 @@ func writeBinary(t *testing.T, f func(w Writer)) []byte {
 	}
 
 	buf := bytes.Buffer{}
-	w := NewBinaryWriter(&buf, NewLocalSymbolTable(bogus, []string{
+	w := NewBinaryWriterLST(&buf, NewLocalSymbolTable(bogus, []string{
 		"foo",
 		"bar",
 	}))

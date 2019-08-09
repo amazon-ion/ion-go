@@ -7,43 +7,43 @@ import (
 
 func TestBufnode(t *testing.T) {
 	root := container{code: 0xE0}
-	root.Add(atom([]byte{0x81, 0x83}))
+	root.Append(atom([]byte{0x81, 0x83}))
 	{
 		symtab := &container{code: 0xD0}
 		{
-			symtab.Add(fieldname(6))
+			symtab.Append(atom([]byte{0x86})) // varUint(6)
 			{
 				imps := &container{code: 0xB0}
 				{
 					imp0 := &container{code: 0xD0}
 					{
-						imp0.Add(fieldname(4))
-						imp0.Add(atom([]byte{0x85, 'b', 'o', 'g', 'u', 's'}))
-						imp0.Add(fieldname(5))
-						imp0.Add(atom([]byte{0x21, 0x2A}))
-						imp0.Add(fieldname(8))
-						imp0.Add(atom([]byte{0x21, 0x64}))
+						imp0.Append(atom([]byte{0x84})) // varUint(4)
+						imp0.Append(atom([]byte{0x85, 'b', 'o', 'g', 'u', 's'}))
+						imp0.Append(atom([]byte{0x85})) // varUint(5)
+						imp0.Append(atom([]byte{0x21, 0x2A}))
+						imp0.Append(atom([]byte{0x88})) // varUint(8)
+						imp0.Append(atom([]byte{0x21, 0x64}))
 					}
-					imps.Add(imp0)
+					imps.Append(imp0)
 				}
-				symtab.Add(imps)
+				symtab.Append(imps)
 			}
 
-			symtab.Add(fieldname(7))
+			symtab.Append(atom([]byte{0x87})) // varUint(7)
 			{
 				syms := &container{code: 0xB0}
 				{
-					syms.Add(atom([]byte{0x83, 'f', 'o', 'o'}))
-					syms.Add(atom([]byte{0x83, 'b', 'a', 'r'}))
+					syms.Append(atom([]byte{0x83, 'f', 'o', 'o'}))
+					syms.Append(atom([]byte{0x83, 'b', 'a', 'r'}))
 				}
-				symtab.Add(syms)
+				symtab.Append(syms)
 			}
 		}
-		root.Add(symtab)
+		root.Append(symtab)
 	}
 
 	buf := bytes.Buffer{}
-	if err := root.WriteTo(&buf); err != nil {
+	if err := root.EmitTo(&buf); err != nil {
 		t.Fatal(err)
 	}
 

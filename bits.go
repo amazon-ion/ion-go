@@ -1,11 +1,11 @@
 package ion
 
 import (
-	"bytes"
 	"math/big"
 	"time"
 )
 
+// uintLen pre-calculates the length, in bytes, of the given uint value.
 func uintLen(v uint64) uint64 {
 	len := uint64(1)
 	v >>= 8
@@ -18,7 +18,9 @@ func uintLen(v uint64) uint64 {
 	return len
 }
 
-func packUint(v uint64) []byte {
+// appendUint appends a uint value to the given slice. The reader is
+// expected to know how many bytes the value takes up.
+func appendUint(b []byte, v uint64) []byte {
 	var buf [8]byte
 
 	i := 7
@@ -31,12 +33,36 @@ func packUint(v uint64) []byte {
 		v >>= 8
 	}
 
-	return buf[i:]
+	return append(b, buf[i:]...)
 }
 
-func packInt(n int64) []byte {
+// intLen pre-calculates the length, in bytes, of the given int value.
+func intLen(n int64) uint64 {
 	if n == 0 {
-		return []byte{}
+		return 0
+	}
+
+	mag := uint64(n)
+	if n < 0 {
+		mag = uint64(-n)
+	}
+
+	len := uintLen(mag)
+
+	// If the high bit is a one, we need an extra byte to store the sign bit.
+	hb := mag >> ((len - 1) * 8)
+	if hb&0x80 != 0 {
+		len++
+	}
+
+	return len
+}
+
+// appendInt appends a (signed) int to the given slice. The reader is
+// expected to know how many bytes the value takes up.
+func appendInt(b []byte, n int64) []byte {
+	if n == 0 {
+		return b
 	}
 
 	neg := false
@@ -47,38 +73,70 @@ func packInt(n int64) []byte {
 		mag = uint64(-n)
 	}
 
-	bits := packUint(mag)
-	if bits[0]&0x80 != 0 {
-		bits = append([]byte{0}, bits...)
+	var buf [8]byte
+	bits := buf[:0]
+	bits = appendUint(bits, mag)
+
+	if bits[0]&0x80 == 0 {
+		// We've got space we can use for the sign bit.
+		if neg {
+			bits[0] ^= 0x80
+		}
+	} else {
+		// We need to add more space.
+		bit := byte(0)
+		if neg {
+			bit = 0x80
+		}
+		b = append(b, bit)
 	}
 
-	if neg {
-		bits[0] ^= 0x80
-	}
-
-	return bits
+	return append(b, bits...)
 }
 
-func packBigInt(v *big.Int) []byte {
+// bigIntLen pre-calculates the length, in bytes, of the given big.Int value.
+func bigIntLen(v *big.Int) uint64 {
+	if v.Sign() == 0 {
+		return 0
+	}
+
+	bitl := v.BitLen()
+	bytel := bitl / 8
+
+	// Either bitl is evenly divisibly by 8, in which case we need another
+	// byte for the sign bit, or its not in which case we need to round up
+	// (but will then have room for the sign bit).
+	return uint64(bytel) + 1
+}
+
+// appendBigInt appends a (signed) big.Int to the given slice. The reader is
+// expected to know how many bytes the value takes up.
+func appendBigInt(b []byte, v *big.Int) []byte {
 	sign := v.Sign()
 	if sign == 0 {
-		return []byte{}
+		return b
 	}
 
 	bits := v.Bytes()
 
-	if bits[0]&0x80 != 0 {
-		// Need to make room for the sign bit.
-		bits = append([]byte{0}, bits...)
+	if bits[0]&0x80 == 0 {
+		// We've got space we can use for the sign bit.
+		if sign < 0 {
+			bits[0] ^= 0x80
+		}
+	} else {
+		// We need to add more space.
+		bit := byte(0)
+		if sign < 0 {
+			bit = 0x80
+		}
+		b = append(b, bit)
 	}
 
-	if sign < 0 {
-		bits[0] ^= 0x80
-	}
-
-	return bits
+	return append(b, bits...)
 }
 
+// varUintLen pre-calculates the length, in bytes, of the given varUint value.
 func varUintLen(v uint64) uint64 {
 	len := uint64(1)
 	v >>= 7
@@ -91,7 +149,10 @@ func varUintLen(v uint64) uint64 {
 	return len
 }
 
-func packVarUint(v uint64) []byte {
+// appendVarUint appends a variable-length-encoded uint to the given slice.
+// Each byte stores seven bits of value; the high bit is a flag marking the
+// last byte of the value.
+func appendVarUint(b []byte, v uint64) []byte {
 	var buf [10]byte
 
 	i := 9
@@ -104,9 +165,10 @@ func packVarUint(v uint64) []byte {
 		v >>= 7
 	}
 
-	return buf[i:]
+	return append(b, buf[i:]...)
 }
 
+// varIntLen pre-calculates the length, in bytes, of the given varInt value.
 func varIntLen(v int64) uint64 {
 	mag := uint64(v)
 	if v < 0 {
@@ -125,7 +187,10 @@ func varIntLen(v int64) uint64 {
 	return len
 }
 
-func packVarInt(v int64) []byte {
+// appendVarInt appends a variable-length-encoded int to the given slice.
+// Most bytes store seven bits of value; the high bit is a flag marking the
+// last byte of the value. The first byte additionally stores a sign bit.
+func appendVarInt(b []byte, v int64) []byte {
 	var buf [10]byte
 
 	signbit := byte(0)
@@ -138,7 +203,7 @@ func packVarInt(v int64) []byte {
 	next := mag >> 6
 	if next == 0 {
 		// The whole thing fits in one byte.
-		return []byte{0x80 | signbit | byte(mag&0x3F)}
+		return append(b, 0x80|signbit|byte(mag&0x3F))
 	}
 
 	i := 9
@@ -156,29 +221,65 @@ func packVarInt(v int64) []byte {
 	i--
 	buf[i] = signbit | byte(mag&0x3F)
 
-	return buf[i:]
+	return append(b, buf[i:]...)
 }
 
-func packTime(t time.Time) []byte {
-	_, offset := t.Zone()
-	utc := t.In(time.UTC)
+// tagLen pre-calculates the length, in bytes, of a tag.
+func tagLen(len uint64) uint64 {
+	if len < 0x0E {
+		return 1
+	}
+	return 1 + varUintLen(len)
+}
 
-	buf := bytes.Buffer{}
-	buf.Write(packVarInt(int64(offset / 60)))
+// appendTag appends a code+len tag to the given slice.
+func appendTag(b []byte, code byte, len uint64) []byte {
+	if len < 0x0E {
+		// Short form, with length embedded in the code byte.
+		return append(b, code|byte(len))
+	}
 
-	buf.Write(packVarUint(uint64(utc.Year())))
-	buf.Write(packVarUint(uint64(utc.Month())))
-	buf.Write(packVarUint(uint64(utc.Day())))
+	// Long form, with separate length.
+	b = append(b, code|0x0E)
+	return appendVarUint(b, len)
+}
 
-	buf.Write(packVarUint(uint64(utc.Hour())))
-	buf.Write(packVarUint(uint64(utc.Minute())))
-	buf.Write(packVarUint(uint64(utc.Second())))
+// timeLen pre-calculates the length, in bytes, of the given time value.
+func timeLen(offset int, utc time.Time) uint64 {
+	ret := varIntLen(int64(offset))
+
+	// Almost certainly two but let's be safe.
+	ret += varUintLen(uint64(utc.Year()))
+
+	// Month, day, hour, minute, and second are all guaranteed to be one byte.
+	ret += 5
 
 	ns := utc.Nanosecond()
 	if ns > 0 {
-		buf.Write(packVarInt(-9))
-		buf.Write(packInt(int64(ns)))
+		ret++ // varIntLen(-9)
+		ret += intLen(int64(ns))
 	}
 
-	return buf.Bytes()
+	return ret
+}
+
+// appendTime appends a timestamp value
+func appendTime(b []byte, offset int, utc time.Time) []byte {
+	b = appendVarInt(b, int64(offset))
+
+	b = appendVarUint(b, uint64(utc.Year()))
+	b = appendVarUint(b, uint64(utc.Month()))
+	b = appendVarUint(b, uint64(utc.Day()))
+
+	b = appendVarUint(b, uint64(utc.Hour()))
+	b = appendVarUint(b, uint64(utc.Minute()))
+	b = appendVarUint(b, uint64(utc.Second()))
+
+	ns := utc.Nanosecond()
+	if ns > 0 {
+		b = appendVarInt(b, -9)
+		b = appendInt(b, int64(ns))
+	}
+
+	return b
 }
