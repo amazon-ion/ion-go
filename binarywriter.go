@@ -24,12 +24,14 @@ type binaryWriter struct {
 // NewBinaryWriter creates a new binary writer that will construct a
 // local symbol table as it is written to.
 func NewBinaryWriter(out io.Writer, sts ...SharedSymbolTable) Writer {
-	return &binaryWriter{
+	w := &binaryWriter{
 		writer: writer{
 			out: out,
 		},
 		lstb: NewSymbolTableBuilder(sts...),
 	}
+	w.bufs.push(&datagram{})
+	return w
 }
 
 // NewBinaryWriterLST creates a new binary writer with a pre-built local
@@ -65,7 +67,7 @@ func (w *binaryWriter) write(bs []byte) error {
 func (w *binaryWriter) writeTag(code byte, len uint64) error {
 	tl := tagLen(len)
 
-	tag := make([]byte, tl)
+	tag := make([]byte, 0, tl)
 	tag = appendTag(tag, code, len)
 
 	return w.write(tag)
@@ -86,8 +88,8 @@ func (w *binaryWriter) beginValue() error {
 	// will end up using/modifying them. Ugh.
 	name := w.fieldName
 	w.fieldName = ""
-	tas := w.typeAnnotations
-	w.typeAnnotations = nil
+	as := w.annotations
+	w.annotations = nil
 
 	// If we have a local symbol table and haven't written it out yet, do that now.
 	if w.lst != nil && !w.wroteLST {
@@ -102,35 +104,30 @@ func (w *binaryWriter) beginValue() error {
 			return errors.New("ion: field name not set")
 		}
 
-		id, ok := w.lst.FindByName(name)
-		if !ok {
-			return fmt.Errorf("ion: symbol '%v' not defined", name)
-		}
-		if id < 0 {
-			panic("negative id")
+		id, err := w.resolve(name)
+		if err != nil {
+			return err
 		}
 
 		buf := make([]byte, 0, 10)
-		buf = appendVarUint(buf, uint64(id))
+		buf = appendVarUint(buf, id)
 		if err := w.write(buf); err != nil {
 			return err
 		}
 	}
 
-	if len(tas) > 0 {
-		ids := make([]uint64, len(tas))
+	if len(as) > 0 {
+		ids := make([]uint64, len(as))
 		idlen := uint64(0)
 
-		for i, a := range tas {
-			id, ok := w.lst.FindByName(a)
-			if !ok {
-				return fmt.Errorf("ion: symbol '%v' not defined", a)
+		for i, a := range as {
+			id, err := w.resolve(a)
+			if err != nil {
+				return err
 			}
-			if id < 0 {
-				panic("negative id")
-			}
-			ids[i] = uint64(id)
-			idlen += varUintLen(uint64(id))
+
+			ids[i] = id
+			idlen += varUintLen(id)
 		}
 
 		buflen := idlen + varUintLen(idlen)
@@ -178,7 +175,7 @@ func (w *binaryWriter) writeValue(f func() error) error {
 }
 
 // BeginContainer begins writing a new container.
-func (w *binaryWriter) beginContainer(t ctxType, code byte) error {
+func (w *binaryWriter) beginContainer(t ctx, code byte) error {
 	if err := w.beginValue(); err != nil {
 		return err
 	}
@@ -191,7 +188,7 @@ func (w *binaryWriter) beginContainer(t ctxType, code byte) error {
 
 // EndContainer ends writing a container, emitting its buffered contents up
 // a level in the stack.
-func (w *binaryWriter) endContainer(t ctxType) error {
+func (w *binaryWriter) endContainer(t ctx) error {
 	if w.ctx.peek() != t {
 		return errors.New("ion: not in that kind of container")
 	}
@@ -205,45 +202,29 @@ func (w *binaryWriter) endContainer(t ctxType) error {
 	}
 
 	w.fieldName = ""
-	w.typeAnnotations = nil
+	w.annotations = nil
 	w.ctx.pop()
 
 	return w.endValue()
 }
 
+// WriteNull writes an untyped null.
 func (w *binaryWriter) WriteNull() {
 	w.WriteNullWithType(NullType)
 }
 
-var nulls = func() []byte {
-	ret := make([]byte, int(StructType)+1)
-	ret[NoType] = 0x0F
-	ret[NullType] = 0x0F
-	ret[BoolType] = 0x1F
-	ret[IntType] = 0x2F
-	ret[FloatType] = 0x4F
-	ret[DecimalType] = 0x5F
-	ret[TimestampType] = 0x6F
-	ret[SymbolType] = 0x7F
-	ret[StringType] = 0x8F
-	ret[ClobType] = 0x9F
-	ret[BlobType] = 0xAF
-	ret[ListType] = 0xBF
-	ret[SexpType] = 0xCF
-	ret[StructType] = 0xDF
-	return ret
-}()
-
+// WriteNullWithType writes a typed null.
 func (w *binaryWriter) WriteNullWithType(t Type) {
 	if w.err != nil {
 		return
 	}
 
 	w.err = w.writeValue(func() error {
-		return w.write([]byte{nulls[t]})
+		return w.write([]byte{binaryNulls[t]})
 	})
 }
 
+// WriteBool writes a bool.
 func (w *binaryWriter) WriteBool(val bool) {
 	if w.err != nil {
 		return
@@ -257,6 +238,7 @@ func (w *binaryWriter) WriteBool(val bool) {
 	})
 }
 
+// WriteInt writes an integer.
 func (w *binaryWriter) WriteInt(val int64) {
 	if w.err != nil {
 		return
@@ -286,6 +268,7 @@ func (w *binaryWriter) WriteInt(val int64) {
 	})
 }
 
+// WriteBigInt writes a big integer.
 func (w *binaryWriter) WriteBigInt(val *big.Int) {
 	if w.err != nil {
 		return
@@ -304,7 +287,8 @@ func (w *binaryWriter) WriteBigInt(val *big.Int) {
 
 		bs := val.Bytes()
 
-		if bl := uint64(len(bs)); bl < 64 {
+		bl := uint64(len(bs))
+		if bl < 64 {
 			buflen := bl + tagLen(bl)
 			buf := make([]byte, 0, buflen)
 
@@ -314,13 +298,14 @@ func (w *binaryWriter) WriteBigInt(val *big.Int) {
 		}
 
 		// no sense in copying, emit tag separately.
-		if err := w.writeTag(code, uint64(len(bs))); err != nil {
+		if err := w.writeTag(code, bl); err != nil {
 			return err
 		}
 		return w.write(bs)
 	})
 }
 
+// WriteFloat writes a floating-point value.
 func (w *binaryWriter) WriteFloat(val float64) {
 	if w.err != nil {
 		return
@@ -341,6 +326,7 @@ func (w *binaryWriter) WriteFloat(val float64) {
 	})
 }
 
+// WriteDecimal writes a decimal value.
 func (w *binaryWriter) WriteDecimal(val *Decimal) {
 	if w.err != nil {
 		return
@@ -370,6 +356,7 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) {
 	})
 }
 
+// WriteTimestamp writes a timestamp value.
 func (w *binaryWriter) WriteTimestamp(val time.Time) {
 	if w.err != nil {
 		return
@@ -392,22 +379,16 @@ func (w *binaryWriter) WriteTimestamp(val time.Time) {
 	})
 }
 
+// WriteSymbol writes a symbol value.
 func (w *binaryWriter) WriteSymbol(val string) {
 	if w.err != nil {
 		return
 	}
 
-	id := 0
-	ok := true
-
-	if w.lst != nil {
-		id, ok = w.lst.FindByName(val)
-		if !ok {
-			w.err = fmt.Errorf("ion: symbol '%v' not defined in local symbol table", val)
-			return
-		}
-	} else {
-		id, _ = w.lstb.Add(val)
+	id, err := w.resolve(val)
+	if err != nil {
+		w.err = err
+		return
 	}
 
 	w.err = w.writeValue(func() error {
@@ -422,6 +403,27 @@ func (w *binaryWriter) WriteSymbol(val string) {
 	})
 }
 
+// Resolve resolves a symbol to its ID.
+func (w *binaryWriter) resolve(sym string) (uint64, error) {
+	if w.lst != nil {
+		id, ok := w.lst.FindByName(sym)
+		if !ok {
+			return 0, fmt.Errorf("ion: symbol '%v' not defined in local symbol table", sym)
+		}
+		if id < 0 {
+			panic("negative id")
+		}
+		return uint64(id), nil
+	}
+
+	id, _ := w.lstb.Add(sym)
+	if id < 0 {
+		panic("negative id")
+	}
+	return uint64(id), nil
+}
+
+// WriteString writes a string.
 func (w *binaryWriter) WriteString(val string) {
 	if w.err != nil {
 		return
@@ -443,14 +445,17 @@ func (w *binaryWriter) WriteString(val string) {
 	})
 }
 
+// WriteClob writes a clob.
 func (w *binaryWriter) WriteClob(val []byte) {
 	w.writeLob(0x90, val)
 }
 
+// WriteBlob writes a blob.
 func (w *binaryWriter) WriteBlob(val []byte) {
 	w.writeLob(0xA0, val)
 }
 
+// WriteLob writes a [bc]lob.
 func (w *binaryWriter) writeLob(code byte, val []byte) {
 	if w.err != nil {
 		return
@@ -476,14 +481,7 @@ func (w *binaryWriter) writeLob(code byte, val []byte) {
 	})
 }
 
-func (w *binaryWriter) WriteValue(val interface{}) {
-	m := Encoder{
-		w:        w,
-		sortMaps: true,
-	}
-	w.err = m.Encode(val)
-}
-
+// BeginList begins writing a list.
 func (w *binaryWriter) BeginList() {
 	if w.err != nil {
 		return
@@ -491,6 +489,7 @@ func (w *binaryWriter) BeginList() {
 	w.err = w.beginContainer(ctxInList, 0xB0)
 }
 
+// EndList finishes writing a list.
 func (w *binaryWriter) EndList() {
 	if w.err != nil {
 		return
@@ -498,6 +497,7 @@ func (w *binaryWriter) EndList() {
 	w.err = w.endContainer(ctxInList)
 }
 
+// BeginSexp begins writing an s-expression.
 func (w *binaryWriter) BeginSexp() {
 	if w.err != nil {
 		return
@@ -505,6 +505,7 @@ func (w *binaryWriter) BeginSexp() {
 	w.err = w.beginContainer(ctxInSexp, 0xC0)
 }
 
+// EndSexp finishes writing an s-expression.
 func (w *binaryWriter) EndSexp() {
 	if w.err != nil {
 		return
@@ -512,6 +513,7 @@ func (w *binaryWriter) EndSexp() {
 	w.err = w.endContainer(ctxInSexp)
 }
 
+// BeginStruct begins writing a struct.
 func (w *binaryWriter) BeginStruct() {
 	if w.err != nil {
 		return
@@ -519,6 +521,7 @@ func (w *binaryWriter) BeginStruct() {
 	w.err = w.beginContainer(ctxInStruct, 0xD0)
 }
 
+// EndStruct finishes writing a struct.
 func (w *binaryWriter) EndStruct() {
 	if w.err != nil {
 		return
@@ -526,6 +529,7 @@ func (w *binaryWriter) EndStruct() {
 	w.err = w.endContainer(ctxInStruct)
 }
 
+// Finish finishes writing a datagram.
 func (w *binaryWriter) Finish() error {
 	if w.err != nil {
 		return w.err
@@ -536,7 +540,7 @@ func (w *binaryWriter) Finish() error {
 	}
 
 	w.fieldName = ""
-	w.typeAnnotations = nil
+	w.annotations = nil
 	w.wroteLST = false
 
 	seq := w.bufs.peek()

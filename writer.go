@@ -8,11 +8,11 @@ import (
 // writer holds shared stuff for all writers.
 type writer struct {
 	out io.Writer
-	ctx ctx
+	ctx ctxstack
 	err error
 
-	fieldName       string
-	typeAnnotations []string
+	fieldName   string
+	annotations []string
 }
 
 // InStruct returns true if we're currently writing a struct.
@@ -48,19 +48,18 @@ func (w *writer) FieldName(val string) {
 	w.fieldName = val
 }
 
-// TypeAnnotation adds a type annotation to the next value written.
-func (w *writer) TypeAnnotation(val string) {
+// Annotation adds an annotation to the next value written.
+func (w *writer) Annotation(val string) {
 	if w.err != nil {
 		return
 	}
-	w.typeAnnotations = append(w.typeAnnotations, val)
+	w.annotations = append(w.annotations, val)
 }
 
-// TypeAnnotations adds one or more type annotations to the next value
-// written.
-func (w *writer) TypeAnnotations(val ...string) {
+// Annotations adds one or more annotations to the next value written.
+func (w *writer) Annotations(val ...string) {
 	if w.err != nil {
 		return
 	}
-	w.typeAnnotations = append(w.typeAnnotations, val...)
+	w.annotations = append(w.annotations, val...)
 }

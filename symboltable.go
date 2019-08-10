@@ -93,7 +93,7 @@ func (s *sharedSymbolTable) FindByID(id int) (string, bool) {
 }
 
 func (s *sharedSymbolTable) WriteTo(w Writer) error {
-	w.TypeAnnotation("$ion_shared_symbol_table")
+	w.Annotation("$ion_shared_symbol_table")
 	w.BeginStruct()
 
 	w.FieldName("name")
@@ -237,7 +237,7 @@ func (t *localSymbolTable) WriteTo(w Writer) error {
 		return nil
 	}
 
-	w.TypeAnnotation("$ion_symbol_table")
+	w.Annotation("$ion_symbol_table")
 	w.BeginStruct()
 
 	if len(t.imports) > 1 {

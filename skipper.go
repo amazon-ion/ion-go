@@ -5,19 +5,56 @@ import (
 	"io"
 )
 
-// FinishValue skips to the end of the current value if (and only if)
-// we're currently in the middle of reading it.
-func (t *tokenizer) finishValue() (bool, error) {
-	if t.unfinished {
-		c, err := t.skipValue()
-		if err != nil {
-			return true, err
-		}
-		t.unread(c)
-		t.unfinished = false
-		return true, nil
+// SkipContainerContents skips over the contents of a container of the given type.
+func (t *tokenizer) SkipContainerContents(typ Type) error {
+	switch typ {
+	case StructType:
+		return t.skipStructHelper()
+	case ListType:
+		return t.skipListHelper()
+	case SexpType:
+		return t.skipSexpHelper()
+	default:
+		panic(fmt.Sprintf("invalid container type: %v", typ))
 	}
-	return false, nil
+}
+
+// Skips whitespace and a double-colon token, if there is one.
+func (t *tokenizer) SkipDoubleColon() (bool, bool, error) {
+	ws, err := t.skipWhitespaceHelper()
+	if err != nil {
+		return false, false, err
+	}
+
+	ok, err := t.skipDoubleColon()
+	if err != nil {
+		return false, false, err
+	}
+
+	return ok, ws, nil
+}
+
+// Peeks ahead to see if the next token is a dot, and
+// if so skips it. If not, leaves the next token unconsumed.
+func (t *tokenizer) SkipDot() (bool, error) {
+	c, err := t.peek()
+	if err != nil {
+		return false, err
+	}
+	if c != '.' {
+		return false, nil
+	}
+
+	t.read()
+	return true, nil
+}
+
+// SkipLobWhitespace skips whitespace when we're inside a large
+// object ({{  ///=  }} or {{ '''///=''' }}) where comments are
+// not allowed.
+func (t *tokenizer) SkipLobWhitespace() (int, error) {
+	c, _, err := t.skipLobWhitespace()
+	return c, err
 }
 
 // SkipValue skips to the end of the current value, if the caller
@@ -512,7 +549,7 @@ func (t *tokenizer) skipEndOfLongString(handler commentHandler) (bool, error) {
 
 	// Check if it's another triple-quote; if so, keep going.
 	if c == '\'' {
-		ok, err := t.isTripleQuote()
+		ok, err := t.IsTripleQuote()
 		if err != nil {
 			return false, err
 		}
@@ -619,7 +656,7 @@ func (t *tokenizer) skipContainerHelper(term int) error {
 			}
 
 		case '\'':
-			ok, err := t.isTripleQuote()
+			ok, err := t.IsTripleQuote()
 			if err != nil {
 				return err
 			}
@@ -823,19 +860,4 @@ func (t *tokenizer) skipDoubleColon() (bool, error) {
 	}
 
 	return false, nil
-}
-
-// Peeks ahead to see if the next token is a dot, and
-// if so skips it. If not, leaves the next token unconsumed.
-func (t *tokenizer) skipDot() (bool, error) {
-	c, err := t.peek()
-	if err != nil {
-		return false, err
-	}
-	if c != '.' {
-		return false, nil
-	}
-
-	t.read()
-	return true, nil
 }

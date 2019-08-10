@@ -67,11 +67,9 @@ func TestMarshalText(t *testing.T) {
 }
 
 func TestMarshalBinary(t *testing.T) {
-	lst := NewLocalSymbolTable(nil, nil)
-
 	test := func(v interface{}, name string, eval []byte) {
 		t.Run(name, func(t *testing.T) {
-			val, err := MarshalBinary(v, lst)
+			val, err := MarshalBinary(v)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,6 +80,41 @@ func TestMarshalBinary(t *testing.T) {
 	}
 
 	test(nil, "null", []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
+	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", []byte{
+		0xE0, 0x01, 0x00, 0xEA,
+		0xE9, 0x81, 0x83, 0xD6, 0x87, 0xB4, 0x81, 'A', 0x81, 'B',
+		0xD5,
+		0x8A, 0x21, 0x2A,
+		0x8B, 0x20,
+	})
+}
+
+func TestMarshalBinaryLST(t *testing.T) {
+	lsta := NewLocalSymbolTable(nil, nil)
+	lstb := NewLocalSymbolTable(nil, []string{
+		"A", "B",
+	})
+
+	test := func(v interface{}, name string, lst SymbolTable, eval []byte) {
+		t.Run(name, func(t *testing.T) {
+			val, err := MarshalBinaryLST(v, lst)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(val, eval) {
+				t.Errorf("expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
+			}
+		})
+	}
+
+	test(nil, "null", lsta, []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
+	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", lstb, []byte{
+		0xE0, 0x01, 0x00, 0xEA,
+		0xE9, 0x81, 0x83, 0xD6, 0x87, 0xB4, 0x81, 'A', 0x81, 'B',
+		0xD5,
+		0x8A, 0x21, 0x2A,
+		0x8B, 0x20,
+	})
 }
 
 func TestMarshalNestedStructs(t *testing.T) {

@@ -9,13 +9,11 @@ import (
 	"time"
 )
 
-func TestDecodeBool(t *testing.T) {
+func TestUnmarshalBool(t *testing.T) {
 	test := func(str string, eval bool) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val bool
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,14 +28,12 @@ func TestDecodeBool(t *testing.T) {
 	test("true", true)
 	test("false", false)
 }
-func TestDecodeBoolPtr(t *testing.T) {
+func TestUnmarshalBoolPtr(t *testing.T) {
 	test := func(str string, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var bval bool
 			val := &bval
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -63,13 +59,11 @@ func TestDecodeBoolPtr(t *testing.T) {
 	test("true", true)
 }
 
-func TestDecodeInt(t *testing.T) {
+func TestUnmarshalInt(t *testing.T) {
 	testInt8 := func(str string, eval int8) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val int8
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,10 +80,8 @@ func TestDecodeInt(t *testing.T) {
 
 	testInt16 := func(str string, eval int16) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val int16
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -106,10 +98,8 @@ func TestDecodeInt(t *testing.T) {
 
 	testInt32 := func(str string, eval int32) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val int32
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -126,10 +116,8 @@ func TestDecodeInt(t *testing.T) {
 
 	testInt := func(str string, eval int) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val int
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -146,10 +134,8 @@ func TestDecodeInt(t *testing.T) {
 
 	testInt64 := func(str string, eval int64) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val int64
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -165,13 +151,11 @@ func TestDecodeInt(t *testing.T) {
 	testInt64("-0x8000000000000000", -0x8000000000000000)
 }
 
-func TestDecodeUint(t *testing.T) {
+func TestUnmarshalUint(t *testing.T) {
 	testUint8 := func(str string, eval uint8) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uint8
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -187,10 +171,8 @@ func TestDecodeUint(t *testing.T) {
 
 	testUint16 := func(str string, eval uint16) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uint16
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -205,10 +187,8 @@ func TestDecodeUint(t *testing.T) {
 
 	testUint32 := func(str string, eval uint32) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uint32
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -223,10 +203,8 @@ func TestDecodeUint(t *testing.T) {
 
 	testUint := func(str string, eval uint) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uint
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -241,10 +219,8 @@ func TestDecodeUint(t *testing.T) {
 
 	testUintptr := func(str string, eval uintptr) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uintptr
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -259,10 +235,8 @@ func TestDecodeUint(t *testing.T) {
 
 	testUint64 := func(str string, eval uint64) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val uint64
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -276,13 +250,11 @@ func TestDecodeUint(t *testing.T) {
 	testUint64("0xFFFFFFFFFFFFFFFF", 0xFFFFFFFFFFFFFFFF)
 }
 
-func TestDecodeBigInt(t *testing.T) {
+func TestUnmarshalBigInt(t *testing.T) {
 	test := func(str string, eval *big.Int) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
-
 			var val big.Int
-			err := d.DecodeTo(&val)
+			err := UnmarshalStr(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -300,7 +272,7 @@ func TestDecodeBigInt(t *testing.T) {
 func TestDecodeFloat(t *testing.T) {
 	test32 := func(str string, eval float32) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val float32
 			err := d.DecodeTo(&val)
@@ -320,7 +292,7 @@ func TestDecodeFloat(t *testing.T) {
 
 	test64 := func(str string, eval float64) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val float64
 			err := d.DecodeTo(&val)
@@ -341,7 +313,7 @@ func TestDecodeFloat(t *testing.T) {
 func TestDecodeDecimal(t *testing.T) {
 	test := func(str string, eval *Decimal) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val *Decimal
 			err := d.DecodeTo(&val)
@@ -362,7 +334,7 @@ func TestDecodeDecimal(t *testing.T) {
 func TestDecodeTimeTo(t *testing.T) {
 	test := func(str string, eval time.Time) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val time.Time
 			err := d.DecodeTo(&val)
@@ -382,7 +354,7 @@ func TestDecodeTimeTo(t *testing.T) {
 func TestDecodeStringTo(t *testing.T) {
 	test := func(str string, eval string) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val string
 			err := d.DecodeTo(&val)
@@ -404,7 +376,7 @@ func TestDecodeStringTo(t *testing.T) {
 func TestDecodeLobTo(t *testing.T) {
 	testSlice := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val []byte
 			err := d.DecodeTo(&val)
@@ -424,7 +396,7 @@ func TestDecodeLobTo(t *testing.T) {
 
 	testArray := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 
 			var val [8]byte
 			err := d.DecodeTo(&val)
@@ -444,7 +416,7 @@ func TestDecodeLobTo(t *testing.T) {
 func TestDecodeStructTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -474,7 +446,7 @@ func TestDecodeStructTo(t *testing.T) {
 func TestDecodeListTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(str))
+			d := NewDecoder(NewTextReaderStr(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -506,7 +478,7 @@ func TestDecodeListTo(t *testing.T) {
 func TestDecode(t *testing.T) {
 	test := func(data string, eval interface{}) {
 		t.Run(data, func(t *testing.T) {
-			d := NewDecoder(NewTextReaderString(data))
+			d := NewDecoder(NewTextReaderStr(data))
 			val, err := d.Decode()
 			if err != nil {
 				t.Fatal(err)

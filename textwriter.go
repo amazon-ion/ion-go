@@ -15,10 +15,10 @@ import (
 type TextWriterOpts uint8
 
 const (
-	// OptQuietFinish disables emiting a newline in Finish(). Convenient if you know
-	// you're only emiting one datagram; dangerous if there's a chance you're going to
-	// emit another datagram using the same Writer.
-	OptQuietFinish TextWriterOpts = 1
+	// TextWriterQuietFinish disables emiting a newline in Finish(). Convenient if you
+	// know you're only emiting one datagram; dangerous if there's a chance you're going
+	// to emit another datagram using the same Writer.
+	TextWriterQuietFinish TextWriterOpts = 1
 )
 
 // textWriter is a writer that writes human-readable text
@@ -78,9 +78,9 @@ func (w *textWriter) beginValue() error {
 		}
 	}
 
-	if len(w.typeAnnotations) > 0 {
-		as := w.typeAnnotations
-		w.typeAnnotations = nil
+	if len(w.annotations) > 0 {
+		as := w.annotations
+		w.annotations = nil
 
 		for _, a := range as {
 			if err := writeSymbol(a, w.out); err != nil {
@@ -101,7 +101,7 @@ func (w *textWriter) endValue() {
 }
 
 // begin starts writing a container of the given type.
-func (w *textWriter) begin(t ctxType, c byte) error {
+func (w *textWriter) begin(t ctx, c byte) error {
 	if err := w.beginValue(); err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (w *textWriter) begin(t ctxType, c byte) error {
 }
 
 // end finishes writing a container of the given type
-func (w *textWriter) end(t ctxType, c byte) error {
+func (w *textWriter) end(t ctx, c byte) error {
 	if w.ctx.peek() != t {
 		return errors.New("not in that kind of container")
 	}
@@ -123,7 +123,7 @@ func (w *textWriter) end(t ctxType, c byte) error {
 	}
 
 	w.fieldName = ""
-	w.typeAnnotations = nil
+	w.annotations = nil
 	w.ctx.pop()
 	w.endValue()
 
@@ -409,14 +409,6 @@ func (w *textWriter) WriteClob(val []byte) {
 	})
 }
 
-func (w *textWriter) WriteValue(val interface{}) {
-	m := Encoder{
-		w:        w,
-		sortMaps: true,
-	}
-	w.err = m.Encode(val)
-}
-
 // Finish finishes the current datagram.
 func (w *textWriter) Finish() error {
 	if w.err != nil {
@@ -427,14 +419,14 @@ func (w *textWriter) Finish() error {
 		return w.err
 	}
 
-	if w.opts&OptQuietFinish == 0 {
+	if w.opts&TextWriterQuietFinish == 0 {
 		if w.err = writeRawChar('\n', w.out); w.err != nil {
 			return w.err
 		}
 	}
 
 	w.fieldName = ""
-	w.typeAnnotations = nil
+	w.annotations = nil
 	w.needsSeparator = false
 	return nil
 }

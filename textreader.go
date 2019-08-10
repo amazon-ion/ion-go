@@ -13,19 +13,18 @@ import (
 	"time"
 )
 
-type textReaderState uint8
+// trs is the state of the text reader.
+type trs uint8
 
 const (
-	trsDone textReaderState = iota
+	trsDone trs = iota
 	trsBeforeFieldName
 	trsBeforeTypeAnnotations
-	trsBeforeScalar
 	trsBeforeContainer
-	trsInValue
 	trsAfterValue
 )
 
-func (s textReaderState) String() string {
+func (s trs) String() string {
 	switch s {
 	case trsDone:
 		return "<done>"
@@ -42,17 +41,18 @@ func (s textReaderState) String() string {
 	}
 }
 
+// A textReader is a Reader that reads text Ion.
 type textReader struct {
 	tok   tokenizer
-	state textReaderState
-	ctx   ctx
+	state trs
+	ctx   ctxstack
 	eof   bool
 	err   error
 
-	fieldName       string
-	typeAnnotations []string
-	valueType       Type
-	value           interface{}
+	fieldName   string
+	annotations []string
+	valueType   Type
+	value       interface{}
 
 	debug bool
 }
@@ -67,25 +67,28 @@ func NewTextReader(in io.Reader) Reader {
 	}
 }
 
-// NewTextReaderString creates a new text reader from a string.
-func NewTextReaderString(str string) Reader {
+// NewTextReaderStr creates a new text reader from a string.
+func NewTextReaderStr(str string) Reader {
 	return NewTextReader(strings.NewReader(str))
 }
 
+// SymbolTable returns the current symbol table.
 func (t *textReader) SymbolTable() SymbolTable {
-	// Text content doesn't have a symbol table.
+	// TODO: Include me if present in the input stream?
 	return nil
 }
 
+// Next moves the reader to the next value.
 func (t *textReader) Next() bool {
 	if t.state == trsDone || t.eof {
 		return false
 	}
 
 	if t.debug {
-		fmt.Println("state:", t.state)
+		fmt.Println("ion: state =", t.state)
 	}
 
+	// If we haven't fully read the current value, skip over it.
 	err := t.finishValue()
 	if err != nil {
 		t.explode(err)
@@ -93,51 +96,268 @@ func (t *textReader) Next() bool {
 	}
 
 	if t.debug {
-		fmt.Println("state after finish:", t.state)
+		fmt.Println("ion: state after finish =", t.state)
 	}
 
 	t.fieldName = ""
-	t.typeAnnotations = nil
+	t.annotations = nil
 	t.valueType = NoType
 	t.value = nil
 
-	if err := t.tok.Next(); err != nil {
-		t.explode(err)
-		return false
-	}
-
-	if t.debug {
-		fmt.Println("read token:", t.tok.Token())
-	}
-
+	// Loop until we've consumed enough tokens to know what the next value is.
 	for {
-		var f func() (bool, error)
-
-		switch t.state {
-		case trsAfterValue:
-			f = t.nextAfterValue
-		case trsBeforeFieldName:
-			f = t.nextBeforeFieldName
-		case trsBeforeTypeAnnotations:
-			f = t.nextBeforeTypeAnnotations
-		default:
-			panic(fmt.Sprintf("invalid state: %v", t.state))
-		}
-
-		done, err := f()
-		if err != nil {
-			t.explode(err)
-			return false
-		}
-		if done {
-			return !t.eof
-		}
-
 		if err := t.tok.Next(); err != nil {
 			t.explode(err)
 			return false
 		}
+
+		if t.debug {
+			fmt.Println("ion: read token ", t.tok.Token())
+		}
+
+		var done bool
+		var err error
+
+		switch t.state {
+		case trsAfterValue:
+			done, err = t.nextAfterValue()
+		case trsBeforeFieldName:
+			done, err = t.nextBeforeFieldName()
+		case trsBeforeTypeAnnotations:
+			done, err = t.nextBeforeTypeAnnotations()
+		default:
+			panic(fmt.Sprintf("unexpected state: %v", t.state))
+		}
+		if err != nil {
+			t.explode(err)
+			return false
+		}
+
+		if done {
+			// We're done reading tokens. If we hit the end of the current sequence,
+			// return false. Otherwise, we've got a value for the caller.
+			return !t.eof
+		}
 	}
+}
+
+// Err returns the current error.
+func (t *textReader) Err() error {
+	return t.err
+}
+
+// Type returns the current value's type.
+func (t *textReader) Type() Type {
+	return t.valueType
+}
+
+// IsNull returns true if the current value is null.
+func (t *textReader) IsNull() bool {
+	return t.valueType != NoType && t.value == nil
+}
+
+// FieldName returns the current value's field name.
+func (t *textReader) FieldName() string {
+	return t.fieldName
+}
+
+// Annotations returns the current value's annotations.
+func (t *textReader) Annotations() []string {
+	return t.annotations
+}
+
+// StepIn steps in to a container.
+func (t *textReader) StepIn() error {
+	if t.err != nil {
+		return t.err
+	}
+	if t.state != trsBeforeContainer {
+		return errors.New("ion: StepIn called when not on a container")
+	}
+
+	ctx := containerTypeToCtx(t.valueType)
+	t.ctx.push(ctx)
+
+	if ctx == ctxInStruct {
+		t.state = trsBeforeFieldName
+	} else {
+		t.state = trsBeforeTypeAnnotations
+	}
+
+	t.tok.SetFinished()
+	return nil
+}
+
+// StepOut steps out of a container.
+func (t *textReader) StepOut() error {
+	if t.err != nil {
+		return t.err
+	}
+
+	ctx := t.ctx.peek()
+	if ctx == ctxAtTopLevel {
+		return errors.New("ion: StepOut called at top level")
+	}
+	ctype := ctxToContainerType(ctx)
+
+	// Finish off whatever value *inside* the container that we're currently reading.
+	_, err := t.tok.FinishValue()
+	if err != nil {
+		t.explode(err)
+		return err
+	}
+
+	// If we haven't seen the end of the container yet, skip values until we find it.
+	if !t.eof {
+		if err := t.tok.SkipContainerContents(ctype); err != nil {
+			t.explode(err)
+			return err
+		}
+	}
+
+	t.ctx.pop()
+	t.state = t.stateAfterValue()
+	t.valueType = NoType
+	t.value = nil
+	t.eof = false
+
+	return nil
+}
+
+// BoolValue returns the current value as a bool.
+func (t *textReader) BoolValue() (bool, error) {
+	if t.valueType == BoolType {
+		if t.value == nil {
+			return false, nil
+		}
+		return t.value.(bool), nil
+	}
+	return false, errors.New("ion: value is not a bool")
+}
+
+// IntSize returns the size of the current int value.
+func (t *textReader) IntSize() (IntSize, error) {
+	if t.valueType != IntType {
+		return NullInt, errors.New("ion: value is not an int")
+	}
+	if t.value == nil {
+		return NullInt, nil
+	}
+
+	if i, ok := t.value.(int64); ok {
+		if i > math.MaxInt32 || i < math.MinInt32 {
+			return Int64, nil
+		}
+		return Int32, nil
+	}
+
+	return BigInt, nil
+}
+
+// IntValue returns the current value as an int.
+func (t *textReader) IntValue() (int, error) {
+	i, err := t.Int64Value()
+	if err != nil {
+		return 0, err
+	}
+	if i > math.MaxInt32 || i < math.MinInt32 {
+		return 0, errors.New("ion: int value out of bounds")
+	}
+	return int(i), nil
+}
+
+// Int64Value returns the current value as an int64.
+func (t *textReader) Int64Value() (int64, error) {
+	if t.valueType == IntType {
+		if t.value == nil {
+			return 0, nil
+		}
+
+		if i, ok := t.value.(int64); ok {
+			return i, nil
+		}
+
+		bi := t.value.(*big.Int)
+		if bi.IsInt64() {
+			return bi.Int64(), nil
+		}
+
+		return 0, errors.New("ion: int value out of bounds")
+	}
+	return 0, errors.New("ion: value is not an int")
+}
+
+// BigIntValue returns the current value as a big int.
+func (t *textReader) BigIntValue() (*big.Int, error) {
+	if t.valueType == IntType {
+		if t.value == nil {
+			return nil, nil
+		}
+		if i, ok := t.value.(int64); ok {
+			return big.NewInt(i), nil
+		}
+		return t.value.(*big.Int), nil
+	}
+	return nil, errors.New("ion: value is not an int")
+}
+
+// FloatValue returns the current value as a float.
+func (t *textReader) FloatValue() (float64, error) {
+	if t.valueType == FloatType {
+		if t.value == nil {
+			return 0.0, nil
+		}
+		return t.value.(float64), nil
+	}
+	return 0.0, errors.New("ion: value is not a float")
+}
+
+// DecimalValue returns the current value as a Decimal.
+func (t *textReader) DecimalValue() (*Decimal, error) {
+	switch t.valueType {
+	case DecimalType:
+		if t.value == nil {
+			return nil, nil
+		}
+		return t.value.(*Decimal), nil
+	}
+	return nil, errors.New("ion: value is not a decimal")
+}
+
+// TimeValue returns the current value as a time.
+func (t *textReader) TimeValue() (time.Time, error) {
+	switch t.valueType {
+	case TimestampType:
+		if t.value == nil {
+			return time.Time{}, nil
+		}
+		return t.value.(time.Time), nil
+	}
+	return time.Time{}, errors.New("ion: value is not a timestamp")
+}
+
+// StringValue returns the current value as a string.
+func (t *textReader) StringValue() (string, error) {
+	switch t.valueType {
+	case StringType, SymbolType:
+		if t.value == nil {
+			return "", nil
+		}
+		return t.value.(string), nil
+	}
+	return "", errors.New("ion: value is not a string")
+}
+
+// ByteValue returns the current value as a byte slice.
+func (t *textReader) ByteValue() ([]byte, error) {
+	switch t.valueType {
+	case BlobType, ClobType:
+		if t.value == nil {
+			return nil, nil
+		}
+		return t.value.([]byte), nil
+	}
+	return nil, errors.New("ion: value is not a byte array")
 }
 
 // NextAfterValue moves to the next value when we're in the
@@ -146,7 +366,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 	tok := t.tok.Token()
 	switch tok {
 	case tokenComma:
-		// Another value coming; eat the comma and move to the
+		// There's another value coming; eat the comma and move to the
 		// appropriate next state.
 		switch t.ctx.peek() {
 		case ctxInStruct:
@@ -154,7 +374,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 		case ctxInList:
 			t.state = trsBeforeTypeAnnotations
 		default:
-			panic(fmt.Sprintf("invalid state: %v", t.ctx.peek()))
+			panic(fmt.Sprintf("unexpected context: %v", t.ctx.peek()))
 		}
 		return false, nil
 
@@ -164,7 +384,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("unexpected token '}'")
+		return false, errors.New("ion: unexpected token '}'")
 
 	case tokenCloseBracket:
 		// No more values in this list.
@@ -172,10 +392,10 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("unexpected token ']'")
+		return false, errors.New("ion: unexpected token ']'")
 
 	default:
-		return false, fmt.Errorf("unexpected token '%v'", tok)
+		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 	}
 }
 
@@ -206,7 +426,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, err
 		}
 		if tok = t.tok.Token(); tok != tokenColon {
-			return false, fmt.Errorf("unexpected token '%v'", tok)
+			return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 		}
 
 		t.fieldName = val
@@ -215,7 +435,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		return false, nil
 
 	default:
-		return false, fmt.Errorf("unexpected token '%v'", tok)
+		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 	}
 }
 
@@ -229,12 +449,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("unexpected EOF")
+		return false, errors.New("ion: unexpected EOF")
 
 	case tokenSymbolOperator, tokenDot:
 		if t.ctx.peek() != ctxInSexp {
 			// Operators can only appear inside an sexp.
-			return false, fmt.Errorf("unexpected token '%v'", tok)
+			return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 		}
 		fallthrough
 
@@ -244,23 +464,19 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, err
 		}
 
-		ws, err := t.tok.skipWhitespaceHelper()
+		ok, ws, err := t.tok.SkipDoubleColon()
 		if err != nil {
 			return false, err
 		}
 
-		ok, err := t.tok.skipDoubleColon()
-		if err != nil {
-			return false, err
-		}
 		if ok {
-			// val was a type annotation; remember it and keep going.
+			// val was an annotation; remember it and keep going.
 			if tok == tokenSymbol {
-				if err := verifyUnquotedSymbol(val, "type annotation"); err != nil {
+				if err := verifyUnquotedSymbol(val, "annotation"); err != nil {
 					return false, err
 				}
 			}
-			t.typeAnnotations = append(t.typeAnnotations, val)
+			t.annotations = append(t.annotations, val)
 			return false, nil
 		}
 
@@ -317,21 +533,13 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.value = SexpType
 		return true, nil
 
-	case tokenCloseBrace:
-		// No more values in this struct.
-		if t.ctx.peek() == ctxInStruct {
-			t.eof = true
-			return true, nil
-		}
-		return false, errors.New("unexpected token '}'")
-
 	case tokenCloseBracket:
 		// No more values in this list.
 		if t.ctx.peek() == ctxInList {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("unexpected token ']'")
+		return false, errors.New("ion: unexpected token ']'")
 
 	case tokenCloseParen:
 		// No more values in this sexp.
@@ -339,22 +547,25 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("unexpected token ')'")
+		return false, errors.New("ion: unexpected token ')'")
 
 	default:
-		return false, fmt.Errorf("unexpected token '%v'", tok)
+		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 	}
 }
 
+// VerifyUnquotedSymbol checks for certain 'special' values that are returned from
+// the tokenizer as symbols but cannot be used as field names or annotations.
 func verifyUnquotedSymbol(val string, ctx string) error {
 	switch val {
 	case "null", "true", "false", "nan":
-		return fmt.Errorf("cannot use unquoted keyword %v as %v", val, ctx)
+		return fmt.Errorf("ion: cannot use unquoted keyword %v as %v", val, ctx)
 	}
 	return nil
 }
 
-func (t *textReader) onSymbol(val string, tok tokenType, ws bool) error {
+// OnSymbol handles finding a symbol-token value.
+func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
@@ -389,9 +600,10 @@ func (t *textReader) onSymbol(val string, tok tokenType, ws bool) error {
 	return nil
 }
 
+// OnNull handles finding a null token.
 func (t *textReader) onNull(ws bool) (Type, error) {
 	if !ws {
-		ok, err := t.tok.skipDot()
+		ok, err := t.tok.SkipDot()
 		if err != nil {
 			return NoType, err
 		}
@@ -399,16 +611,16 @@ func (t *textReader) onNull(ws bool) (Type, error) {
 			return t.readNullType()
 		}
 	}
-
 	return NullType, nil
 }
 
+// readNullType reads the null.{this} type symbol.
 func (t *textReader) readNullType() (Type, error) {
 	if err := t.tok.Next(); err != nil {
 		return NoType, err
 	}
 	if t.tok.Token() != tokenSymbol {
-		return NoType, fmt.Errorf("unexpected token %v after null", t.tok.Token())
+		return NoType, fmt.Errorf("ion: invalid symbol null.%v", t.tok.Token())
 	}
 
 	val, err := t.tok.ReadValue(tokenSymbol)
@@ -444,11 +656,12 @@ func (t *textReader) readNullType() (Type, error) {
 	case "sexp":
 		return SexpType, nil
 	default:
-		return NoType, fmt.Errorf("invalid symbol null.%v", val)
+		return NoType, fmt.Errorf("ion: invalid symbol null.%v", val)
 	}
 }
 
-func (t *textReader) onNumber(tok tokenType) error {
+// OnNumber handles finding a number token.
+func (t *textReader) onNumber(tok token) error {
 	var valueType Type
 	var value interface{}
 
@@ -493,7 +706,7 @@ func (t *textReader) onNumber(tok tokenType) error {
 		case DecimalType:
 			value, err = parseDecimal(val)
 		default:
-			panic("unexpected type")
+			panic(fmt.Sprintf("unexpected type %v", tt))
 		}
 
 		if err != nil {
@@ -509,7 +722,7 @@ func (t *textReader) onNumber(tok tokenType) error {
 		value = math.Inf(-1)
 
 	default:
-		panic("unexpected token type")
+		panic(fmt.Sprintf("unexpected token type %v", tok))
 	}
 
 	t.state = t.stateAfterValue()
@@ -519,6 +732,7 @@ func (t *textReader) onNumber(tok tokenType) error {
 	return nil
 }
 
+// OnTimestamp handles finding a timestamp token.
 func (t *textReader) onTimestamp() error {
 	val, err := t.tok.ReadValue(tokenTimestamp)
 	if err != nil {
@@ -537,8 +751,9 @@ func (t *textReader) onTimestamp() error {
 	return nil
 }
 
+// OnLob handles finding a [bc]lob token.
 func (t *textReader) onLob() error {
-	c, _, err := t.tok.skipLobWhitespace()
+	c, err := t.tok.SkipLobWhitespace()
 	if err != nil {
 		return err
 	}
@@ -561,7 +776,7 @@ func (t *textReader) onLob() error {
 
 	} else if c == '\'' {
 		// Long clob.
-		ok, err := t.tok.isTripleQuote()
+		ok, err := t.tok.IsTripleQuote()
 		if err != nil {
 			return err
 		}
@@ -601,233 +816,9 @@ func (t *textReader) onLob() error {
 	return nil
 }
 
-func (t *textReader) Type() Type {
-	return t.valueType
-}
-
-func (t *textReader) Err() error {
-	return t.err
-}
-
-func (t *textReader) FieldName() string {
-	return t.fieldName
-}
-
-func (t *textReader) TypeAnnotations() []string {
-	return t.typeAnnotations
-}
-
-func (t *textReader) IsNull() bool {
-	return t.value == nil
-}
-
-func (t *textReader) StepIn() error {
-	if t.err != nil {
-		return t.err
-	}
-	if t.state != trsBeforeContainer {
-		return fmt.Errorf("stepin called in invalid state %v", t.state)
-	}
-
-	var ctx ctxType
-	switch t.valueType {
-	case StructType:
-		ctx = ctxInStruct
-	case ListType:
-		ctx = ctxInList
-	case SexpType:
-		ctx = ctxInSexp
-	default:
-		panic("trsBeforeContainer with unexpected valueType")
-	}
-	t.ctx.push(ctx)
-
-	if ctx == ctxInStruct {
-		t.state = trsBeforeFieldName
-	} else {
-		t.state = trsBeforeTypeAnnotations
-	}
-
-	// TODO: Make this less hacky.
-	t.tok.unfinished = false
-	return nil
-}
-
-func (t *textReader) StepOut() error {
-	if t.err != nil {
-		return t.err
-	}
-
-	ctx := t.ctx.peek()
-	if ctx == ctxAtTopLevel {
-		return errors.New("stepout called at top level")
-	}
-
-	_, err := t.tok.finishValue()
-	if err != nil {
-		t.explode(err)
-		return err
-	}
-
-	if !t.eof {
-		// Haven't seen the end of the container yet; skip until we
-		// find it.
-		switch t.ctx.peek() {
-		case ctxInStruct:
-			err = t.tok.skipStructHelper()
-		case ctxInList:
-			err = t.tok.skipListHelper()
-		case ctxInSexp:
-			err = t.tok.skipSexpHelper()
-		default:
-			panic("invalid ctx")
-		}
-
-		if err != nil {
-			t.explode(err)
-			return err
-		}
-	}
-
-	t.ctx.pop()
-	t.state = t.stateAfterValue()
-	t.valueType = NoType
-	t.value = nil
-	t.eof = false
-
-	return nil
-}
-
-func (t *textReader) BoolValue() (bool, error) {
-	if t.valueType == BoolType {
-		if t.value == nil {
-			return false, nil
-		}
-		return t.value.(bool), nil
-	}
-	return false, errors.New("value is not a bool")
-}
-
-func (t *textReader) IntSize() IntSize {
-	if t.valueType != IntType || t.value == nil {
-		return NullInt
-	}
-
-	if i, ok := t.value.(int64); ok {
-		if i > math.MaxInt32 || i < math.MinInt32 {
-			return Int64
-		}
-		return Int32
-	}
-
-	return BigInt
-}
-
-func (t *textReader) IntValue() (int, error) {
-	i, err := t.Int64Value()
-	if err != nil {
-		return 0, err
-	}
-	if i > math.MaxInt32 || i < math.MinInt32 {
-		return 0, errors.New("value out of bounds")
-	}
-	return int(i), nil
-}
-
-func (t *textReader) Int64Value() (int64, error) {
-	if t.valueType == IntType {
-		if t.value == nil {
-			return 0, nil
-		}
-
-		if i, ok := t.value.(int64); ok {
-			return i, nil
-		}
-
-		bi := t.value.(*big.Int)
-		if bi.IsInt64() {
-			return bi.Int64(), nil
-		}
-
-		return 0, errors.New("value out of bounds")
-	}
-	return 0, errors.New("value is not an int")
-}
-
-func (t *textReader) BigIntValue() (*big.Int, error) {
-	if t.valueType == IntType {
-		if t.value == nil {
-			return nil, nil
-		}
-		if i, ok := t.value.(int64); ok {
-			return big.NewInt(i), nil
-		}
-		return t.value.(*big.Int), nil
-	}
-	return nil, errors.New("value is not an int")
-}
-
-func (t *textReader) FloatValue() (float64, error) {
-	if t.valueType == FloatType {
-		if t.value == nil {
-			return 0.0, nil
-		}
-		return t.value.(float64), nil
-	}
-	// TODO: Cast ints/decimals?
-	return 0.0, errors.New("value is not a float")
-}
-
-func (t *textReader) DecimalValue() (*Decimal, error) {
-	switch t.valueType {
-	case DecimalType:
-		if t.value == nil {
-			return nil, nil
-		}
-		return t.value.(*Decimal), nil
-	}
-	// TODO: Cast floats/ints?
-	return nil, errors.New("value is not a decimal")
-}
-
-func (t *textReader) TimeValue() (time.Time, error) {
-	switch t.valueType {
-	case TimestampType:
-		if t.value == nil {
-			return time.Time{}, nil
-		}
-		return t.value.(time.Time), nil
-	}
-	return time.Time{}, errors.New("value is not a timestamp")
-}
-
-func (t *textReader) StringValue() (string, error) {
-	switch t.valueType {
-	case StringType, SymbolType:
-		if t.value == nil {
-			return "", nil
-		}
-		return t.value.(string), nil
-
-	default:
-		return "", errors.New("value is not a string")
-	}
-}
-
-func (t *textReader) ByteValue() ([]byte, error) {
-	switch t.valueType {
-	case BlobType, ClobType:
-		if t.value == nil {
-			return nil, nil
-		}
-		return t.value.([]byte), nil
-	}
-	return nil, errors.New("value is not a byte array")
-}
-
 // FinishValue finishes reading the current value, if there is one.
 func (t *textReader) finishValue() error {
-	ok, err := t.tok.finishValue()
+	ok, err := t.tok.FinishValue()
 	if err != nil {
 		return err
 	}
@@ -839,14 +830,15 @@ func (t *textReader) finishValue() error {
 	return nil
 }
 
-func (t *textReader) stateAfterValue() textReaderState {
-	switch t.ctx.peek() {
+func (t *textReader) stateAfterValue() trs {
+	ctx := t.ctx.peek()
+	switch ctx {
 	case ctxInList, ctxInStruct:
 		return trsAfterValue
 	case ctxInSexp, ctxAtTopLevel:
 		return trsBeforeTypeAnnotations
 	default:
-		panic("invalid ctx")
+		panic(fmt.Sprintf("invalid ctx %v", ctx))
 	}
 }
 

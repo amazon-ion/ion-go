@@ -185,8 +185,6 @@ func fromHex(c int) (int, error) {
 	return 0, invalidChar(c)
 }
 
-var hexChars = []byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
-
 // Write out the given character in escaped form.
 func writeEscapedChar(c byte, out io.Writer) error {
 	switch c {

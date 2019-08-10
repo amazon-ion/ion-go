@@ -7,37 +7,52 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
+)
+
+// EncoderOpts holds bit-flag options for an Encoder.
+type EncoderOpts uint
+
+const (
+	// EncodeSortMaps instructs the encoder to write map keys in sorted order.
+	EncodeSortMaps EncoderOpts = 1
 )
 
 // MarshalText marshals values to text ion.
 func MarshalText(v interface{}) ([]byte, error) {
-	buf := bytes.Buffer{}
-	m := Encoder{
-		w:        NewTextWriterOpts(&buf, OptQuietFinish),
-		sortMaps: true,
-	}
-
-	if err := m.Encode(v); err != nil {
-		return nil, err
-	}
-	if err := m.Finish(); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return marshal(func(w io.Writer) Writer {
+		return NewTextWriterOpts(w, TextWriterQuietFinish)
+	}, EncodeSortMaps, v)
 }
 
 // MarshalBinary marshals values to binary ion.
-func MarshalBinary(v interface{}, lst SymbolTable) ([]byte, error) {
-	buf := bytes.Buffer{}
-	m := NewBinaryEncoder(&buf, lst)
+func MarshalBinary(v interface{}, ssts ...SharedSymbolTable) ([]byte, error) {
+	return marshal(func(w io.Writer) Writer {
+		return NewBinaryWriter(w, ssts...)
+	}, 0, v)
+}
 
-	if err := m.Encode(v); err != nil {
+// MarshalBinaryLST marshals values to binary ion with a fixed local symbol table.
+func MarshalBinaryLST(v interface{}, lst SymbolTable) ([]byte, error) {
+	return marshal(func(w io.Writer) Writer {
+		return NewBinaryWriterLST(w, lst)
+	}, 0, v)
+}
+
+// marshal marshals a value using the given writer type.
+func marshal(wf func(io.Writer) Writer, opts EncoderOpts, v interface{}) ([]byte, error) {
+	buf := bytes.Buffer{}
+	w := wf(&buf)
+
+	e := Encoder{
+		w:    w,
+		opts: opts,
+	}
+
+	if err := e.Encode(v); err != nil {
 		return nil, err
 	}
-	if err := m.Finish(); err != nil {
+	if err := e.Finish(); err != nil {
 		return nil, err
 	}
 
@@ -46,36 +61,60 @@ func MarshalBinary(v interface{}, lst SymbolTable) ([]byte, error) {
 
 // An Encoder writes Ion values to an output stream.
 type Encoder struct {
-	w        Writer
-	sortMaps bool
+	w    Writer
+	opts EncoderOpts
 }
 
 // NewEncoder creates a new encoder.
 func NewEncoder(w Writer) *Encoder {
+	return NewEncoderOpts(w, 0)
+}
+
+// NewEncoderOpts creates a new encoder with the specified options.
+func NewEncoderOpts(w Writer, opts EncoderOpts) *Encoder {
 	return &Encoder{
+		w:    w,
+		opts: opts,
+	}
+}
+
+// NewTextEncoder creates a new text Encoder.
+func NewTextEncoder(w io.Writer) *Encoder {
+	return NewEncoder(NewTextWriter(w))
+}
+
+// NewBinaryEncoder creates a new binary Encoder.
+func NewBinaryEncoder(w io.Writer, ssts ...SharedSymbolTable) *Encoder {
+	return NewEncoder(NewBinaryWriter(w, ssts...))
+}
+
+// NewBinaryEncoderLST creates a new binary Encoder with a fixed local symbol table.
+func NewBinaryEncoderLST(w io.Writer, lst SymbolTable) *Encoder {
+	return NewEncoder(NewBinaryWriterLST(w, lst))
+}
+
+// EncodeTo encodes the given value to the given writer. It does
+// not call Finish, so is suitable for encoding values inside of
+// a partially-constructed Ion value.
+func EncodeTo(w Writer, v interface{}) error {
+	e := Encoder{
 		w: w,
 	}
+	return e.Encode(v)
 }
 
-// NewTextEncoder creates a new Encoder that marshals text Ion to the given writer.
-func NewTextEncoder(w io.Writer) *Encoder {
-	return &Encoder{
-		w:        NewTextWriter(w),
-		sortMaps: true,
+// EncodeToOpts is like EncodeTo but accepts additional opts.
+func EncodeToOpts(w Writer, opts EncoderOpts, v interface{}) error {
+	e := Encoder{
+		w:    w,
+		opts: opts,
 	}
-}
-
-// NewBinaryEncoder creates a new Encoder that marshals binary Ion to the given writer.
-func NewBinaryEncoder(w io.Writer, lst SymbolTable) *Encoder {
-	return &Encoder{
-		w:        NewBinaryWriterLST(w, lst),
-		sortMaps: false,
-	}
+	return e.Encode(v)
 }
 
 // Encode marshals the given value to Ion, writing it to the underlying writer.
 func (m *Encoder) Encode(v interface{}) error {
-	return m.marshalValue(reflect.ValueOf(v))
+	return m.encodeValue(reflect.ValueOf(v))
 }
 
 // Finish finishes writing the current Ion datagram.
@@ -83,7 +122,8 @@ func (m *Encoder) Finish() error {
 	return m.w.Finish()
 }
 
-func (m *Encoder) marshalValue(v reflect.Value) error {
+// EncodeValue recursively encodes a value.
+func (m *Encoder) encodeValue(v reflect.Value) error {
 	if !v.IsValid() {
 		m.w.WriteNull()
 		return nil
@@ -118,34 +158,37 @@ func (m *Encoder) marshalValue(v reflect.Value) error {
 		return m.w.Err()
 
 	case reflect.Interface, reflect.Ptr:
-		return m.marshalPtr(v)
+		return m.encodePtr(v)
 
 	case reflect.Struct:
-		return m.marshalStruct(v)
+		return m.encodeStruct(v)
 
 	case reflect.Map:
-		return m.marshalMap(v)
+		return m.encodeMap(v)
 
 	case reflect.Slice:
-		return m.marshalSlice(v)
+		return m.encodeSlice(v)
 
 	case reflect.Array:
-		return m.marshalArray(v)
+		return m.encodeArray(v)
 
 	default:
 		return fmt.Errorf("ion: unsupported type: %v", v.Type().String())
 	}
 }
 
-func (m *Encoder) marshalPtr(v reflect.Value) error {
+// EncodePtr encodes an Ion null if the pointer is nil, and otherwise encodes the value that
+// the pointer is pointing to.
+func (m *Encoder) encodePtr(v reflect.Value) error {
 	if v.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
 	}
-	return m.marshalValue(v.Elem())
+	return m.encodeValue(v.Elem())
 }
 
-func (m *Encoder) marshalMap(v reflect.Value) error {
+// EncodeMap encodes a map to the output writer as an Ion struct.
+func (m *Encoder) encodeMap(v reflect.Value) error {
 	if v.IsNil() {
 		m.w.WriteNull()
 		return m.w.Err()
@@ -153,18 +196,15 @@ func (m *Encoder) marshalMap(v reflect.Value) error {
 
 	m.w.BeginStruct()
 
-	keys := getKeys(v)
-	if m.sortMaps {
-		// We do this for text Ion because json.Marshal does, and it's useful for testing.
-		// For binary Ion, skip it and write things in whatever order they come back from
-		// the map.
+	keys := keysFor(v)
+	if m.opts&EncodeSortMaps != 0 {
 		sort.Slice(keys, func(i, j int) bool { return keys[i].s < keys[j].s })
 	}
 
 	for _, key := range keys {
 		m.w.FieldName(key.s)
 		value := v.MapIndex(key.v)
-		if err := m.marshalValue(value); err != nil {
+		if err := m.encodeValue(value); err != nil {
 			return err
 		}
 	}
@@ -173,12 +213,14 @@ func (m *Encoder) marshalMap(v reflect.Value) error {
 	return m.w.Err()
 }
 
+// A mapkey holds the reflective map key value as well as its stringified form.
 type mapkey struct {
 	v reflect.Value
 	s string
 }
 
-func getKeys(v reflect.Value) []mapkey {
+// KeysFor returns the stringified keys for the given map.
+func keysFor(v reflect.Value) []mapkey {
 	keys := v.MapKeys()
 	res := make([]mapkey, len(keys))
 
@@ -196,9 +238,10 @@ func getKeys(v reflect.Value) []mapkey {
 	return res
 }
 
-func (m *Encoder) marshalSlice(v reflect.Value) error {
+// EncodeSlice encodes a slice to the output writer as an appropriate Ion type.
+func (m *Encoder) encodeSlice(v reflect.Value) error {
 	if v.Type().Elem().Kind() == reflect.Uint8 {
-		return m.marshalBlob(v)
+		return m.encodeBlob(v)
 	}
 
 	if v.IsNil() {
@@ -206,10 +249,11 @@ func (m *Encoder) marshalSlice(v reflect.Value) error {
 		return m.w.Err()
 	}
 
-	return m.marshalArray(v)
+	return m.encodeArray(v)
 }
 
-func (m *Encoder) marshalBlob(v reflect.Value) error {
+// EncodeBlob encodes a []byte to the output writer as an Ion blob.
+func (m *Encoder) encodeBlob(v reflect.Value) error {
 	if v.IsNil() {
 		m.w.WriteNull()
 	} else {
@@ -218,11 +262,12 @@ func (m *Encoder) marshalBlob(v reflect.Value) error {
 	return m.w.Err()
 }
 
-func (m *Encoder) marshalArray(v reflect.Value) error {
+// EncodeArray encodes an array to the output writer as an Ion list.
+func (m *Encoder) encodeArray(v reflect.Value) error {
 	m.w.BeginList()
 
 	for i := 0; i < v.Len(); i++ {
-		if err := m.marshalValue(v.Index(i)); err != nil {
+		if err := m.encodeValue(v.Index(i)); err != nil {
 			return err
 		}
 	}
@@ -231,15 +276,14 @@ func (m *Encoder) marshalArray(v reflect.Value) error {
 	return m.w.Err()
 }
 
-var decimalType = reflect.TypeOf(Decimal{})
-
-func (m *Encoder) marshalStruct(v reflect.Value) error {
+// EncodeStruct encodes a struct to the output writer as an Ion struct.
+func (m *Encoder) encodeStruct(v reflect.Value) error {
 	t := v.Type()
 	if t == timeType {
-		return m.marshalTime(v)
+		return m.encodeTime(v)
 	}
 	if t == decimalType {
-		return m.marshalDecimal(v)
+		return m.encodeDecimal(v)
 	}
 
 	fields := fieldsFor(v.Type())
@@ -266,7 +310,7 @@ FieldLoop:
 		}
 
 		m.w.FieldName(f.name)
-		if err := m.marshalValue(fv); err != nil {
+		if err := m.encodeValue(fv); err != nil {
 			return err
 		}
 	}
@@ -275,18 +319,21 @@ FieldLoop:
 	return m.w.Err()
 }
 
-func (m *Encoder) marshalTime(v reflect.Value) error {
+// EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
+func (m *Encoder) encodeTime(v reflect.Value) error {
 	t := v.Interface().(time.Time)
 	m.w.WriteTimestamp(t)
 	return m.w.Err()
 }
 
-func (m *Encoder) marshalDecimal(v reflect.Value) error {
+// EncodeDecimal encodes an ion.Decimal to the output writer as an Ion decimal.
+func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	d := v.Addr().Interface().(*Decimal)
 	m.w.WriteDecimal(d)
 	return m.w.Err()
 }
 
+// EmptyValue returns true if the given value is the empty value for its type.
 func emptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
@@ -301,113 +348,6 @@ func emptyValue(v reflect.Value) bool {
 		return v.Float() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
-	}
-	return false
-}
-
-type field struct {
-	name      string
-	typ       reflect.Type
-	path      []int
-	omitEmpty bool
-}
-
-type fielder struct {
-	fields []field
-	index  map[string]bool
-}
-
-func fieldsFor(t reflect.Type) []field {
-	fldr := fielder{index: map[string]bool{}}
-	fldr.inspect(t, nil)
-	return fldr.fields
-}
-
-func (f *fielder) inspect(t reflect.Type, path []int) {
-	for i := 0; i < t.NumField(); i++ {
-		sf := t.Field(i)
-		if !visible(&sf) {
-			// Skip non-visible fields.
-			continue
-		}
-
-		tag := sf.Tag.Get("json")
-		if tag == "-" {
-			// Skip fields that are explicitly hidden by tag.
-			continue
-		}
-		name, opts := parseTag(tag)
-
-		newpath := make([]int, len(path)+1)
-		copy(newpath, path)
-		newpath[len(path)] = i
-
-		ft := sf.Type
-		if ft.Name() == "" && ft.Kind() == reflect.Ptr {
-			ft = ft.Elem()
-		}
-
-		if name == "" && sf.Anonymous && ft.Kind() == reflect.Struct {
-			// Dig in to the embedded struct.
-			f.inspect(ft, newpath)
-		} else {
-			// Add this named field.
-			if name == "" {
-				name = sf.Name
-			}
-
-			if f.index[name] {
-				panic(fmt.Sprintf("too many fields named %v", name))
-			}
-			f.index[name] = true
-
-			f.fields = append(f.fields, field{
-				name:      name,
-				typ:       ft,
-				path:      newpath,
-				omitEmpty: omitEmpty(opts),
-			})
-		}
-	}
-}
-
-func visible(sf *reflect.StructField) bool {
-	exported := sf.PkgPath == ""
-	if sf.Anonymous {
-		t := sf.Type
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-		}
-		if t.Kind() == reflect.Struct {
-			// Fields of embedded structs are visible even if the struct type itself is not.
-			return true
-		}
-	}
-	return exported
-}
-
-func parseTag(tag string) (string, string) {
-	if idx := strings.Index(tag, ","); idx != -1 {
-		// Ignore additional JSON options, at least for now.
-		return tag[:idx], tag[idx+1:]
-	}
-	return tag, ""
-}
-
-func omitEmpty(opts string) bool {
-	for opts != "" {
-		var o string
-
-		i := strings.Index(opts, ",")
-		if i >= 0 {
-			o, opts = opts[:i], opts[i+1:]
-		} else {
-			o, opts = opts, ""
-		}
-
-		if o == "omitempty" {
-			return true
-		}
 	}
 	return false
 }

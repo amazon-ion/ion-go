@@ -23,11 +23,11 @@ func TestWriteBinaryStruct(t *testing.T) {
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.TypeAnnotation("foo")
+		w.Annotation("foo")
 		w.BeginStruct()
 		{
 			w.FieldName("name")
-			w.TypeAnnotation("bar")
+			w.Annotation("bar")
 			w.WriteNull()
 
 			w.FieldName("max_id")
@@ -49,10 +49,10 @@ func TestWriteBinarySexp(t *testing.T) {
 		w.BeginSexp()
 		w.EndSexp()
 
-		w.TypeAnnotation("foo")
+		w.Annotation("foo")
 		w.BeginSexp()
 		{
-			w.TypeAnnotation("bar")
+			w.Annotation("bar")
 			w.WriteNull()
 
 			w.WriteInt(0)
@@ -73,10 +73,10 @@ func TestWriteBinaryList(t *testing.T) {
 		w.BeginList()
 		w.EndList()
 
-		w.TypeAnnotation("foo")
+		w.Annotation("foo")
 		w.BeginList()
 		{
-			w.TypeAnnotation("bar")
+			w.Annotation("bar")
 			w.WriteNull()
 
 			w.WriteInt(0)
@@ -93,6 +93,16 @@ func TestWriteBinaryBlob(t *testing.T) {
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteBlob([]byte{})
 		w.WriteBlob([]byte("Hello World"))
+	})
+}
+
+func TestWriteLargeBinaryBlob(t *testing.T) {
+	eval := make([]byte, 131)
+	eval[0] = 0xAE
+	eval[1] = 0x01
+	eval[2] = 0x80
+	testBinaryWriter(t, eval, func(w Writer) {
+		w.WriteBlob(make([]byte, 128))
 	})
 }
 
@@ -216,6 +226,19 @@ func TestWriteBinaryBigInts(t *testing.T) {
 	})
 }
 
+func TestWriteBinaryReallyBigInts(t *testing.T) {
+	eval := []byte{
+		0x2E, 0x01, 0x80, // 128-byte positive integer
+		0x80, // high bit set
+	}
+	eval = append(eval, make([]byte, 127)...)
+	testBinaryWriter(t, eval, func(w Writer) {
+		i := new(big.Int)
+		i = i.SetBit(i, 1023, 1)
+		w.WriteBigInt(i)
+	})
+}
+
 func TestWriteBinaryInts(t *testing.T) {
 	eval := []byte{
 		0x20,       // 0
@@ -246,7 +269,7 @@ func TestWriteBinaryBoolAnnotated(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.TypeAnnotations("name", "version")
+		w.Annotations("name", "version")
 		w.WriteBool(false)
 	})
 }

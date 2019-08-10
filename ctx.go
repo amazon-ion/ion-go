@@ -1,36 +1,65 @@
 package ion
 
-type ctxType byte
+import "fmt"
+
+// ctx is the current reader or writer context.
+type ctx uint8
 
 const (
-	ctxAtTopLevel ctxType = iota
+	ctxAtTopLevel ctx = iota
 	ctxInStruct
 	ctxInList
 	ctxInSexp
 )
 
-// ctx is a context stack.
-type ctx struct {
-	stack []ctxType
+func ctxToContainerType(c ctx) Type {
+	switch c {
+	case ctxInList:
+		return ListType
+	case ctxInSexp:
+		return SexpType
+	case ctxInStruct:
+		return StructType
+	default:
+		return NoType
+	}
+}
+
+func containerTypeToCtx(t Type) ctx {
+	switch t {
+	case ListType:
+		return ctxInList
+	case SexpType:
+		return ctxInSexp
+	case StructType:
+		return ctxInStruct
+	default:
+		panic(fmt.Sprintf("type %v is not a container type", t))
+	}
+}
+
+// ctxstack is a context stack.
+type ctxstack struct {
+	arr []ctx
 }
 
 // peek returns the current context.
-func (c *ctx) peek() ctxType {
-	if len(c.stack) == 0 {
+func (c *ctxstack) peek() ctx {
+	if len(c.arr) == 0 {
 		return ctxAtTopLevel
 	}
-	return c.stack[len(c.stack)-1]
+	return c.arr[len(c.arr)-1]
 }
 
 // push pushes a new context onto the stack.
-func (c *ctx) push(ctx ctxType) {
-	c.stack = append(c.stack, ctx)
+func (c *ctxstack) push(ctx ctx) {
+	c.arr = append(c.arr, ctx)
 }
 
 // pop pops the top context off the stack.
-func (c *ctx) pop() {
-	if len(c.stack) == 0 {
+func (c *ctxstack) pop() {
+	if len(c.arr) == 0 {
 		panic("pop called at top level")
 	}
-	c.stack = c.stack[:len(c.stack)-1]
+	c.arr = c.arr[:len(c.arr)-1]
 }

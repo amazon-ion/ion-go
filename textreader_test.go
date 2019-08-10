@@ -9,7 +9,7 @@ import (
 )
 
 func TestIgnoreValues(t *testing.T) {
-	r := NewTextReaderString("(skip ++ me / please) {skip: me, please: 0}\n[skip, me, please]\nfoo")
+	r := NewTextReaderStr("(skip ++ me / please) {skip: me, please: 0}\n[skip, me, please]\nfoo")
 
 	_next(t, r, SexpType)
 	_next(t, r, StructType)
@@ -22,7 +22,7 @@ func TestIgnoreValues(t *testing.T) {
 func TestReadSexps(t *testing.T) {
 	test := func(str string, f containerhandler) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_sexp(t, r, f)
 			_eof(t, r)
 		})
@@ -51,7 +51,7 @@ func TestReadSexps(t *testing.T) {
 func TestStructs(t *testing.T) {
 	test := func(str string, f containerhandler) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_struct(t, r, f)
 			_eof(t, r)
 		})
@@ -73,7 +73,7 @@ func TestStructs(t *testing.T) {
 }
 
 func TestMultipleStructs(t *testing.T) {
-	r := NewTextReaderString("{} {} {}")
+	r := NewTextReaderStr("{} {} {}")
 
 	for i := 0; i < 3; i++ {
 		_struct(t, r, func(t *testing.T, r Reader) {
@@ -85,7 +85,7 @@ func TestMultipleStructs(t *testing.T) {
 }
 
 func TestNullStructs(t *testing.T) {
-	r := NewTextReaderString("null.struct 'null'::{foo:bar}")
+	r := NewTextReaderStr("null.struct 'null'::{foo:bar}")
 
 	_null(t, r, StructType)
 	_nextAF(t, r, StructType, "", []string{"null"})
@@ -95,7 +95,7 @@ func TestNullStructs(t *testing.T) {
 func TestLists(t *testing.T) {
 	test := func(str string, f containerhandler) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_list(t, r, f)
 			_eof(t, r)
 		})
@@ -123,7 +123,7 @@ func TestReadNestedLists(t *testing.T) {
 		_eof(t, r)
 	}
 
-	r := NewTextReaderString("[[], [[]]]")
+	r := NewTextReaderStr("[[], [[]]]")
 
 	_list(t, r, func(t *testing.T, r Reader) {
 		_list(t, r, empty)
@@ -141,7 +141,7 @@ func TestReadNestedLists(t *testing.T) {
 func TestClobs(t *testing.T) {
 	test := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_next(t, r, ClobType)
 
 			val, err := r.ByteValue()
@@ -165,7 +165,7 @@ func TestClobs(t *testing.T) {
 func TestBlobs(t *testing.T) {
 	test := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_next(t, r, BlobType)
 
 			val, err := r.ByteValue()
@@ -188,7 +188,7 @@ func TestBlobs(t *testing.T) {
 func TestTimestamps(t *testing.T) {
 	testA := func(str string, etas []string, eval time.Time) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_nextAF(t, r, TimestampType, "", etas)
 
 			val, err := r.TimeValue()
@@ -228,7 +228,7 @@ func TestDoubles(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			ee := MustParseDecimal(eval)
 
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_nextAF(t, r, DecimalType, "", etas)
 
 			val, err := r.DecimalValue()
@@ -260,7 +260,7 @@ func TestDoubles(t *testing.T) {
 func TestFloats(t *testing.T) {
 	testA := func(str string, etas []string, eval float64) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_floatAF(t, r, "", etas, eval)
 			_eof(t, r)
 		})
@@ -282,7 +282,7 @@ func TestFloats(t *testing.T) {
 func TestInts(t *testing.T) {
 	test := func(str string, f func(*testing.T, Reader)) {
 		t.Run(str, func(t *testing.T) {
-			r := NewTextReaderString(str)
+			r := NewTextReaderStr(str)
 			_next(t, r, IntType)
 
 			f(t, r)
@@ -352,7 +352,7 @@ func TestInts(t *testing.T) {
 }
 
 func TestStrings(t *testing.T) {
-	r := NewTextReaderString(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
+	r := NewTextReaderStr(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
 
 	_stringAF(t, r, "", []string{"foo"}, "bar")
 	_string(t, r, "baz")
@@ -363,7 +363,7 @@ func TestStrings(t *testing.T) {
 }
 
 func TestSymbols(t *testing.T) {
-	r := NewTextReaderString("'null'::foo bar a::b::'baz' null.symbol")
+	r := NewTextReaderStr("'null'::foo bar a::b::'baz' null.symbol")
 
 	_symbolAF(t, r, "", []string{"null"}, "foo")
 	_symbol(t, r, "bar")
@@ -374,7 +374,7 @@ func TestSymbols(t *testing.T) {
 }
 
 func TestSpecialSymbols(t *testing.T) {
-	r := NewTextReaderString("null\nnull.struct\ntrue\nfalse\nnan")
+	r := NewTextReaderStr("null\nnull.struct\ntrue\nfalse\nnan")
 
 	_null(t, r, NullType)
 	_null(t, r, StructType)
@@ -386,7 +386,7 @@ func TestSpecialSymbols(t *testing.T) {
 }
 
 func TestOperators(t *testing.T) {
-	r := NewTextReaderString("(a*(b+c))")
+	r := NewTextReaderStr("(a*(b+c))")
 
 	_sexp(t, r, func(t *testing.T, r Reader) {
 		_symbol(t, r, "a")
@@ -402,7 +402,7 @@ func TestOperators(t *testing.T) {
 }
 
 func TestTopLevelOperators(t *testing.T) {
-	r := NewTextReaderString("a + b")
+	r := NewTextReaderStr("a + b")
 
 	_symbol(t, r, "a")
 
@@ -411,6 +411,15 @@ func TestTopLevelOperators(t *testing.T) {
 	}
 	if r.Err() == nil {
 		t.Error("no error")
+	}
+}
+
+func TestTrsToString(t *testing.T) {
+	for i := trsDone; i <= trsAfterValue+1; i++ {
+		str := i.String()
+		if str == "" {
+			t.Errorf("expected a non-empty string for trs %v", uint8(i))
+		}
 	}
 }
 
@@ -564,8 +573,8 @@ func _nextAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
 	if efn != r.FieldName() {
 		t.Errorf("expected fieldname=%v, got %v", efn, r.FieldName())
 	}
-	if !_strequals(etas, r.TypeAnnotations()) {
-		t.Errorf("expected type annotations=%v, got %v", etas, r.TypeAnnotations())
+	if !_strequals(etas, r.Annotations()) {
+		t.Errorf("expected type annotations=%v, got %v", etas, r.Annotations())
 	}
 }
 

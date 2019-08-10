@@ -8,7 +8,7 @@ import (
 func TestNext(t *testing.T) {
 	tok := tokenizeString("foo::'foo':[] 123, {})")
 
-	next := func(tt tokenType) {
+	next := func(tt token) {
 		if err := tok.Next(); err != nil {
 			t.Fatal(err)
 		}
@@ -28,7 +28,7 @@ func TestNext(t *testing.T) {
 }
 
 func TestReadSymbol(t *testing.T) {
-	test := func(str string, expected string, next tokenType) {
+	test := func(str string, expected string, next token) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			if err := tok.Next(); err != nil {
@@ -182,7 +182,7 @@ func TestIsTripleQuote(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 
-			ok, err := tok.isTripleQuote()
+			ok, err := tok.IsTripleQuote()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -254,7 +254,7 @@ func TestIsInf(t *testing.T) {
 }
 
 func TestScanForNumericType(t *testing.T) {
-	test := func(str string, ett tokenType) {
+	test := func(str string, ett token) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, err := tok.read()
@@ -549,6 +549,15 @@ func TestReadUnread(t *testing.T) {
 	read(t, tok, '\n')
 	read(t, tok, -1)
 	read(t, tok, -1)
+}
+
+func TestTokenToString(t *testing.T) {
+	for i := tokenError; i <= tokenCloseDoubleBrace+1; i++ {
+		str := i.String()
+		if str == "" {
+			t.Errorf("expected non-empty string for token %v", int(i))
+		}
+	}
 }
 
 func read(t *testing.T, tok *tokenizer, expected int) {

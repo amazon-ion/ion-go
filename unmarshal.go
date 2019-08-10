@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -20,6 +19,11 @@ var (
 func Unmarshal(data []byte, v interface{}) error {
 	// TODO: Figure out if it's text or binary instead of hardcoding text.
 	return NewDecoder(NewTextReader(bytes.NewReader(data))).DecodeTo(v)
+}
+
+// UnmarshalStr unmarshals Ion data from a string to the given object.
+func UnmarshalStr(data string, v interface{}) error {
+	return Unmarshal([]byte(data), v)
 }
 
 // A Decoder decodes go values from an Ion reader.
@@ -88,7 +92,14 @@ func (d *Decoder) decode() (interface{}, error) {
 }
 
 func (d *Decoder) decodeInt() (interface{}, error) {
-	switch d.r.IntSize() {
+	size, err := d.r.IntSize()
+	if err != nil {
+		return nil, err
+	}
+
+	switch size {
+	case NullInt:
+		return nil, nil
 	case Int32:
 		return d.r.IntValue()
 	case Int64:
@@ -352,8 +363,6 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 	}
 	return fmt.Errorf("ion: cannot decode decimal to %v", v.Type().String())
 }
-
-var timeType = reflect.TypeOf(time.Time{})
 
 func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 	val, err := d.r.TimeValue()

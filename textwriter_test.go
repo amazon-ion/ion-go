@@ -50,9 +50,9 @@ func TestEmptyStruct(t *testing.T) {
 
 func TestAnnotatedStruct(t *testing.T) {
 	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w Writer) {
-		w.TypeAnnotation("foo")
-		w.TypeAnnotation("$bar")
-		w.TypeAnnotation(".baz")
+		w.Annotation("foo")
+		w.Annotation("$bar")
+		w.Annotation(".baz")
 		w.BeginStruct()
 		w.EndStruct()
 
@@ -67,7 +67,7 @@ func TestNestedStruct(t *testing.T) {
 		w.BeginStruct()
 
 		w.FieldName("foo")
-		w.TypeAnnotation("true")
+		w.Annotation("true")
 		w.BeginStruct()
 		w.EndStruct()
 
@@ -109,11 +109,11 @@ func TestNestedLists(t *testing.T) {
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.TypeAnnotation("foo")
+		w.Annotation("foo")
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.TypeAnnotation("null")
+		w.Annotation("null")
 		w.BeginList()
 		w.EndList()
 
@@ -146,10 +146,10 @@ func TestNull(t *testing.T) {
 		w.BeginList()
 
 		w.WriteNull()
-		w.TypeAnnotation("foo")
+		w.Annotation("foo")
 		w.WriteNullWithType(NullType)
 		w.WriteNullWithType(IntType)
-		w.TypeAnnotation("bar")
+		w.Annotation("bar")
 		w.WriteNullWithType(SexpType)
 
 		w.EndList()
@@ -164,12 +164,12 @@ func TestBool(t *testing.T) {
 		w.BeginSexp()
 
 		w.WriteBool(false)
-		w.TypeAnnotation("123")
+		w.Annotation("123")
 		w.WriteBool(true)
 
 		w.EndSexp()
 
-		w.TypeAnnotation("false")
+		w.Annotation("false")
 		w.WriteBool(false)
 	})
 }
@@ -179,7 +179,7 @@ func TestWriteTextInt(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
 
-		w.TypeAnnotation("zero")
+		w.Annotation("zero")
 		w.WriteInt(0)
 		w.WriteInt(1)
 		w.WriteInt(-1)
@@ -205,7 +205,7 @@ func TestWriteTextBigInt(t *testing.T) {
 		one.SetInt64(1)
 		val.Add(&max, &one)
 
-		w.TypeAnnotation("big")
+		w.Annotation("big")
 		w.WriteBigInt(&val)
 
 		w.EndList()
@@ -267,9 +267,9 @@ func TestSymbol(t *testing.T) {
 		w.WriteSymbol("null")
 
 		w.FieldName("f")
-		w.TypeAnnotation("a")
-		w.TypeAnnotation("b")
-		w.TypeAnnotation("u")
+		w.Annotation("a")
+		w.Annotation("b")
+		w.Annotation("u")
 		w.WriteSymbol("lo🇺🇸")
 
 		w.EndStruct()
@@ -285,7 +285,7 @@ func TestString(t *testing.T) {
 
 		w.BeginSexp()
 		w.WriteString("\\\"\n\"\\")
-		w.TypeAnnotation("zany")
+		w.Annotation("zany")
 		w.WriteString("🤪")
 		w.EndSexp()
 
@@ -298,7 +298,7 @@ func TestBlob(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBlob([]byte{0, 1, 2, 0xFD, 0xFE, 0xFF})
 		w.WriteBlob([]byte("Hello World"))
-		w.TypeAnnotation("empty")
+		w.Annotation("empty")
 		w.WriteBlob(nil)
 	})
 }
@@ -311,19 +311,6 @@ func TestClob(t *testing.T) {
 		w.WriteClob([]byte("world"))
 		w.FieldName("bits")
 		w.WriteClob([]byte{0, 1, 0xFE, 0xFF})
-		w.EndStruct()
-	})
-}
-
-func TestWriteValue(t *testing.T) {
-	expected := "{s:{B:2,A:1}}"
-	testTextWriter(t, expected, func(w Writer) {
-		w.BeginStruct()
-		w.FieldName("s")
-		w.WriteValue(struct {
-			B int
-			A int
-		}{2, 1})
 		w.EndStruct()
 	})
 }

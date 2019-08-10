@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-type tokenType int
+type token int
 
 const (
-	tokenError tokenType = iota
+	tokenError token = iota
 
 	tokenEOF // End of input
 
@@ -45,7 +45,7 @@ const (
 	tokenCloseDoubleBrace // }}
 )
 
-func (t tokenType) String() string {
+func (t token) String() string {
 	switch t {
 	case tokenError:
 		return "<error>"
@@ -113,7 +113,7 @@ type tokenizer struct {
 	in     *bufio.Reader
 	buffer []int
 
-	token      tokenType
+	token      token
 	unfinished bool
 }
 
@@ -132,7 +132,7 @@ func tokenize(in io.Reader) *tokenizer {
 }
 
 // Token returns the type of the current token.
-func (t *tokenizer) Token() tokenType {
+func (t *tokenizer) Token() token {
 	return t.token
 }
 
@@ -153,7 +153,7 @@ func (t *tokenizer) Next() error {
 
 	switch {
 	case c == -1:
-		return t.finish(tokenEOF, true)
+		return t.ok(tokenEOF, true)
 
 	case c == ':':
 		c2, err := t.peek()
@@ -162,9 +162,9 @@ func (t *tokenizer) Next() error {
 		}
 		if c2 == ':' {
 			t.read()
-			return t.finish(tokenDoubleColon, false)
+			return t.ok(tokenDoubleColon, false)
 		}
-		return t.finish(tokenColon, false)
+		return t.ok(tokenColon, false)
 
 	case c == '{':
 		c2, err := t.peek()
@@ -173,27 +173,27 @@ func (t *tokenizer) Next() error {
 		}
 		if c2 == '{' {
 			t.read()
-			return t.finish(tokenOpenDoubleBrace, true)
+			return t.ok(tokenOpenDoubleBrace, true)
 		}
-		return t.finish(tokenOpenBrace, true)
+		return t.ok(tokenOpenBrace, true)
 
 	case c == '}':
-		return t.finish(tokenCloseBrace, false)
+		return t.ok(tokenCloseBrace, false)
 
 	case c == '[':
-		return t.finish(tokenOpenBracket, true)
+		return t.ok(tokenOpenBracket, true)
 
 	case c == ']':
-		return t.finish(tokenCloseBracket, false)
+		return t.ok(tokenCloseBracket, false)
 
 	case c == '(':
-		return t.finish(tokenOpenParen, true)
+		return t.ok(tokenOpenParen, true)
 
 	case c == ')':
-		return t.finish(tokenCloseParen, false)
+		return t.ok(tokenCloseParen, false)
 
 	case c == ',':
-		return t.finish(tokenComma, false)
+		return t.ok(tokenComma, false)
 
 	case c == '.':
 		c2, err := t.peek()
@@ -202,19 +202,19 @@ func (t *tokenizer) Next() error {
 		}
 		if isOperatorChar(c2) {
 			t.unread(c)
-			return t.finish(tokenSymbolOperator, true)
+			return t.ok(tokenSymbolOperator, true)
 		}
-		return t.finish(tokenDot, false)
+		return t.ok(tokenDot, false)
 
 	case c == '\'':
-		ok, err := t.isTripleQuote()
+		ok, err := t.IsTripleQuote()
 		if err != nil {
 			return err
 		}
 		if ok {
-			return t.finish(tokenLongString, true)
+			return t.ok(tokenLongString, true)
 		}
-		return t.finish(tokenSymbolQuoted, true)
+		return t.ok(tokenSymbolQuoted, true)
 
 	case c == '+':
 		ok, err := t.isInf(c)
@@ -222,10 +222,10 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if ok {
-			return t.finish(tokenFloatInf, false)
+			return t.ok(tokenFloatInf, false)
 		}
 		t.unread(c)
-		return t.finish(tokenSymbolOperator, true)
+		return t.ok(tokenSymbolOperator, true)
 
 	case c == '-':
 		c2, err := t.peek()
@@ -245,7 +245,7 @@ func (t *tokenizer) Next() error {
 			}
 			t.unread(c2)
 			t.unread(c)
-			return t.finish(tt, true)
+			return t.ok(tt, true)
 		}
 
 		ok, err := t.isInf(c)
@@ -253,22 +253,22 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if ok {
-			return t.finish(tokenFloatMinusInf, false)
+			return t.ok(tokenFloatMinusInf, false)
 		}
 
 		t.unread(c)
-		return t.finish(tokenSymbolOperator, true)
+		return t.ok(tokenSymbolOperator, true)
 
 	case isOperatorChar(c):
 		t.unread(c)
-		return t.finish(tokenSymbolOperator, true)
+		return t.ok(tokenSymbolOperator, true)
 
 	case c == '"':
-		return t.finish(tokenString, true)
+		return t.ok(tokenString, true)
 
 	case isIdentifierStart(c):
 		t.unread(c)
-		return t.finish(tokenSymbol, true)
+		return t.ok(tokenSymbol, true)
 
 	case isDigit(c):
 		tt, err := t.scanForNumericType(c)
@@ -277,21 +277,45 @@ func (t *tokenizer) Next() error {
 		}
 
 		t.unread(c)
-		return t.finish(tt, true)
+		return t.ok(tt, true)
 
 	default:
 		return invalidChar(c)
 	}
 }
 
-func (t *tokenizer) finish(token tokenType, more bool) error {
-	t.token = token
+func (t *tokenizer) ok(tok token, more bool) error {
+	t.token = tok
 	t.unfinished = more
 	return nil
 }
 
+// SetFinished marks the current token finished (indicating that the caller has
+// chosen to step in to a list, sexp, or struct and Next should not skip over its
+// contents in search of the next token).
+func (t *tokenizer) SetFinished() {
+	t.unfinished = false
+}
+
+// FinishValue skips to the end of the current value if (and only if)
+// we're currently in the middle of reading it.
+func (t *tokenizer) FinishValue() (bool, error) {
+	if !t.unfinished {
+		return false, nil
+	}
+
+	c, err := t.skipValue()
+	if err != nil {
+		return true, err
+	}
+
+	t.unread(c)
+	t.unfinished = false
+	return true, nil
+}
+
 // ReadValue reads the value of a token of the given type.
-func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
+func (t *tokenizer) ReadValue(tok token) (string, error) {
 	var str string
 	var err error
 
@@ -313,7 +337,7 @@ func (t *tokenizer) ReadValue(tok tokenType) (string, error) {
 	case tokenTimestamp:
 		str, err = t.readTimestamp()
 	default:
-		panic("unsupported token type")
+		panic(fmt.Sprintf("unsupported token type %v", tok))
 	}
 
 	if err != nil {
@@ -981,7 +1005,7 @@ func (t *tokenizer) ReadLongClob() (string, error) {
 }
 
 // IsTripleQuote returns true if this is a triple-quote sequence (''').
-func (t *tokenizer) isTripleQuote() (bool, error) {
+func (t *tokenizer) IsTripleQuote() (bool, error) {
 	// We've just read a '\'', check if the next two are too.
 	cs, err := t.peekN(2)
 	if err == io.EOF {
@@ -1036,7 +1060,7 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 // out binary (0b...), hex (0x...), and timestamps (....-) via this
 // method. There are a couple other cases where we *could* distinguish,
 // but it's unclear that it's worth it.
-func (t *tokenizer) scanForNumericType(c int) (tokenType, error) {
+func (t *tokenizer) scanForNumericType(c int) (token, error) {
 	if !isDigit(c) {
 		panic("scanForNumericType with non-digit")
 	}
