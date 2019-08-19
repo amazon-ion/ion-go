@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // trs is the state of the text reader.
@@ -45,14 +43,8 @@ func (s trs) String() string {
 type textReader struct {
 	tok   tokenizer
 	state trs
-	ctx   ctxstack
-	eof   bool
-	err   error
 
-	fieldName   string
-	annotations []string
-	valueType   Type
-	value       interface{}
+	reader
 
 	debug bool
 }
@@ -99,10 +91,7 @@ func (t *textReader) Next() bool {
 		fmt.Println("ion: state after finish =", t.state)
 	}
 
-	t.fieldName = ""
-	t.annotations = nil
-	t.valueType = NoType
-	t.value = nil
+	t.clear()
 
 	// Loop until we've consumed enough tokens to know what the next value is.
 	for {
@@ -139,225 +128,6 @@ func (t *textReader) Next() bool {
 			return !t.eof
 		}
 	}
-}
-
-// Err returns the current error.
-func (t *textReader) Err() error {
-	return t.err
-}
-
-// Type returns the current value's type.
-func (t *textReader) Type() Type {
-	return t.valueType
-}
-
-// IsNull returns true if the current value is null.
-func (t *textReader) IsNull() bool {
-	return t.valueType != NoType && t.value == nil
-}
-
-// FieldName returns the current value's field name.
-func (t *textReader) FieldName() string {
-	return t.fieldName
-}
-
-// Annotations returns the current value's annotations.
-func (t *textReader) Annotations() []string {
-	return t.annotations
-}
-
-// StepIn steps in to a container.
-func (t *textReader) StepIn() error {
-	if t.err != nil {
-		return t.err
-	}
-	if t.state != trsBeforeContainer {
-		return errors.New("ion: StepIn called when not on a container")
-	}
-
-	ctx := containerTypeToCtx(t.valueType)
-	t.ctx.push(ctx)
-
-	if ctx == ctxInStruct {
-		t.state = trsBeforeFieldName
-	} else {
-		t.state = trsBeforeTypeAnnotations
-	}
-
-	t.tok.SetFinished()
-	return nil
-}
-
-// StepOut steps out of a container.
-func (t *textReader) StepOut() error {
-	if t.err != nil {
-		return t.err
-	}
-
-	ctx := t.ctx.peek()
-	if ctx == ctxAtTopLevel {
-		return errors.New("ion: StepOut called at top level")
-	}
-	ctype := ctxToContainerType(ctx)
-
-	// Finish off whatever value *inside* the container that we're currently reading.
-	_, err := t.tok.FinishValue()
-	if err != nil {
-		t.explode(err)
-		return err
-	}
-
-	// If we haven't seen the end of the container yet, skip values until we find it.
-	if !t.eof {
-		if err := t.tok.SkipContainerContents(ctype); err != nil {
-			t.explode(err)
-			return err
-		}
-	}
-
-	t.ctx.pop()
-	t.state = t.stateAfterValue()
-	t.valueType = NoType
-	t.value = nil
-	t.eof = false
-
-	return nil
-}
-
-// BoolValue returns the current value as a bool.
-func (t *textReader) BoolValue() (bool, error) {
-	if t.valueType == BoolType {
-		if t.value == nil {
-			return false, nil
-		}
-		return t.value.(bool), nil
-	}
-	return false, errors.New("ion: value is not a bool")
-}
-
-// IntSize returns the size of the current int value.
-func (t *textReader) IntSize() (IntSize, error) {
-	if t.valueType != IntType {
-		return NullInt, errors.New("ion: value is not an int")
-	}
-	if t.value == nil {
-		return NullInt, nil
-	}
-
-	if i, ok := t.value.(int64); ok {
-		if i > math.MaxInt32 || i < math.MinInt32 {
-			return Int64, nil
-		}
-		return Int32, nil
-	}
-
-	return BigInt, nil
-}
-
-// IntValue returns the current value as an int.
-func (t *textReader) IntValue() (int, error) {
-	i, err := t.Int64Value()
-	if err != nil {
-		return 0, err
-	}
-	if i > math.MaxInt32 || i < math.MinInt32 {
-		return 0, errors.New("ion: int value out of bounds")
-	}
-	return int(i), nil
-}
-
-// Int64Value returns the current value as an int64.
-func (t *textReader) Int64Value() (int64, error) {
-	if t.valueType == IntType {
-		if t.value == nil {
-			return 0, nil
-		}
-
-		if i, ok := t.value.(int64); ok {
-			return i, nil
-		}
-
-		bi := t.value.(*big.Int)
-		if bi.IsInt64() {
-			return bi.Int64(), nil
-		}
-
-		return 0, errors.New("ion: int value out of bounds")
-	}
-	return 0, errors.New("ion: value is not an int")
-}
-
-// BigIntValue returns the current value as a big int.
-func (t *textReader) BigIntValue() (*big.Int, error) {
-	if t.valueType == IntType {
-		if t.value == nil {
-			return nil, nil
-		}
-		if i, ok := t.value.(int64); ok {
-			return big.NewInt(i), nil
-		}
-		return t.value.(*big.Int), nil
-	}
-	return nil, errors.New("ion: value is not an int")
-}
-
-// FloatValue returns the current value as a float.
-func (t *textReader) FloatValue() (float64, error) {
-	if t.valueType == FloatType {
-		if t.value == nil {
-			return 0.0, nil
-		}
-		return t.value.(float64), nil
-	}
-	return 0.0, errors.New("ion: value is not a float")
-}
-
-// DecimalValue returns the current value as a Decimal.
-func (t *textReader) DecimalValue() (*Decimal, error) {
-	switch t.valueType {
-	case DecimalType:
-		if t.value == nil {
-			return nil, nil
-		}
-		return t.value.(*Decimal), nil
-	}
-	return nil, errors.New("ion: value is not a decimal")
-}
-
-// TimeValue returns the current value as a time.
-func (t *textReader) TimeValue() (time.Time, error) {
-	switch t.valueType {
-	case TimestampType:
-		if t.value == nil {
-			return time.Time{}, nil
-		}
-		return t.value.(time.Time), nil
-	}
-	return time.Time{}, errors.New("ion: value is not a timestamp")
-}
-
-// StringValue returns the current value as a string.
-func (t *textReader) StringValue() (string, error) {
-	switch t.valueType {
-	case StringType, SymbolType:
-		if t.value == nil {
-			return "", nil
-		}
-		return t.value.(string), nil
-	}
-	return "", errors.New("ion: value is not a string")
-}
-
-// ByteValue returns the current value as a byte slice.
-func (t *textReader) ByteValue() ([]byte, error) {
-	switch t.valueType {
-	case BlobType, ClobType:
-		if t.value == nil {
-			return nil, nil
-		}
-		return t.value.([]byte), nil
-	}
-	return nil, errors.New("ion: value is not a byte array")
 }
 
 // NextAfterValue moves to the next value when we're in the
@@ -552,6 +322,65 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 	default:
 		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
 	}
+}
+
+// StepIn steps in to a container.
+func (t *textReader) StepIn() error {
+	if t.err != nil {
+		return t.err
+	}
+	if t.state != trsBeforeContainer {
+		return errors.New("ion: StepIn called when not on a container")
+	}
+
+	ctx := containerTypeToCtx(t.valueType)
+	t.ctx.push(ctx)
+
+	if ctx == ctxInStruct {
+		t.state = trsBeforeFieldName
+	} else {
+		t.state = trsBeforeTypeAnnotations
+	}
+
+	t.clear()
+
+	t.tok.SetFinished()
+	return nil
+}
+
+// StepOut steps out of a container.
+func (t *textReader) StepOut() error {
+	if t.err != nil {
+		return t.err
+	}
+
+	ctx := t.ctx.peek()
+	if ctx == ctxAtTopLevel {
+		return errors.New("ion: StepOut called at top level")
+	}
+	ctype := ctxToContainerType(ctx)
+
+	// Finish off whatever value *inside* the container that we're currently reading.
+	_, err := t.tok.FinishValue()
+	if err != nil {
+		t.explode(err)
+		return err
+	}
+
+	// If we haven't seen the end of the container yet, skip values until we find it.
+	if !t.eof {
+		if err := t.tok.SkipContainerContents(ctype); err != nil {
+			t.explode(err)
+			return err
+		}
+	}
+
+	t.ctx.pop()
+	t.state = t.stateAfterValue()
+	t.clear()
+	t.eof = false
+
+	return nil
 }
 
 // VerifyUnquotedSymbol checks for certain 'special' values that are returned from

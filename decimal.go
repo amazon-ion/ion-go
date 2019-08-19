@@ -25,6 +25,11 @@ func NewDecimal(n *big.Int, exp int) *Decimal {
 	}
 }
 
+// NewDecimalInt creates a new decimal whose value is equal to n.
+func NewDecimalInt(n int64) *Decimal {
+	return NewDecimal(big.NewInt(n), 0)
+}
+
 // MustParseDecimal parses the given string into a decimal object,
 // panicing on error.
 func MustParseDecimal(in string) *Decimal {

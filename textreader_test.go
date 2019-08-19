@@ -223,7 +223,7 @@ func TestTimestamps(t *testing.T) {
 	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
 }
 
-func TestDoubles(t *testing.T) {
+func TestDecimals(t *testing.T) {
 	testA := func(str string, etas []string, eval string) {
 		t.Run(str, func(t *testing.T) {
 			ee := MustParseDecimal(eval)
@@ -466,6 +466,87 @@ func _containerAF(t *testing.T, r Reader, et Type, efn string, etas []string, f 
 	}
 }
 
+func _int(t *testing.T, r Reader, eval int) {
+	_intAF(t, r, "", nil, eval)
+}
+
+func _intAF(t *testing.T, r Reader, efn string, etas []string, eval int) {
+	_nextAF(t, r, IntType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.int", eval)
+	}
+
+	size, err := r.IntSize()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != Int32 {
+		t.Errorf("expected size=Int32, got %v", size)
+	}
+
+	val, err := r.IntValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _int64(t *testing.T, r Reader, eval int64) {
+	_int64AF(t, r, "", nil, eval)
+}
+
+func _int64AF(t *testing.T, r Reader, efn string, etas []string, eval int64) {
+	_nextAF(t, r, IntType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.int", eval)
+	}
+
+	size, err := r.IntSize()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != Int64 {
+		t.Errorf("expected size=Int64, got %v", size)
+	}
+
+	val, err := r.Int64Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _bigInt(t *testing.T, r Reader, eval *big.Int) {
+	_bigIntAF(t, r, "", nil, eval)
+}
+
+func _bigIntAF(t *testing.T, r Reader, efn string, etas []string, eval *big.Int) {
+	_nextAF(t, r, IntType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.int", eval)
+	}
+
+	size, err := r.IntSize()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != BigInt {
+		t.Errorf("expected size=BigInt, got %v", size)
+	}
+
+	val, err := r.BigIntValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.Cmp(eval) != 0 {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
 func _float(t *testing.T, r Reader, eval float64) {
 	_floatAF(t, r, "", nil, eval)
 }
@@ -486,6 +567,26 @@ func _floatAF(t *testing.T, r Reader, efn string, etas []string, eval float64) {
 			t.Errorf("expected %v, got %v", eval, val)
 		}
 	} else if eval != val {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _decimal(t *testing.T, r Reader, eval *Decimal) {
+	_decimalAF(t, r, "", nil, eval)
+}
+
+func _decimalAF(t *testing.T, r Reader, efn string, etas []string, eval *Decimal) {
+	_nextAF(t, r, DecimalType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.decimal", eval)
+	}
+
+	val, err := r.DecimalValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !eval.Equal(val) {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
 }

@@ -3,9 +3,12 @@ package ion
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 )
 
 type bss uint8
@@ -24,7 +27,8 @@ const (
 	bitcodeEOF
 	bitcodeBVM
 	bitcodeNull
-	bitcodeBool
+	bitcodeFalse
+	bitcodeTrue
 	bitcodeInt
 	bitcodeNegInt
 	bitcodeFloat
@@ -49,8 +53,10 @@ func (b bitcode) String() string {
 		return "eof"
 	case bitcodeBVM:
 		return "bvm"
-	case bitcodeBool:
-		return "bool"
+	case bitcodeFalse:
+		return "false"
+	case bitcodeTrue:
+		return "true"
 	case bitcodeInt:
 		return "int"
 	case bitcodeNegInt:
@@ -82,37 +88,6 @@ func (b bitcode) String() string {
 	default:
 		return fmt.Sprintf("<invalid bitcode 0x%2X>", uint8(b))
 	}
-}
-
-type bitnode struct {
-	code bitcode
-	end  uint64
-}
-
-type bitstack struct {
-	arr []bitnode
-}
-
-func (b *bitstack) empty() bool {
-	return len(b.arr) == 0
-}
-
-func (b *bitstack) peek() bitnode {
-	if len(b.arr) == 0 {
-		return bitnode{}
-	}
-	return b.arr[len(b.arr)-1]
-}
-
-func (b *bitstack) push(code bitcode, end uint64) {
-	b.arr = append(b.arr, bitnode{code, end})
-}
-
-func (b *bitstack) pop() {
-	if len(b.arr) == 0 {
-		panic("pop called on empty bitstack")
-	}
-	b.arr = b.arr[:len(b.arr)-1]
 }
 
 type bitstream struct {
@@ -190,18 +165,39 @@ func (b *bitstream) Next() error {
 
 	b.state = bssOnValue
 
-	// This value is actually a BVM. It's invalid if we're not at the top level.
-	if code == bitcodeAnnotation && len == 0 {
-		if !b.stack.empty() {
-			return errors.New("ion: BVM in a container")
+	if code == bitcodeAnnotation {
+		switch len {
+		case 0:
+			// This value is actually a BVM. It's invalid if we're not at the top level.
+			if !b.stack.empty() {
+				return errors.New("ion: BVM in a container")
+			}
+			b.code = bitcodeBVM
+			b.len = 3
+			return nil
+
+		case 0x0F:
+			// No such thing as a null annotation.
+			return fmt.Errorf("ion: invalid tag byte: 0x%X", c)
 		}
-		b.code = bitcodeBVM
-		b.len = 3
-		return nil
 	}
 
-	// This value is actually a null.
+	// Booleans are a bit special.
+	if code == bitcodeFalse {
+		switch len {
+		case 0, 0x0F:
+			break
+		case 1:
+			code = bitcodeTrue
+			len = 0
+		default:
+			// Other forms of bool are invalid.
+			return fmt.Errorf("ion: invalid tag byte: 0x%X", c)
+		}
+	}
+
 	if len == 0x0F {
+		// This value is actually a null.
 		b.code = code
 		b.null = true
 		return nil
@@ -236,13 +232,8 @@ func (b *bitstream) SkipValue() error {
 			if err := b.skip(b.len); err != nil {
 				return err
 			}
-
-			if b.stack.peek().code == bitcodeStruct {
-				b.state = bssBeforeFieldID
-			} else {
-				b.state = bssBeforeValue
-			}
 		}
+		b.state = b.stateAfterValue()
 	}
 
 	b.code = bitcodeNone
@@ -282,16 +273,13 @@ func (b *bitstream) StepOut() error {
 	}
 
 	diff := cur.end - b.pos
-	if err := b.skip(diff); err != nil {
-		return err
+	if diff > 0 {
+		if err := b.skip(diff); err != nil {
+			return err
+		}
 	}
 
-	if b.stack.peek().code == bitcodeStruct {
-		b.state = bssBeforeFieldID
-	} else {
-		b.state = bssBeforeValue
-	}
-
+	b.state = b.stateAfterValue()
 	b.code = bitcodeNone
 	b.null = false
 	b.len = 0
@@ -389,6 +377,144 @@ func (b *bitstream) ReadFieldID() (uint64, error) {
 	return id, nil
 }
 
+func (b *bitstream) ReadInt() (interface{}, error) {
+	switch b.code {
+	case bitcodeInt, bitcodeNegInt:
+	default:
+		return "", errors.New("ion: not an integer")
+	}
+
+	bs, err := b.readN(b.len)
+	if err != nil {
+		return "", err
+	}
+
+	var ret interface{}
+	switch {
+	case len(bs) == 0:
+		// Special case for zero.
+		ret = int64(0)
+
+	case len(bs) < 8, (len(bs) == 8 && bs[0]&0x80 == 0):
+		// It'll fit in an int64.
+		i := int64(0)
+		for _, b := range bs {
+			i <<= 8
+			i |= int64(b)
+		}
+		if b.code == bitcodeNegInt {
+			i = -i
+		}
+		ret = i
+
+	default:
+		// Need to go big.Int.
+		i := new(big.Int).SetBytes(bs)
+		if b.code == bitcodeNegInt {
+			i = i.Neg(i)
+		}
+		ret = i
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	return ret, nil
+}
+
+func (b *bitstream) ReadFloat() (float64, error) {
+	if b.code != bitcodeFloat {
+		return 0, errors.New("ion: not a float")
+	}
+
+	bs, err := b.readN(b.len)
+	if err != nil {
+		return 0, err
+	}
+
+	var ret float64
+	switch len(bs) {
+	case 0:
+		ret = 0
+
+	case 4:
+		ui := binary.BigEndian.Uint32(bs)
+		ret = float64(math.Float32frombits(ui))
+
+	case 8:
+		ui := binary.BigEndian.Uint64(bs)
+		ret = math.Float64frombits(ui)
+
+	default:
+		return 0, errors.New("ion: invalid float size")
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	return ret, nil
+}
+
+func (b *bitstream) ReadDecimal() (*Decimal, error) {
+	if b.code != bitcodeDecimal {
+		return nil, errors.New("ion: not a decimal")
+	}
+	if b.len == 0 {
+		return NewDecimalInt(0), nil
+	}
+
+	exp, explen, err := b.readVarIntLen(b.len)
+	if err != nil {
+		return nil, err
+	}
+
+	coef := new(big.Int)
+
+	coeflen := b.len - explen
+	if coeflen > 0 {
+		bs, err := b.readN(coeflen)
+		if err != nil {
+			return nil, err
+		}
+
+		neg := (bs[0]&0x80 != 0)
+		bs[0] &= 0x7F
+		if bs[0] == 0 {
+			bs = bs[1:]
+		}
+
+		coef.SetBytes(bs)
+		if neg {
+			coef.Neg(coef)
+		}
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	return NewDecimal(coef, int(exp)), nil
+}
+
+func (b *bitstream) ReadString() (string, error) {
+	if b.code != bitcodeString {
+		return "", errors.New("ion: not a string")
+	}
+
+	bs, err := b.readN(b.len)
+	if err != nil {
+		return "", err
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	return string(bs), nil
+}
+
 func (b *bitstream) readVarUint() (uint64, error) {
 	r, _, err := b.readVarUintLen(10)
 	return r, err
@@ -407,15 +533,60 @@ func (b *bitstream) readVarUintLen(max uint64) (uint64, uint64, error) {
 			return 0, 0, errors.New("ion: unexpected end of input")
 		}
 
+		r <<= 7
+		r ^= uint64(c & 0x7F)
 		l++
 
-		r = (r << 7) ^ uint64(c&0x7F)
 		if c&0x80 != 0 {
 			return r, l, nil
 		}
 
 		if l == max {
 			return 0, 0, errors.New("ion: varuint too large")
+		}
+	}
+}
+
+func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
+	c, err := b.read()
+	if err != nil {
+		return 0, 0, err
+	}
+	if c == -1 {
+		return 0, 0, errors.New("ion: unexpected end of input")
+	}
+
+	sign := int64(1)
+	if c&0x40 != 0 {
+		sign = -1
+	}
+
+	r := int64(c & 0x3F)
+	l := uint64(1)
+
+	if c&0x80 != 0 {
+		return r * sign, l, nil
+	}
+
+	for {
+		c, err := b.read()
+		if err != nil {
+			return 0, 0, err
+		}
+		if c == -1 {
+			return 0, 0, errors.New("ion: unexpected end of input")
+		}
+
+		r <<= 7
+		r ^= int64(c & 0x7F)
+		l++
+
+		if c&0x80 != 0 {
+			return r * sign, l, nil
+		}
+
+		if l == max {
+			return 0, 0, errors.New("ion: varint too large")
 		}
 	}
 }
@@ -435,9 +606,16 @@ func (b *bitstream) skipVarUint() error {
 	}
 }
 
+func (b *bitstream) stateAfterValue() bss {
+	if b.stack.peek().code == bitcodeStruct {
+		return bssBeforeFieldID
+	}
+	return bssBeforeValue
+}
+
 var bitcodes = []bitcode{
 	bitcodeNull,       // 0x00
-	bitcodeBool,       // 0x10
+	bitcodeFalse,      // 0x10
 	bitcodeInt,        // 0x20
 	bitcodeNegInt,     // 0x30
 	bitcodeFloat,      // 0x40
@@ -465,6 +643,24 @@ func parseTag(c int) (bitcode, uint64) {
 	return code, uint64(low)
 }
 
+func (b *bitstream) readN(n uint64) ([]byte, error) {
+	if n == 0 {
+		return nil, nil
+	}
+
+	bs := make([]byte, n)
+	_, err := b.in.Read(bs)
+	if err == io.EOF {
+		return nil, errors.New("ion: unexpected end of input")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	b.pos += n
+	return bs, nil
+}
+
 func (b *bitstream) read() (int, error) {
 	c, err := b.in.ReadByte()
 	if err == io.EOF {
@@ -485,4 +681,35 @@ func (b *bitstream) skip(n uint64) error {
 	}
 	b.pos += n
 	return err
+}
+
+type bitnode struct {
+	code bitcode
+	end  uint64
+}
+
+type bitstack struct {
+	arr []bitnode
+}
+
+func (b *bitstack) empty() bool {
+	return len(b.arr) == 0
+}
+
+func (b *bitstack) peek() bitnode {
+	if len(b.arr) == 0 {
+		return bitnode{}
+	}
+	return b.arr[len(b.arr)-1]
+}
+
+func (b *bitstack) push(code bitcode, end uint64) {
+	b.arr = append(b.arr, bitnode{code, end})
+}
+
+func (b *bitstack) pop() {
+	if len(b.arr) == 0 {
+		panic("pop called on empty bitstack")
+	}
+	b.arr = b.arr[:len(b.arr)-1]
 }
