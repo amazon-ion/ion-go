@@ -96,24 +96,23 @@ func (s *sst) FindByID(id int) (string, bool) {
 func (s *sst) WriteTo(w Writer) error {
 	w.Annotation("$ion_shared_symbol_table")
 	w.BeginStruct()
+	{
+		w.FieldName("name")
+		w.WriteString(s.name)
 
-	w.FieldName("name")
-	w.WriteString(s.name)
+		w.FieldName("version")
+		w.WriteInt(int64(s.version))
 
-	w.FieldName("version")
-	w.WriteInt(int64(s.version))
-
-	w.FieldName("symbols")
-	w.BeginList()
-
-	for _, sym := range s.symbols {
-		w.WriteString(sym)
+		w.FieldName("symbols")
+		w.BeginList()
+		{
+			for _, sym := range s.symbols {
+				w.WriteString(sym)
+			}
+		}
+		w.EndList()
 	}
-
-	w.EndList() // symbols
-
-	w.EndStruct()
-	return w.Err()
+	return w.EndStruct()
 }
 
 func (s *sst) String() string {
@@ -321,12 +320,10 @@ func (t *lst) WriteTo(w Writer) error {
 		for _, sym := range t.symbols {
 			w.WriteString(sym)
 		}
-
 		w.EndList()
 	}
 
-	w.EndStruct()
-	return w.Err()
+	return w.EndStruct()
 }
 
 func (t *lst) String() string {

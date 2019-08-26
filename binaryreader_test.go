@@ -199,8 +199,10 @@ func TestReadBinaryDecimals(t *testing.T) {
 
 func TestReadBinaryFloats(t *testing.T) {
 	r := readBinary([]byte{
-		0x40,                                                 // 0
-		0x4F,                                                 // null.float
+		0x40,                         // 0
+		0x4F,                         // null.float
+		0x44, 0x7F, 0x7F, 0xFF, 0xFF, // MaxFloat32
+		0x44, 0xFF, 0x7F, 0xFF, 0xFF, // -MaxFloat32
 		0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MaxFloat64
 		0x48, 0xFF, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // -MaxFloat64
 		0x48, 0x7F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // +inf
@@ -210,6 +212,8 @@ func TestReadBinaryFloats(t *testing.T) {
 
 	_float(t, r, 0)
 	_null(t, r, FloatType)
+	_float(t, r, math.MaxFloat32)
+	_float(t, r, -math.MaxFloat32)
 	_float(t, r, math.MaxFloat64)
 	_float(t, r, -math.MaxFloat64)
 	_float(t, r, math.Inf(1))
@@ -254,6 +258,24 @@ func TestReadBinaryBools(t *testing.T) {
 	_bool(t, r, false)
 	_bool(t, r, true)
 	_null(t, r, BoolType)
+	_eof(t, r)
+}
+
+func TestReadBinaryNulls(t *testing.T) {
+	r := readBinary([]byte{
+		0x00,       // 1-byte NOP
+		0x0F,       // null
+		0x01, 0xFF, // 2-byte NOP
+		0xE3, 0x81, 0x81, 0x0F, // $ion::null
+		0x0E, 0x8F, // 16-byte NOP
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0xE4, 0x82, 0xEE, 0xEF, 0x0F, // foo::bar::null
+	})
+
+	_null(t, r, NullType)
+	_nullAF(t, r, NullType, "", []string{"$ion"})
+	_nullAF(t, r, NullType, "", []string{"foo", "bar"})
 	_eof(t, r)
 }
 

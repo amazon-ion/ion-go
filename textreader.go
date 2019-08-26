@@ -51,17 +51,21 @@ type textReader struct {
 
 // NewTextReader creates a new text reader.
 func NewTextReader(in io.Reader) Reader {
-	return &textReader{
-		tok: tokenizer{
-			in: bufio.NewReader(in),
-		},
-		state: trsBeforeTypeAnnotations,
-	}
+	return newTextReaderBuf(bufio.NewReader(in))
 }
 
 // NewTextReaderStr creates a new text reader from a string.
 func NewTextReaderStr(str string) Reader {
 	return NewTextReader(strings.NewReader(str))
+}
+
+func newTextReaderBuf(in *bufio.Reader) Reader {
+	return &textReader{
+		tok: tokenizer{
+			in: in,
+		},
+		state: trsBeforeTypeAnnotations,
+	}
 }
 
 // SymbolTable returns the current symbol table.

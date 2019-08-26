@@ -306,18 +306,18 @@ func TestWriteBinaryNulls(t *testing.T) {
 
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteNull()
-		w.WriteNullWithType(BoolType)
-		w.WriteNullWithType(IntType)
-		w.WriteNullWithType(FloatType)
-		w.WriteNullWithType(DecimalType)
-		w.WriteNullWithType(TimestampType)
-		w.WriteNullWithType(SymbolType)
-		w.WriteNullWithType(StringType)
-		w.WriteNullWithType(ClobType)
-		w.WriteNullWithType(BlobType)
-		w.WriteNullWithType(ListType)
-		w.WriteNullWithType(SexpType)
-		w.WriteNullWithType(StructType)
+		w.WriteNullType(BoolType)
+		w.WriteNullType(IntType)
+		w.WriteNullType(FloatType)
+		w.WriteNullType(DecimalType)
+		w.WriteNullType(TimestampType)
+		w.WriteNullType(SymbolType)
+		w.WriteNullType(StringType)
+		w.WriteNullType(ClobType)
+		w.WriteNullType(BlobType)
+		w.WriteNullType(ListType)
+		w.WriteNullType(SexpType)
+		w.WriteNullType(StructType)
 	})
 }
 
@@ -377,8 +377,8 @@ func writeBinary(t *testing.T, f func(w Writer)) []byte {
 
 	f(w)
 
-	if w.Err() != nil {
-		t.Fatal(w.Err())
+	if err := w.Finish(); err != nil {
+		t.Fatal(err)
 	}
 
 	return buf.Bytes()

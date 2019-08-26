@@ -1,11 +1,26 @@
 package ion
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"math"
 	"math/big"
 	"time"
 )
+
+// NewReader creates a new Ion reader of the appropriate type by peeking
+// at the first several bytes of input for a binary version marker.
+func NewReader(in io.Reader) Reader {
+	br := bufio.NewReader(in)
+
+	bs, err := br.Peek(4)
+	if err == nil && bs[0] == 0xE0 && bs[3] == 0xEA {
+		return newBinaryReaderBuf(br, nil)
+	}
+
+	return newTextReaderBuf(br)
+}
 
 // A reader holds common implementation stuff to both the text and binary readers.
 type reader struct {

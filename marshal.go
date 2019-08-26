@@ -132,30 +132,24 @@ func (m *Encoder) encodeValue(v reflect.Value) error {
 	t := v.Type()
 	switch t.Kind() {
 	case reflect.Bool:
-		m.w.WriteBool(v.Bool())
-		return m.w.Err()
+		return m.w.WriteBool(v.Bool())
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		m.w.WriteInt(v.Int())
-		return m.w.Err()
+		return m.w.WriteInt(v.Int())
 
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
-		m.w.WriteInt(int64(v.Uint()))
-		return m.w.Err()
+		return m.w.WriteInt(int64(v.Uint()))
 
 	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
 		i := big.Int{}
 		i.SetUint64(v.Uint())
-		m.w.WriteBigInt(&i)
-		return m.w.Err()
+		return m.w.WriteBigInt(&i)
 
 	case reflect.Float32, reflect.Float64:
-		m.w.WriteFloat(v.Float())
-		return m.w.Err()
+		return m.w.WriteFloat(v.Float())
 
 	case reflect.String:
-		m.w.WriteString(v.String())
-		return m.w.Err()
+		return m.w.WriteString(v.String())
 
 	case reflect.Interface, reflect.Ptr:
 		return m.encodePtr(v)
@@ -181,8 +175,7 @@ func (m *Encoder) encodeValue(v reflect.Value) error {
 // the pointer is pointing to.
 func (m *Encoder) encodePtr(v reflect.Value) error {
 	if v.IsNil() {
-		m.w.WriteNull()
-		return m.w.Err()
+		return m.w.WriteNull()
 	}
 	return m.encodeValue(v.Elem())
 }
@@ -190,8 +183,7 @@ func (m *Encoder) encodePtr(v reflect.Value) error {
 // EncodeMap encodes a map to the output writer as an Ion struct.
 func (m *Encoder) encodeMap(v reflect.Value) error {
 	if v.IsNil() {
-		m.w.WriteNull()
-		return m.w.Err()
+		return m.w.WriteNull()
 	}
 
 	m.w.BeginStruct()
@@ -209,8 +201,7 @@ func (m *Encoder) encodeMap(v reflect.Value) error {
 		}
 	}
 
-	m.w.EndStruct()
-	return m.w.Err()
+	return m.w.EndStruct()
 }
 
 // A mapkey holds the reflective map key value as well as its stringified form.
@@ -245,8 +236,7 @@ func (m *Encoder) encodeSlice(v reflect.Value) error {
 	}
 
 	if v.IsNil() {
-		m.w.WriteNull()
-		return m.w.Err()
+		return m.w.WriteNull()
 	}
 
 	return m.encodeArray(v)
@@ -255,11 +245,9 @@ func (m *Encoder) encodeSlice(v reflect.Value) error {
 // EncodeBlob encodes a []byte to the output writer as an Ion blob.
 func (m *Encoder) encodeBlob(v reflect.Value) error {
 	if v.IsNil() {
-		m.w.WriteNull()
-	} else {
-		m.w.WriteBlob(v.Bytes())
+		return m.w.WriteNull()
 	}
-	return m.w.Err()
+	return m.w.WriteBlob(v.Bytes())
 }
 
 // EncodeArray encodes an array to the output writer as an Ion list.
@@ -272,8 +260,7 @@ func (m *Encoder) encodeArray(v reflect.Value) error {
 		}
 	}
 
-	m.w.EndList()
-	return m.w.Err()
+	return m.w.EndList()
 }
 
 // EncodeStruct encodes a struct to the output writer as an Ion struct.
@@ -315,22 +302,19 @@ FieldLoop:
 		}
 	}
 
-	m.w.EndStruct()
-	return m.w.Err()
+	return m.w.EndStruct()
 }
 
 // EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
 func (m *Encoder) encodeTime(v reflect.Value) error {
 	t := v.Interface().(time.Time)
-	m.w.WriteTimestamp(t)
-	return m.w.Err()
+	return m.w.WriteTimestamp(t)
 }
 
 // EncodeDecimal encodes an ion.Decimal to the output writer as an Ion decimal.
 func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	d := v.Addr().Interface().(*Decimal)
-	m.w.WriteDecimal(d)
-	return m.w.Err()
+	return m.w.WriteDecimal(d)
 }
 
 // EmptyValue returns true if the given value is the empty value for its type.

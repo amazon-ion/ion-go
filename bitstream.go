@@ -102,12 +102,12 @@ type bitstream struct {
 	len  uint64
 }
 
-func (b *bitstream) Init(in io.Reader) {
-	b.in = bufio.NewReader(in)
+func (b *bitstream) Init(in *bufio.Reader) {
+	b.in = in
 }
 
 func (b *bitstream) InitBytes(in []byte) {
-	b.Init(bytes.NewReader(in))
+	b.in = bufio.NewReader(bytes.NewReader(in))
 }
 
 func (b *bitstream) Code() bitcode {
@@ -504,8 +504,11 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	utc := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], int(nsecs), time.UTC)
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
 
+	utc := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], int(nsecs), time.UTC)
 	return utc.In(time.FixedZone("fixed", int(offset)*60)), nil
 }
 

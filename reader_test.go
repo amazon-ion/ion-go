@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -122,17 +121,7 @@ func testReadFile(t *testing.T, path string, d drainfunc) {
 	}
 	defer file.Close()
 
-	var r Reader
-
-	if strings.HasSuffix(path, ".ion") {
-		r = NewTextReader(file)
-		// r.(*textReader).debug = true
-	} else if strings.HasSuffix(path, ".10n") {
-		// Binary ion not yet supported.
-		return
-	} else {
-		t.Fatal("unexpected suffix on file", path)
-	}
+	r := NewReader(file)
 
 	d(t, r, path)
 }

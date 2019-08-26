@@ -100,3 +100,12 @@ func TestBitstream(t *testing.T) {
 	next(bitcodeEOF, false, 0)
 	next(bitcodeEOF, false, 0)
 }
+
+func TestBitcodeString(t *testing.T) {
+	for i := bitcodeNone; i <= bitcodeAnnotation+1; i++ {
+		str := i.String()
+		if str == "" {
+			t.Errorf("expected non-empty string for bitcode %v", uint8(i))
+		}
+	}
+}

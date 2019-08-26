@@ -1,6 +1,8 @@
 package ion
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,19 +18,19 @@ type binaryReader struct {
 
 // NewBinaryReader creates a new binary reader.
 func NewBinaryReader(in io.Reader, cat *Catalog) Reader {
-	r := &binaryReader{
-		cat: cat,
-	}
-	r.bits.Init(in)
-	return r
+	return newBinaryReaderBuf(bufio.NewReader(in), cat)
 }
 
 // NewBinaryReaderBytes creates a new binary reader for the given bytes.
 func NewBinaryReaderBytes(in []byte, cat *Catalog) Reader {
+	return NewBinaryReader(bytes.NewReader(in), cat)
+}
+
+func newBinaryReaderBuf(in *bufio.Reader, cat *Catalog) Reader {
 	r := &binaryReader{
 		cat: cat,
 	}
-	r.bits.InitBytes(in)
+	r.bits.Init(in)
 	return r
 }
 
@@ -75,6 +77,15 @@ func (r *binaryReader) next() (bool, error) {
 	case bitcodeAnnotation:
 		err := r.readAnnotations()
 		return false, err
+
+	case bitcodeNull:
+		if !r.bits.Null() {
+			// NOP padding; skip it and keep going.
+			err := r.bits.SkipValue()
+			return false, err
+		}
+		r.valueType = NullType
+		return true, nil
 
 	case bitcodeFalse, bitcodeTrue:
 		r.valueType = BoolType

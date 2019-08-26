@@ -10,8 +10,7 @@ import (
 
 func TestTopLevelFieldName(t *testing.T) {
 	writeText(func(w Writer) {
-		w.FieldName("foo")
-		if w.Err() == nil {
+		if err := w.FieldName("foo"); err == nil {
 			t.Error("expected an error")
 		}
 	})
@@ -19,30 +18,15 @@ func TestTopLevelFieldName(t *testing.T) {
 
 func TestEmptyStruct(t *testing.T) {
 	testTextWriter(t, "{}", func(w Writer) {
-		if w.InStruct() {
-			t.Error("already in struct")
+		if err := w.BeginStruct(); err != nil {
+			t.Fatal(err)
 		}
 
-		w.BeginStruct()
-		if w.Err() != nil {
-			t.Fatal(w.Err())
+		if err := w.EndStruct(); err != nil {
+			t.Fatal(err)
 		}
 
-		if !w.InStruct() {
-			t.Error("not in struct after begin")
-		}
-
-		w.EndStruct()
-		if w.Err() != nil {
-			t.Fatal(w.Err())
-		}
-
-		if w.InStruct() {
-			t.Error("still in struct after end")
-		}
-
-		w.EndStruct()
-		if w.Err() == nil {
+		if err := w.EndStruct(); err == nil {
 			t.Fatal("no error from ending struct too many times")
 		}
 	})
@@ -54,10 +38,10 @@ func TestAnnotatedStruct(t *testing.T) {
 		w.Annotation("$bar")
 		w.Annotation(".baz")
 		w.BeginStruct()
-		w.EndStruct()
+		err := w.EndStruct()
 
-		if w.Err() != nil {
-			t.Fatal(w.Err())
+		if err != nil {
+			t.Fatal(err)
 		}
 	})
 }
@@ -81,22 +65,15 @@ func TestNestedStruct(t *testing.T) {
 
 func TestEmptyList(t *testing.T) {
 	testTextWriter(t, "[]", func(w Writer) {
-		w.BeginList()
-		if w.Err() != nil {
-			t.Fatal(w.Err())
+		if err := w.BeginList(); err != nil {
+			t.Fatal(err)
 		}
 
-		if w.InStruct() {
-			t.Error("instruct returns true in a list")
+		if err := w.EndList(); err != nil {
+			t.Fatal(err)
 		}
 
-		w.EndList()
-		if w.Err() != nil {
-			t.Fatal(w.Err())
-		}
-
-		w.EndList()
-		if w.Err() == nil {
+		if err := w.EndList(); err == nil {
 			t.Error("no error calling endlist at top level")
 		}
 	})
@@ -140,17 +117,30 @@ func TestWriteSexps(t *testing.T) {
 	})
 }
 
-func TestNull(t *testing.T) {
-	expected := "[null,foo::null,null.int,bar::null.sexp]"
+func TestNulls(t *testing.T) {
+	expected := "[null,foo::null.null,null.bool,null.int,null.float,null.decimal," +
+		"null.timestamp,null.symbol,null.string,null.clob,null.blob," +
+		"null.list,'null'::null.sexp,null.struct]"
+
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginList()
 
 		w.WriteNull()
 		w.Annotation("foo")
-		w.WriteNullWithType(NullType)
-		w.WriteNullWithType(IntType)
-		w.Annotation("bar")
-		w.WriteNullWithType(SexpType)
+		w.WriteNullType(NullType)
+		w.WriteNullType(BoolType)
+		w.WriteNullType(IntType)
+		w.WriteNullType(FloatType)
+		w.WriteNullType(DecimalType)
+		w.WriteNullType(TimestampType)
+		w.WriteNullType(SymbolType)
+		w.WriteNullType(StringType)
+		w.WriteNullType(ClobType)
+		w.WriteNullType(BlobType)
+		w.WriteNullType(ListType)
+		w.Annotation("null")
+		w.WriteNullType(SexpType)
+		w.WriteNullType(StructType)
 
 		w.EndList()
 	})
