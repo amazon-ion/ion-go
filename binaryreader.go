@@ -116,6 +116,28 @@ func (r *binaryReader) next() (bool, error) {
 		}
 		return true, nil
 
+	case bitcodeTimestamp:
+		r.valueType = TimestampType
+		if !r.bits.Null() {
+			val, err := r.bits.ReadTimestamp()
+			if err != nil {
+				return false, err
+			}
+			r.value = val
+		}
+		return true, nil
+
+	case bitcodeSymbol:
+		r.valueType = SymbolType
+		if !r.bits.Null() {
+			id, err := r.bits.ReadSymbol()
+			if err != nil {
+				return false, err
+			}
+			r.value = r.resolve(id)
+		}
+		return true, nil
+
 	case bitcodeString:
 		r.valueType = StringType
 		if !r.bits.Null() {
@@ -127,10 +149,39 @@ func (r *binaryReader) next() (bool, error) {
 		}
 		return true, nil
 
+	case bitcodeClob:
+		r.valueType = ClobType
+		if !r.bits.Null() {
+			val, err := r.bits.ReadBytes()
+			if err != nil {
+				return false, err
+			}
+			r.value = val
+		}
+		return true, nil
+
+	case bitcodeBlob:
+		r.valueType = BlobType
+		if !r.bits.Null() {
+			val, err := r.bits.ReadBytes()
+			if err != nil {
+				return false, err
+			}
+			r.value = val
+		}
+		return true, nil
+
 	case bitcodeList:
 		r.valueType = ListType
 		if !r.bits.Null() {
 			r.value = ListType
+		}
+		return true, nil
+
+	case bitcodeSexp:
+		r.valueType = SexpType
+		if !r.bits.Null() {
+			r.value = SexpType
 		}
 		return true, nil
 

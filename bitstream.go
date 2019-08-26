@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"time"
 )
 
 type bss uint8
@@ -465,37 +466,106 @@ func (b *bitstream) ReadDecimal() (*Decimal, error) {
 		return NewDecimalInt(0), nil
 	}
 
-	exp, explen, err := b.readVarIntLen(b.len)
+	d, err := b.readDecimal(b.len)
 	if err != nil {
 		return nil, err
-	}
-
-	coef := new(big.Int)
-
-	coeflen := b.len - explen
-	if coeflen > 0 {
-		bs, err := b.readN(coeflen)
-		if err != nil {
-			return nil, err
-		}
-
-		neg := (bs[0]&0x80 != 0)
-		bs[0] &= 0x7F
-		if bs[0] == 0 {
-			bs = bs[1:]
-		}
-
-		coef.SetBytes(bs)
-		if neg {
-			coef.Neg(coef)
-		}
 	}
 
 	b.state = b.stateAfterValue()
 	b.code = bitcodeNone
 	b.len = 0
 
+	return d, nil
+}
+
+func (b *bitstream) ReadTimestamp() (time.Time, error) {
+	if b.code != bitcodeTimestamp {
+		return time.Time{}, errors.New("ion: not a timestamp")
+	}
+
+	offset, olen, err := b.readVarIntLen(b.len)
+	if err != nil {
+		return time.Time{}, err
+	}
+	b.len -= olen
+
+	ts := []int{1, 1, 1, 0, 0, 0}
+	for i := 0; b.len > 0 && i < 6; i++ {
+		val, vlen, err := b.readVarUintLen(b.len)
+		if err != nil {
+			return time.Time{}, err
+		}
+		b.len -= vlen
+		ts[i] = int(val)
+	}
+
+	nsecs, err := b.readNsecs()
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	utc := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], int(nsecs), time.UTC)
+
+	return utc.In(time.FixedZone("fixed", int(offset)*60)), nil
+}
+
+func (b *bitstream) readNsecs() (int64, error) {
+	d, err := b.readDecimal(b.len)
+	if err != nil {
+		return 0, err
+	}
+	return d.ShiftL(9).Trunc()
+}
+
+func (b *bitstream) readDecimal(len uint64) (*Decimal, error) {
+	exp := int64(0)
+	coef := new(big.Int)
+
+	if len > 0 {
+		val, vlen, err := b.readVarIntLen(len)
+		if err != nil {
+			return nil, err
+		}
+		exp = val
+		len -= vlen
+	}
+
+	if len > 0 {
+		if err := b.readIntTo(len, coef); err != nil {
+			return nil, err
+		}
+	}
+
 	return NewDecimal(coef, int(exp)), nil
+}
+
+func (b *bitstream) ReadSymbol() (uint64, error) {
+	if b.code != bitcodeSymbol {
+		return 0, errors.New("ion: not a symbol")
+	}
+
+	bs, err := b.readN(b.len)
+	if err != nil {
+		return 0, err
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	if len(bs) == 0 {
+		return 0, nil
+	}
+	if len(bs) > 8 {
+		return 0, errors.New("ion: symbol id out of range")
+	}
+
+	ret := uint64(0)
+	for _, b := range bs {
+		ret <<= 8
+		ret |= uint64(b)
+	}
+	return ret, nil
 }
 
 func (b *bitstream) ReadString() (string, error) {
@@ -513,6 +583,43 @@ func (b *bitstream) ReadString() (string, error) {
 	b.len = 0
 
 	return string(bs), nil
+}
+
+func (b *bitstream) ReadBytes() ([]byte, error) {
+	if b.code != bitcodeClob && b.code != bitcodeBlob {
+		return nil, errors.New("ion: not a lob")
+	}
+
+	bs, err := b.readN(b.len)
+	if err != nil {
+		return nil, err
+	}
+
+	b.state = b.stateAfterValue()
+	b.code = bitcodeNone
+	b.len = 0
+
+	return bs, nil
+}
+
+func (b *bitstream) readIntTo(len uint64, ret *big.Int) error {
+	bs, err := b.readN(len)
+	if err != nil {
+		return err
+	}
+
+	neg := (bs[0]&0x80 != 0)
+	bs[0] &= 0x7F
+	if bs[0] == 0 {
+		bs = bs[1:]
+	}
+
+	ret.SetBytes(bs)
+	if neg {
+		ret.Neg(ret)
+	}
+
+	return nil
 }
 
 func (b *bitstream) readVarUint() (uint64, error) {

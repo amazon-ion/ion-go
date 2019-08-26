@@ -129,6 +129,30 @@ func TestNeg(t *testing.T) {
 	test("-1.2d-3", "1.2d-3")
 }
 
+func TestTrunc(t *testing.T) {
+	test := func(a string, eval int64) {
+		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
+			aa := MustParseDecimal(a)
+			val, err := aa.Trunc()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if val != eval {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("0.", 0)
+	test("0.01", 0)
+	test("1.", 1)
+	test("-1.", -1)
+	test("1.01", 1)
+	test("-1.01", -1)
+	test("101", 101)
+	test("1d3", 1000)
+}
+
 func addF(a, b *Decimal) *Decimal { return a.Add(b) }
 func subF(a, b *Decimal) *Decimal { return a.Sub(b) }
 func mulF(a, b *Decimal) *Decimal { return a.Mul(b) }

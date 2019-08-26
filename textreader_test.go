@@ -591,6 +591,26 @@ func _decimalAF(t *testing.T, r Reader, efn string, etas []string, eval *Decimal
 	}
 }
 
+func _timestamp(t *testing.T, r Reader, eval time.Time) {
+	_timestampAF(t, r, "", nil, eval)
+}
+
+func _timestampAF(t *testing.T, r Reader, efn string, etas []string, eval time.Time) {
+	_nextAF(t, r, TimestampType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.timestamp", eval)
+	}
+
+	val, err := r.TimeValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !val.Equal(eval) {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
 func _string(t *testing.T, r Reader, eval string) {
 	_stringAF(t, r, "", nil, eval)
 }
@@ -644,6 +664,44 @@ func _boolAF(t *testing.T, r Reader, efn string, etas []string, eval bool) {
 		t.Fatal(err)
 	}
 	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _clob(t *testing.T, r Reader, eval []byte) {
+	_clobAF(t, r, "", nil, eval)
+}
+
+func _clobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
+	_nextAF(t, r, ClobType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.clob", eval)
+	}
+
+	val, err := r.ByteValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(val, eval) {
+		t.Errorf("expected %v, got %v", eval, val)
+	}
+}
+
+func _blob(t *testing.T, r Reader, eval []byte) {
+	_blobAF(t, r, "", nil, eval)
+}
+
+func _blobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
+	_nextAF(t, r, BlobType, efn, etas)
+	if r.IsNull() {
+		t.Fatalf("expected %v, got null.blob", eval)
+	}
+
+	val, err := r.ByteValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(val, eval) {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
 }

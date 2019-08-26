@@ -221,6 +221,24 @@ func (d *Decimal) upscale(scale int) *Decimal {
 	}
 }
 
+// Trunc attempts to truncate this decimal to an int64. Use at your own risk.
+func (d *Decimal) Trunc() (int64, error) {
+	if d.scale < 0 {
+		// TODO: safety in case scale is very small?
+		d = d.upscale(0)
+	}
+
+	str := d.n.String()
+
+	want := len(str) - d.scale
+	if want <= 0 {
+		return 0, nil
+	}
+
+	trunc := str[:want]
+	return strconv.ParseInt(trunc, 10, 64)
+}
+
 // Truncate returns a new decimal, truncated to the given number of
 // decimal digits of precision. It does not round, so 19.Truncate(1)
 // = 1d1.

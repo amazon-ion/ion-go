@@ -1,24 +1,178 @@
 package ion
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"testing"
+	"time"
 )
 
 func TestReadBinaryStructs(t *testing.T) {
 	r := readBinary([]byte{
-		0xD0,                   // {}
 		0xDF,                   // null.struct
+		0xD0,                   // {}
 		0xEA, 0x81, 0xEE, 0xD7, // foo::{
-		0x84, 0xE3, 0x81, 0xEF, 0x0F, // name:bar::null,
+		0x84, 0xE3, 0x81, 0xEF, 0xD0, // name:bar::{},
 		0x88, 0x20, // max_id:0
 		// }
 	})
 
-	_next(t, r, StructType)
 	_null(t, r, StructType)
-	_nextAF(t, r, StructType, "", []string{"foo"})
+	_struct(t, r, func(t *testing.T, r Reader) {
+		_eof(t, r)
+	})
+	_structAF(t, r, "", []string{"foo"}, func(t *testing.T, r Reader) {
+		_structAF(t, r, "name", []string{"bar"}, func(t *testing.T, r Reader) {
+			_eof(t, r)
+		})
+		_intAF(t, r, "max_id", nil, 0)
+	})
+	_eof(t, r)
+}
+
+func TestReadBinarySexps(t *testing.T) {
+	r := readBinary([]byte{
+		0xCF,
+		0xC3, 0xC1, 0xC0, 0xC0,
+	})
+
+	_null(t, r, SexpType)
+	_sexp(t, r, func(t *testing.T, r Reader) {
+		_sexp(t, r, func(t *testing.T, r Reader) {
+			_sexp(t, r, func(t *testing.T, r Reader) {
+				_eof(t, r)
+			})
+		})
+		_sexp(t, r, func(t *testing.T, r Reader) {
+			_eof(t, r)
+		})
+		_eof(t, r)
+	})
+	_eof(t, r)
+}
+
+func TestReadBinaryLists(t *testing.T) {
+	r := readBinary([]byte{
+		0xBF,
+		0xB3, 0xB1, 0xB0, 0xB0,
+	})
+
+	_null(t, r, ListType)
+	_list(t, r, func(t *testing.T, r Reader) {
+		_list(t, r, func(t *testing.T, r Reader) {
+			_list(t, r, func(t *testing.T, r Reader) {
+				_eof(t, r)
+			})
+		})
+		_list(t, r, func(t *testing.T, r Reader) {
+			_eof(t, r)
+		})
+		_eof(t, r)
+	})
+	_eof(t, r)
+}
+
+func TestReadBinaryBlobs(t *testing.T) {
+	r := readBinary([]byte{
+		0xAF,
+		0xA0,
+		0xA1, 'a',
+		0xAE, 0x96,
+		'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', ' ', 'b', 'u', 't',
+		' ', 'l', 'o', 'n', 'g', 'e', 'r',
+	})
+
+	_null(t, r, BlobType)
+	_blob(t, r, []byte(""))
+	_blob(t, r, []byte("a"))
+	_blob(t, r, []byte("hello world but longer"))
+	_eof(t, r)
+}
+
+func TestReadBinaryClobs(t *testing.T) {
+	r := readBinary([]byte{
+		0x9F,
+		0x90,      // {{}}
+		0x91, 'a', // {{a}}
+		0x9E, 0x96,
+		'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', ' ', 'b', 'u', 't',
+		' ', 'l', 'o', 'n', 'g', 'e', 'r',
+	})
+
+	_null(t, r, ClobType)
+	_clob(t, r, []byte(""))
+	_clob(t, r, []byte("a"))
+	_clob(t, r, []byte("hello world but longer"))
+	_eof(t, r)
+}
+
+func TestReadBinaryStrings(t *testing.T) {
+	r := readBinary([]byte{
+		0x8F,
+		0x80,      // ""
+		0x81, 'a', // "a"
+		0x8E, 0x96,
+		'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', ' ', 'b', 'u', 't',
+		' ', 'l', 'o', 'n', 'g', 'e', 'r',
+	})
+
+	_null(t, r, StringType)
+	_string(t, r, "")
+	_string(t, r, "a")
+	_string(t, r, "hello world but longer")
+	_eof(t, r)
+}
+
+func TestReadBinarySymbols(t *testing.T) {
+	r := readBinary([]byte{
+		0x7F,
+		0x70,       // $0
+		0x71, 0x01, // $ion
+		0x71, 0x0A, // $10
+		0x71, 0x6E, // foo
+		0xE4, 0x81, 0xEE, 0x71, 0x6F, // foo::bar
+		0x78, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // ${maxint64}
+	})
+
+	_null(t, r, SymbolType)
+	_symbol(t, r, "$0")
+	_symbol(t, r, "$ion")
+	_symbol(t, r, "$10")
+	_symbol(t, r, "foo")
+	_symbolAF(t, r, "", []string{"foo"}, "bar")
+	_symbol(t, r, fmt.Sprintf("$%v", uint64(math.MaxUint64)))
+	_eof(t, r)
+}
+
+func TestReadBinaryTimestamps(t *testing.T) {
+	r := readBinary([]byte{
+		0x6F,
+		0x62, 0x80, 0x81, // 0001T
+		0x63, 0x80, 0x81, 0x81, // 0001-01T
+		0x64, 0x80, 0x81, 0x81, 0x81, // 0001-01-01T
+		0x66, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, // 0001-01-01T00:00Z
+		0x67, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80, // 0001-01-01T00:00:00Z
+		0x6E, 0x8E, // 0x0E-bit timestamp
+		0x04, 0xD8, // offset: +600 minutes (+10:00)
+		0x0F, 0xE3, // year:   2019
+		0x88,                   // month:  8
+		0x84,                   // day:    4
+		0x88,                   // hour:   8 utc (18 local)
+		0x8F,                   // minute: 15
+		0xAB,                   // second: 43
+		0xC9,                   // exp:    -9
+		0x33, 0x77, 0xDF, 0x70, // nsec:   863494000
+	})
+
+	_null(t, r, TimestampType)
+
+	for i := 0; i < 5; i++ {
+		_timestamp(t, r, time.Time{})
+	}
+
+	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	_timestamp(t, r, nowish)
 	_eof(t, r)
 }
 
