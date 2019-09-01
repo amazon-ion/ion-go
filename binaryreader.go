@@ -8,11 +8,11 @@ import (
 
 // A binaryReader reads binary Ion.
 type binaryReader struct {
+	reader
+
 	bits bitstream
 	cat  *Catalog
 	lst  SymbolTable
-
-	reader
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat *Catalog) Reader {

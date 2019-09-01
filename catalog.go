@@ -32,3 +32,10 @@ func (c *Catalog) NewReader(in io.Reader) Reader {
 func (c *Catalog) NewReaderBytes(in []byte) Reader {
 	return newReader(bytes.NewReader(in), c)
 }
+
+// Unmarshal unmarshals Ion data using this catalog.
+func (c *Catalog) Unmarshal(data []byte, v interface{}) error {
+	r := c.NewReader(bytes.NewReader(data))
+	d := NewDecoder(r)
+	return d.DecodeTo(v)
+}

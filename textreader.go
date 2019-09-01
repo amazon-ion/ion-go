@@ -39,12 +39,10 @@ func (s trs) String() string {
 
 // A textReader is a Reader that reads text Ion.
 type textReader struct {
-	tok   tokenizer
-	state trs
-
 	reader
 
-	debug bool
+	tok   tokenizer
+	state trs
 }
 
 func newTextReaderBuf(in *bufio.Reader) Reader {
@@ -68,19 +66,11 @@ func (t *textReader) Next() bool {
 		return false
 	}
 
-	if t.debug {
-		fmt.Println("ion: state =", t.state)
-	}
-
 	// If we haven't fully read the current value, skip over it.
 	err := t.finishValue()
 	if err != nil {
 		t.explode(err)
 		return false
-	}
-
-	if t.debug {
-		fmt.Println("ion: state after finish =", t.state)
 	}
 
 	t.clear()
@@ -90,10 +80,6 @@ func (t *textReader) Next() bool {
 		if err := t.tok.Next(); err != nil {
 			t.explode(err)
 			return false
-		}
-
-		if t.debug {
-			fmt.Println("ion: read token ", t.tok.Token())
 		}
 
 		var done bool

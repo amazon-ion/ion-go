@@ -20,34 +20,44 @@ const (
 
 // MarshalText marshals values to text ion.
 func MarshalText(v interface{}) ([]byte, error) {
-	return marshal(func(w io.Writer) Writer {
-		return NewTextWriterOpts(w, TextWriterQuietFinish)
-	}, EncodeSortMaps, v)
+	buf := bytes.Buffer{}
+	w := NewTextWriterOpts(&buf, TextWriterQuietFinish)
+	e := Encoder{
+		w:    w,
+		opts: EncodeSortMaps,
+	}
+
+	if err := e.Encode(v); err != nil {
+		return nil, err
+	}
+	if err := e.Finish(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // MarshalBinary marshals values to binary ion.
 func MarshalBinary(v interface{}, ssts ...SharedSymbolTable) ([]byte, error) {
-	return marshal(func(w io.Writer) Writer {
-		return NewBinaryWriter(w, ssts...)
-	}, 0, v)
+	buf := bytes.Buffer{}
+	w := NewBinaryWriter(&buf, ssts...)
+	e := Encoder{w: w}
+
+	if err := e.Encode(v); err != nil {
+		return nil, err
+	}
+	if err := e.Finish(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // MarshalBinaryLST marshals values to binary ion with a fixed local symbol table.
 func MarshalBinaryLST(v interface{}, lst SymbolTable) ([]byte, error) {
-	return marshal(func(w io.Writer) Writer {
-		return NewBinaryWriterLST(w, lst)
-	}, 0, v)
-}
-
-// marshal marshals a value using the given writer type.
-func marshal(wf func(io.Writer) Writer, opts EncoderOpts, v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
-	w := wf(&buf)
-
-	e := Encoder{
-		w:    w,
-		opts: opts,
-	}
+	w := NewBinaryWriterLST(&buf, lst)
+	e := Encoder{w: w}
 
 	if err := e.Encode(v); err != nil {
 		return nil, err
