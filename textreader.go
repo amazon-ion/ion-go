@@ -5,10 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"strconv"
-	"strings"
 )
 
 // trs is the state of the text reader.
@@ -47,16 +45,6 @@ type textReader struct {
 	reader
 
 	debug bool
-}
-
-// NewTextReader creates a new text reader.
-func NewTextReader(in io.Reader) Reader {
-	return newTextReaderBuf(bufio.NewReader(in))
-}
-
-// NewTextReaderStr creates a new text reader from a string.
-func NewTextReaderStr(str string) Reader {
-	return NewTextReader(strings.NewReader(str))
 }
 
 func newTextReaderBuf(in *bufio.Reader) Reader {

@@ -17,8 +17,7 @@ var (
 
 // Unmarshal unmarshals Ion data to the given object.
 func Unmarshal(data []byte, v interface{}) error {
-	// TODO: Figure out if it's text or binary instead of hardcoding text.
-	return NewDecoder(NewTextReader(bytes.NewReader(data))).DecodeTo(v)
+	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
 }
 
 // UnmarshalStr unmarshals Ion data from a string to the given object.

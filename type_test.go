@@ -1,8 +1,6 @@
 package ion
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestTypeToString(t *testing.T) {
 	for i := NoType; i <= StructType+1; i++ {

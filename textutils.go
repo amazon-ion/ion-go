@@ -5,12 +5,14 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // Does this symbol need to be quoted in text form?
 func symbolNeedsQuoting(sym string) bool {
-	if sym == "" || sym == "null" || sym == "true" || sym == "false" || sym == "nan" {
+	switch sym {
+	case "", "null", "true", "false", "nan":
 		return true
 	}
 
@@ -91,9 +93,8 @@ func isDigit(c int) bool {
 // Is this a valid part of an operator symbol?
 func isOperatorChar(c int) bool {
 	switch c {
-	case '!', '#', '%', '&', '*', '+', '-', '.', '/', ';', '<', '=':
-		return true
-	case '>', '?', '@', '^', '`', '|', '~':
+	case '!', '#', '%', '&', '*', '+', '-', '.', '/', ';', '<', '=',
+		'>', '?', '@', '^', '`', '|', '~':
 		return true
 	default:
 		return false
@@ -105,9 +106,8 @@ func isOperatorChar(c int) bool {
 // characters. Use tokenizer.isStopChar(c) or check for it yourself.
 func isStopChar(c int) bool {
 	switch c {
-	case -1, '{', '}', '[', ']', '(', ')', ',', '"', '\'':
-		return true
-	case ' ', '\t', '\n', '\r':
+	case -1, '{', '}', '[', ']', '(', ')', ',', '"', '\'',
+		' ', '\t', '\n', '\r':
 		return true
 	default:
 		return false
@@ -119,9 +119,34 @@ func isWhitespace(c int) bool {
 	switch c {
 	case ' ', '\t', '\n', '\r':
 		return true
-	default:
-		return false
 	}
+	return false
+}
+
+// Formats a float64 in Ion text style.
+func formatFloat(val float64) string {
+	str := strconv.FormatFloat(val, 'e', -1, 64)
+
+	// Ion uses lower case for special values.
+	switch str {
+	case "NaN":
+		return "nan"
+	case "+Inf":
+		return "+inf"
+	case "-Inf":
+		return "-inf"
+	}
+
+	idx := strings.Index(str, "e")
+	if idx < 0 {
+		// We need to add an 'e' or it will get interpreted as an Ion decimal.
+		str += "e0"
+	} else if idx+2 < len(str) && str[idx+2] == '0' {
+		// FormatFloat returns exponents with a leading ±0 in some cases; strip it.
+		str = str[:idx+2] + str[idx+3:]
+	}
+
+	return str
 }
 
 // Write the given symbol out, quoting and encoding if necessary.
@@ -170,19 +195,6 @@ func writeEscapedString(str string, out io.Writer) error {
 		}
 	}
 	return nil
-}
-
-func fromHex(c int) (int, error) {
-	if c >= '0' && c <= '9' {
-		return c - '0', nil
-	}
-	if c >= 'a' && c <= 'f' {
-		return 10 + (c - 'a'), nil
-	}
-	if c >= 'A' && c <= 'F' {
-		return 10 + (c - 'A'), nil
-	}
-	return 0, invalidChar(c)
 }
 
 // Write out the given character in escaped form.

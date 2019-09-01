@@ -99,7 +99,7 @@ func (w *binaryWriter) beginValue() error {
 		}
 	}
 
-	if w.InStruct() {
+	if w.inStruct() {
 		if name == "" {
 			return errors.New("ion: field name not set")
 		}

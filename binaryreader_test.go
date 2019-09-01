@@ -295,5 +295,5 @@ func readBinary(ion []byte) Reader {
 		// ]
 		// }
 	}
-	return NewBinaryReaderBytes(append(prefix, ion...), nil)
+	return NewReaderBytes(append(prefix, ion...))
 }

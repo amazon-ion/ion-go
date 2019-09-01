@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -43,6 +41,264 @@ func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	}
 }
 
+// // writeValue writes a value whose raw encoding is produced by the
+// // given function.
+// func (w *textWriter) writeValue(f func() string) error {
+// 	if err := w.beginValue(); err != nil {
+// 		return err
+// 	}
+
+// 	sym := f()
+// 	if err := writeRawString(sym, w.out); err != nil {
+// 		return err
+// 	}
+
+// 	w.endValue()
+// 	return nil
+// }
+
+// // writeValue writes a value by calling the given function, which is
+// // expected to write the raw value to w.out.
+// func (w *textWriter) writeValueStreaming(f func() error) error {
+// 	if err := w.beginValue(); err != nil {
+// 		return err
+// 	}
+
+// 	if err := f(); err != nil {
+// 		return err
+// 	}
+
+// 	w.endValue()
+// 	return nil
+// }
+
+// WriteNull writes an untyped null.
+func (w *textWriter) WriteNull() error {
+	return w.WriteNullType(NoType)
+}
+
+// WriteNullType writes a typed null.
+func (w *textWriter) WriteNullType(t Type) error {
+	return w.writeValue(textNulls[t])
+}
+
+// WriteBool writes a boolean value.
+func (w *textWriter) WriteBool(val bool) error {
+	str := "false"
+	if val {
+		str = "true"
+	}
+	return w.writeValue(str)
+}
+
+// WriteInt writes an integer value.
+func (w *textWriter) WriteInt(val int64) error {
+	return w.writeValue(fmt.Sprintf("%d", val))
+}
+
+// WriteBigInt writes a (big) integer value.
+func (w *textWriter) WriteBigInt(val *big.Int) error {
+	return w.writeValue(val.String())
+}
+
+// WriteFloat writes a floating-point value.
+func (w *textWriter) WriteFloat(val float64) error {
+	return w.writeValue(formatFloat(val))
+}
+
+// WriteDecimal writes an arbitrary-precision decimal value.
+func (w *textWriter) WriteDecimal(val *Decimal) error {
+	return w.writeValue(val.String())
+}
+
+// WriteTimestamp writes a timestamp.
+func (w *textWriter) WriteTimestamp(val time.Time) error {
+	return w.writeValue(val.Format(time.RFC3339Nano))
+}
+
+// WriteSymbol writes a symbol.
+func (w *textWriter) WriteSymbol(val string) error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.err = w.beginValue(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeSymbol(val, w.out); w.err != nil {
+		return w.err
+	}
+
+	w.endValue()
+	return nil
+}
+
+// WriteString writes a string.
+func (w *textWriter) WriteString(val string) error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.err = w.beginValue(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeRawChar('"', w.out); w.err != nil {
+		return w.err
+	}
+	if w.err = writeEscapedString(val, w.out); w.err != nil {
+		return w.err
+	}
+	if w.err = writeRawChar('"', w.out); w.err != nil {
+		return w.err
+	}
+
+	w.endValue()
+	return nil
+}
+
+// WriteClob writes a clob.
+func (w *textWriter) WriteClob(val []byte) error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.err = w.beginValue(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeRawString("{{\"", w.out); w.err != nil {
+		return w.err
+	}
+	for _, c := range val {
+		if c < 32 || c == '\\' || c == '"' || c > 0x7F {
+			if err := writeEscapedChar(c, w.out); err != nil {
+				return err
+			}
+		} else {
+			if err := writeRawChar(c, w.out); err != nil {
+				return err
+			}
+		}
+	}
+	if w.err = writeRawString("\"}}", w.out); w.err != nil {
+		return w.err
+	}
+
+	w.endValue()
+	return nil
+}
+
+// WriteBlob writes a blob.
+func (w *textWriter) WriteBlob(val []byte) error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.err = w.beginValue(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeRawString("{{", w.out); w.err != nil {
+		return w.err
+	}
+
+	enc := base64.NewEncoder(base64.StdEncoding, w.out)
+	enc.Write(val)
+	if w.err = enc.Close(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeRawString("}}", w.out); w.err != nil {
+		return w.err
+	}
+
+	w.endValue()
+	return nil
+}
+
+// BeginList begins writing a list.
+func (w *textWriter) BeginList() error {
+	if w.err == nil {
+		w.err = w.begin(ctxInList, '[')
+	}
+	return w.err
+}
+
+// EndList finishes writing a list.
+func (w *textWriter) EndList() error {
+	if w.err == nil {
+		w.err = w.end(ctxInList, ']')
+	}
+	return w.err
+}
+
+// BeginSexp begins writing an s-expression.
+func (w *textWriter) BeginSexp() error {
+	if w.err == nil {
+		w.err = w.begin(ctxInSexp, '(')
+	}
+	return w.err
+}
+
+// EndSexp finishes writing an s-expression.
+func (w *textWriter) EndSexp() error {
+	if w.err == nil {
+		w.err = w.end(ctxInSexp, ')')
+	}
+	return w.err
+}
+
+// BeginStruct begins writing a struct.
+func (w *textWriter) BeginStruct() error {
+	if w.err == nil {
+		w.err = w.begin(ctxInStruct, '{')
+	}
+	return w.err
+}
+
+// EndStruct finishes writing a struct.
+func (w *textWriter) EndStruct() error {
+	if w.err == nil {
+		w.err = w.end(ctxInStruct, '}')
+	}
+	return w.err
+}
+
+// Finish finishes writing the current datagram.
+func (w *textWriter) Finish() error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.ctx.peek() != ctxAtTopLevel {
+		return errors.New("ion: Finish not at top level")
+	}
+
+	if w.opts&TextWriterQuietFinish == 0 {
+		if w.err = writeRawChar('\n', w.out); w.err != nil {
+			return w.err
+		}
+		w.needsSeparator = false
+	}
+
+	w.clear()
+	return nil
+}
+
+// writeValue writes a stringified value to the output stream.
+func (w *textWriter) writeValue(val string) error {
+	if w.err != nil {
+		return w.err
+	}
+	if w.err = w.beginValue(); w.err != nil {
+		return w.err
+	}
+
+	if w.err = writeRawString(val, w.out); w.err != nil {
+		return w.err
+	}
+
+	w.endValue()
+	return nil
+}
+
 // beginValue begins the process of writing a value, by writing out
 // a separator (if needed), field name (if in a struct), and type
 // annotations (if any).
@@ -63,9 +319,9 @@ func (w *textWriter) beginValue() error {
 		}
 	}
 
-	if w.InStruct() {
+	if w.inStruct() {
 		if w.fieldName == "" {
-			return errors.New("field name not set")
+			return errors.New("ion: field name not set")
 		}
 		name := w.fieldName
 		w.fieldName = ""
@@ -115,319 +371,16 @@ func (w *textWriter) begin(t ctx, c byte) error {
 // end finishes writing a container of the given type
 func (w *textWriter) end(t ctx, c byte) error {
 	if w.ctx.peek() != t {
-		return errors.New("not in that kind of container")
+		return errors.New("ion: End called with wrong container type")
 	}
 
 	if err := writeRawChar(c, w.out); err != nil {
 		return err
 	}
 
-	w.fieldName = ""
-	w.annotations = nil
+	w.clear()
 	w.ctx.pop()
 	w.endValue()
 
-	return nil
-}
-
-// BeginStruct begins writing a struct.
-func (w *textWriter) BeginStruct() error {
-	if w.err == nil {
-		w.err = w.begin(ctxInStruct, '{')
-	}
-	return w.err
-}
-
-// EndStruct finishes writing a struct.
-func (w *textWriter) EndStruct() error {
-	if w.err == nil {
-		w.err = w.end(ctxInStruct, '}')
-	}
-	return w.err
-}
-
-// BeginList begins writing a list.
-func (w *textWriter) BeginList() error {
-	if w.err == nil {
-		w.err = w.begin(ctxInList, '[')
-	}
-	return w.err
-}
-
-// EndList finishes writing a list.
-func (w *textWriter) EndList() error {
-	if w.err == nil {
-		w.err = w.end(ctxInList, ']')
-	}
-	return w.err
-}
-
-// BeginSexp begins writing an s-expression.
-func (w *textWriter) BeginSexp() error {
-	if w.err == nil {
-		w.err = w.begin(ctxInSexp, '(')
-	}
-	return w.err
-}
-
-// EndSexp finishes writing an s-expression.
-func (w *textWriter) EndSexp() error {
-	if w.err == nil {
-		w.err = w.end(ctxInSexp, ')')
-	}
-	return w.err
-}
-
-// writeValue writes a value whose raw encoding is produced by the
-// given function.
-func (w *textWriter) writeValue(f func() string) error {
-	if err := w.beginValue(); err != nil {
-		return err
-	}
-
-	sym := f()
-	if err := writeRawString(sym, w.out); err != nil {
-		return err
-	}
-
-	w.endValue()
-	return nil
-}
-
-// writeValue writes a value by calling the given function, which is
-// expected to write the raw value to w.out.
-func (w *textWriter) writeValueStreaming(f func() error) error {
-	if err := w.beginValue(); err != nil {
-		return err
-	}
-
-	if err := f(); err != nil {
-		return err
-	}
-
-	w.endValue()
-	return nil
-}
-
-// WriteNull writes an untyped null.
-func (w *textWriter) WriteNull() error {
-	return w.WriteNullType(NoType)
-}
-
-// WriteNullType writes a typed null.
-func (w *textWriter) WriteNullType(t Type) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			switch t {
-			case NoType:
-				return "null"
-			case NullType:
-				return "null.null"
-			case BoolType:
-				return "null.bool"
-			case IntType:
-				return "null.int"
-			case FloatType:
-				return "null.float"
-			case DecimalType:
-				return "null.decimal"
-			case TimestampType:
-				return "null.timestamp"
-			case StringType:
-				return "null.string"
-			case SymbolType:
-				return "null.symbol"
-			case BlobType:
-				return "null.blob"
-			case ClobType:
-				return "null.clob"
-			case StructType:
-				return "null.struct"
-			case ListType:
-				return "null.list"
-			case SexpType:
-				return "null.sexp"
-			default:
-				panic(fmt.Sprintf("invalid type: %v", t))
-			}
-		})
-	}
-	return w.err
-}
-
-// WriteBool writes a boolean value.
-func (w *textWriter) WriteBool(val bool) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			if val {
-				return "true"
-			}
-			return "false"
-		})
-	}
-	return w.err
-}
-
-// WriteInt writes an integer value.
-func (w *textWriter) WriteInt(val int64) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			return fmt.Sprintf("%d", val)
-		})
-	}
-	return w.err
-}
-
-// WriteBigInt writes a (big) integer value.
-func (w *textWriter) WriteBigInt(val *big.Int) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			return val.String()
-		})
-	}
-	return w.err
-}
-
-// WriteFloat writes a floating-point value.
-func (w *textWriter) WriteFloat(val float64) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			// Built-in go formatting isn't quite up to the task. :(
-			str := strconv.FormatFloat(val, 'e', -1, 64)
-
-			switch str {
-			case "NaN":
-				return "nan"
-			case "+Inf":
-				return "+inf"
-			case "-Inf":
-				return "-inf"
-			default:
-				break
-			}
-
-			idx := strings.Index(str, "e")
-			if idx < 0 {
-				str += "e0"
-			} else if idx+2 < len(str) && str[idx+2] == '0' {
-				str = str[:idx+2] + str[idx+3:]
-			}
-
-			return str
-		})
-	}
-	return w.err
-}
-
-// WriteDecimal writes an arbitrary-precision decimal value.
-func (w *textWriter) WriteDecimal(val *Decimal) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			return val.String()
-		})
-	}
-	return w.err
-}
-
-// WriteTimestamp writes a timestamp.
-func (w *textWriter) WriteTimestamp(val time.Time) error {
-	if w.err == nil {
-		w.err = w.writeValue(func() string {
-			return val.Format(time.RFC3339Nano)
-		})
-	}
-	return w.err
-}
-
-// WriteSymbol writes a symbol.
-func (w *textWriter) WriteSymbol(val string) error {
-	if w.err == nil {
-		w.err = w.writeValueStreaming(func() error {
-			return writeSymbol(val, w.out)
-		})
-	}
-	return w.err
-}
-
-// WriteString writes a string.
-func (w *textWriter) WriteString(val string) error {
-	if w.err == nil {
-		w.err = w.writeValueStreaming(func() error {
-			if err := writeRawChar('"', w.out); err != nil {
-				return err
-			}
-			if err := writeEscapedString(val, w.out); err != nil {
-				return err
-			}
-			return writeRawChar('"', w.out)
-		})
-	}
-	return w.err
-}
-
-// WriteBlob writes a blob.
-func (w *textWriter) WriteBlob(val []byte) error {
-	if w.err == nil {
-		w.err = w.writeValueStreaming(func() error {
-			if err := writeRawString("{{", w.out); err != nil {
-				return err
-			}
-
-			enc := base64.NewEncoder(base64.StdEncoding, w.out)
-			enc.Write(val)
-			if err := enc.Close(); err != nil {
-				return err
-			}
-
-			return writeRawString("}}", w.out)
-		})
-	}
-	return w.err
-}
-
-// WriteClob writes a clob.
-func (w *textWriter) WriteClob(val []byte) error {
-	if w.err == nil {
-		w.err = w.writeValueStreaming(func() error {
-			if err := writeRawString("{{\"", w.out); err != nil {
-				return err
-			}
-
-			for _, c := range val {
-				if c < 32 || c == '\\' || c == '"' || c > 0x7F {
-					if err := writeEscapedChar(c, w.out); err != nil {
-						return err
-					}
-				} else {
-					if err := writeRawChar(c, w.out); err != nil {
-						return err
-					}
-				}
-			}
-
-			return writeRawString("\"}}", w.out)
-		})
-	}
-	return w.err
-}
-
-// Finish finishes the current datagram.
-func (w *textWriter) Finish() error {
-	if w.err != nil {
-		return w.err
-	}
-	if w.ctx.peek() != ctxAtTopLevel {
-		return errors.New("not at top level")
-	}
-
-	if w.opts&TextWriterQuietFinish == 0 {
-		if w.err = writeRawChar('\n', w.out); w.err != nil {
-			return w.err
-		}
-	}
-
-	w.fieldName = ""
-	w.annotations = nil
-	w.needsSeparator = false
 	return nil
 }

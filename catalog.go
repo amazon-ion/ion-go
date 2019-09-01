@@ -1,8 +1,12 @@
 package ion
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"io"
+)
 
-// A Catalog stores shared symbol tables.
+// A Catalog stores shared symbol tables and serves as a reader factory.
 type Catalog struct {
 	ssts map[string]SharedSymbolTable
 }
@@ -17,4 +21,14 @@ func (c *Catalog) Add(sst SharedSymbolTable) {
 func (c *Catalog) Find(name string, version int) SharedSymbolTable {
 	key := fmt.Sprintf("%v/%v", name, version)
 	return c.ssts[key]
+}
+
+// NewReader creates a new reader using this catalog.
+func (c *Catalog) NewReader(in io.Reader) Reader {
+	return newReader(in, c)
+}
+
+// NewReaderBytes creates a new reader using this catalog.
+func (c *Catalog) NewReaderBytes(in []byte) Reader {
+	return newReader(bytes.NewReader(in), c)
 }

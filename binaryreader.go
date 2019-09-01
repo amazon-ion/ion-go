@@ -2,28 +2,17 @@ package ion
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 )
 
+// A binaryReader reads binary Ion.
 type binaryReader struct {
 	bits bitstream
 	cat  *Catalog
 	lst  SymbolTable
 
 	reader
-}
-
-// NewBinaryReader creates a new binary reader.
-func NewBinaryReader(in io.Reader, cat *Catalog) Reader {
-	return newBinaryReaderBuf(bufio.NewReader(in), cat)
-}
-
-// NewBinaryReaderBytes creates a new binary reader for the given bytes.
-func NewBinaryReaderBytes(in []byte, cat *Catalog) Reader {
-	return NewBinaryReader(bytes.NewReader(in), cat)
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat *Catalog) Reader {

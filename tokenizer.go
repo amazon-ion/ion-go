@@ -685,6 +685,19 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 	return val, nil
 }
 
+func fromHex(c int) (int, error) {
+	if c >= '0' && c <= '9' {
+		return c - '0', nil
+	}
+	if c >= 'a' && c <= 'f' {
+		return 10 + (c - 'a'), nil
+	}
+	if c >= 'A' && c <= 'F' {
+		return 10 + (c - 'A'), nil
+	}
+	return 0, invalidChar(c)
+}
+
 func (t *tokenizer) readBinary() (string, error) {
 	isB := func(c int) bool {
 		return c == 'b' || c == 'B'
