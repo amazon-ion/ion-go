@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -25,6 +26,14 @@ func UnmarshalStr(data string, v interface{}) error {
 	return Unmarshal([]byte(data), v)
 }
 
+// UnmarshalFrom unmarshal Ion data from a reader to the given object.
+func UnmarshalFrom(r Reader, v interface{}) error {
+	d := Decoder{
+		r: r,
+	}
+	return d.DecodeTo(v)
+}
+
 // A Decoder decodes go values from an Ion reader.
 type Decoder struct {
 	r Reader
@@ -35,6 +44,13 @@ func NewDecoder(r Reader) *Decoder {
 	return &Decoder{
 		r: r,
 	}
+}
+
+// NewTextDecoder creates a new text decoder. Well, a decoder that uses a reader with
+// no shared symbol tables, it'll work to read binary too if the binary doesn't reference
+// any shared symbol tables.
+func NewTextDecoder(in io.Reader) *Decoder {
+	return NewDecoder(NewReader(in))
 }
 
 // Decode decodes a value from the underlying Ion reader without any expectations

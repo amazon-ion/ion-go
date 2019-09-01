@@ -69,6 +69,16 @@ func MarshalBinaryLST(v interface{}, lst SymbolTable) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// MarshalTo marshals the given value to the given writer. It does
+// not call Finish, so is suitable for encoding values inside of
+// a partially-constructed Ion value.
+func MarshalTo(w Writer, v interface{}) error {
+	e := Encoder{
+		w: w,
+	}
+	return e.Encode(v)
+}
+
 // An Encoder writes Ion values to an output stream.
 type Encoder struct {
 	w    Writer
@@ -101,25 +111,6 @@ func NewBinaryEncoder(w io.Writer, ssts ...SharedSymbolTable) *Encoder {
 // NewBinaryEncoderLST creates a new binary Encoder with a fixed local symbol table.
 func NewBinaryEncoderLST(w io.Writer, lst SymbolTable) *Encoder {
 	return NewEncoder(NewBinaryWriterLST(w, lst))
-}
-
-// EncodeTo encodes the given value to the given writer. It does
-// not call Finish, so is suitable for encoding values inside of
-// a partially-constructed Ion value.
-func EncodeTo(w Writer, v interface{}) error {
-	e := Encoder{
-		w: w,
-	}
-	return e.Encode(v)
-}
-
-// EncodeToOpts is like EncodeTo but accepts additional opts.
-func EncodeToOpts(w Writer, opts EncoderOpts, v interface{}) error {
-	e := Encoder{
-		w:    w,
-		opts: opts,
-	}
-	return e.Encode(v)
 }
 
 // Encode marshals the given value to Ion, writing it to the underlying writer.

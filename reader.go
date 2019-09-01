@@ -149,7 +149,7 @@ type Reader interface {
 // NewReader creates a new Ion reader of the appropriate type by peeking
 // at the first several bytes of input for a binary version marker.
 func NewReader(in io.Reader) Reader {
-	return newReader(in, nil)
+	return NewReaderCat(in, nil)
 }
 
 // NewReaderStr creates a new reader from a string.
@@ -162,7 +162,8 @@ func NewReaderBytes(in []byte) Reader {
 	return NewReader(bytes.NewReader(in))
 }
 
-func newReader(in io.Reader, cat *Catalog) Reader {
+// NewReaderCat creates a new reader with the given catalog.
+func NewReaderCat(in io.Reader, cat Catalog) Reader {
 	br := bufio.NewReader(in)
 
 	bs, err := br.Peek(4)

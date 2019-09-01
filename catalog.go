@@ -4,38 +4,70 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 )
 
-// A Catalog stores shared symbol tables and serves as a reader factory.
-type Catalog struct {
+// A Catalog provides access to shared symbol tables.
+type Catalog interface {
+	Find(name string, version int) SharedSymbolTable
+}
+
+// A basicCatalog wraps an in-memory collection of shared symbol tables.
+type basicCatalog struct {
 	ssts map[string]SharedSymbolTable
 }
 
+// NewCatalog creates a new basic catalog containing the given symbol tables.
+func NewCatalog(ssts ...SharedSymbolTable) Catalog {
+	cat := &basicCatalog{make(map[string]SharedSymbolTable)}
+	for _, sst := range ssts {
+		cat.add(sst)
+	}
+	return cat
+}
+
 // Add adds a shared symbol table to the catalog.
-func (c *Catalog) Add(sst SharedSymbolTable) {
+func (c *basicCatalog) add(sst SharedSymbolTable) {
 	key := fmt.Sprintf("%v/%v", sst.Name(), sst.Version())
 	c.ssts[key] = sst
 }
 
 // Find attempts to find a shared symbol table with the given name and version.
-func (c *Catalog) Find(name string, version int) SharedSymbolTable {
+func (c *basicCatalog) Find(name string, version int) SharedSymbolTable {
 	key := fmt.Sprintf("%v/%v", name, version)
 	return c.ssts[key]
 }
 
-// NewReader creates a new reader using this catalog.
-func (c *Catalog) NewReader(in io.Reader) Reader {
-	return newReader(in, c)
+// A System is a reader factory wrapping a catalog.
+type System struct {
+	Catalog Catalog
 }
 
-// NewReaderBytes creates a new reader using this catalog.
-func (c *Catalog) NewReaderBytes(in []byte) Reader {
-	return newReader(bytes.NewReader(in), c)
+// NewReader creates a new reader using this system's catalog.
+func (s System) NewReader(in io.Reader) Reader {
+	return NewReaderCat(in, s.Catalog)
 }
 
-// Unmarshal unmarshals Ion data using this catalog.
-func (c *Catalog) Unmarshal(data []byte, v interface{}) error {
-	r := c.NewReader(bytes.NewReader(data))
+// NewReaderStr creates a new reader using this system's catalog.
+func (s System) NewReaderStr(in string) Reader {
+	return NewReaderCat(strings.NewReader(in), s.Catalog)
+}
+
+// NewReaderBytes creates a new reader using this system's catalog.
+func (s System) NewReaderBytes(in []byte) Reader {
+	return NewReaderCat(bytes.NewReader(in), s.Catalog)
+}
+
+// Unmarshal unmarshals Ion data using this system's catalog.
+func (s System) Unmarshal(data []byte, v interface{}) error {
+	r := s.NewReaderBytes(data)
+	d := NewDecoder(r)
+	return d.DecodeTo(v)
+}
+
+// UnmarshalStr unmarshals Ion data using this system's catalog.
+func (s System) UnmarshalStr(data string, v interface{}) error {
+	r := s.NewReaderStr(data)
 	d := NewDecoder(r)
 	return d.DecodeTo(v)
 }

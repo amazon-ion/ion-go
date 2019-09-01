@@ -11,11 +11,11 @@ type binaryReader struct {
 	reader
 
 	bits bitstream
-	cat  *Catalog
+	cat  Catalog
 	lst  SymbolTable
 }
 
-func newBinaryReaderBuf(in *bufio.Reader, cat *Catalog) Reader {
+func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r := &binaryReader{
 		cat: cat,
 	}
