@@ -41,37 +41,6 @@ func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	}
 }
 
-// // writeValue writes a value whose raw encoding is produced by the
-// // given function.
-// func (w *textWriter) writeValue(f func() string) error {
-// 	if err := w.beginValue(); err != nil {
-// 		return err
-// 	}
-
-// 	sym := f()
-// 	if err := writeRawString(sym, w.out); err != nil {
-// 		return err
-// 	}
-
-// 	w.endValue()
-// 	return nil
-// }
-
-// // writeValue writes a value by calling the given function, which is
-// // expected to write the raw value to w.out.
-// func (w *textWriter) writeValueStreaming(f func() error) error {
-// 	if err := w.beginValue(); err != nil {
-// 		return err
-// 	}
-
-// 	if err := f(); err != nil {
-// 		return err
-// 	}
-
-// 	w.endValue()
-// 	return nil
-// }
-
 // WriteNull writes an untyped null.
 func (w *textWriter) WriteNull() error {
 	return w.WriteNullType(NoType)

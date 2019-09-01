@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestTopLevelFieldName(t *testing.T) {
+func TestWriteTextTopLevelFieldName(t *testing.T) {
 	writeText(func(w Writer) {
 		if err := w.FieldName("foo"); err == nil {
 			t.Error("expected an error")
@@ -16,7 +16,7 @@ func TestTopLevelFieldName(t *testing.T) {
 	})
 }
 
-func TestEmptyStruct(t *testing.T) {
+func TestWriteTextEmptyStruct(t *testing.T) {
 	testTextWriter(t, "{}", func(w Writer) {
 		if err := w.BeginStruct(); err != nil {
 			t.Fatal(err)
@@ -32,7 +32,7 @@ func TestEmptyStruct(t *testing.T) {
 	})
 }
 
-func TestAnnotatedStruct(t *testing.T) {
+func TestWriteTextAnnotatedStruct(t *testing.T) {
 	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w Writer) {
 		w.Annotation("foo")
 		w.Annotation("$bar")
@@ -46,7 +46,7 @@ func TestAnnotatedStruct(t *testing.T) {
 	})
 }
 
-func TestNestedStruct(t *testing.T) {
+func TestWriteTextNestedStruct(t *testing.T) {
 	testTextWriter(t, "{foo:'true'::{},'null':{}}", func(w Writer) {
 		w.BeginStruct()
 
@@ -63,7 +63,7 @@ func TestNestedStruct(t *testing.T) {
 	})
 }
 
-func TestEmptyList(t *testing.T) {
+func TestWriteTextEmptyList(t *testing.T) {
 	testTextWriter(t, "[]", func(w Writer) {
 		if err := w.BeginList(); err != nil {
 			t.Fatal(err)
@@ -79,7 +79,7 @@ func TestEmptyList(t *testing.T) {
 	})
 }
 
-func TestNestedLists(t *testing.T) {
+func TestWriteTextNestedLists(t *testing.T) {
 	testTextWriter(t, "[{},foo::{},'null'::[]]", func(w Writer) {
 		w.BeginList()
 
@@ -98,7 +98,7 @@ func TestNestedLists(t *testing.T) {
 	})
 }
 
-func TestWriteSexps(t *testing.T) {
+func TestWriteTextSexps(t *testing.T) {
 	testTextWriter(t, "()\n(())\n(() ())", func(w Writer) {
 		w.BeginSexp()
 		w.EndSexp()
@@ -117,7 +117,7 @@ func TestWriteSexps(t *testing.T) {
 	})
 }
 
-func TestNulls(t *testing.T) {
+func TestWriteTextNulls(t *testing.T) {
 	expected := "[null,foo::null.null,null.bool,null.int,null.float,null.decimal," +
 		"null.timestamp,null.symbol,null.string,null.clob,null.blob," +
 		"null.list,'null'::null.sexp,null.struct]"
@@ -146,7 +146,7 @@ func TestNulls(t *testing.T) {
 	})
 }
 
-func TestBool(t *testing.T) {
+func TestWriteTextBool(t *testing.T) {
 	expected := "true\n(false '123'::true)\n'false'::false"
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBool(true)
@@ -202,7 +202,7 @@ func TestWriteTextBigInt(t *testing.T) {
 	})
 }
 
-func TestFloat(t *testing.T) {
+func TestWriteTextFloat(t *testing.T) {
 	expected := "{z:0e+0,nz:-0e+0,s:1.234e+1,l:1.234e-55,n:nan,i:+inf,ni:-inf}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
@@ -228,7 +228,7 @@ func TestFloat(t *testing.T) {
 	})
 }
 
-func TestDecimal(t *testing.T) {
+func TestWriteTextDecimal(t *testing.T) {
 	expected := "0.\n-1.23d-98"
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteDecimal(MustParseDecimal("0"))
@@ -236,7 +236,7 @@ func TestDecimal(t *testing.T) {
 	})
 }
 
-func TestTimestamp(t *testing.T) {
+func TestWriteTextTimestamp(t *testing.T) {
 	expected := "1970-01-01T00:00:00.001Z\n1970-01-01T01:23:00+01:23"
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteTimestamp(time.Unix(0, 1000000).In(time.UTC))
@@ -244,7 +244,7 @@ func TestTimestamp(t *testing.T) {
 	})
 }
 
-func TestSymbol(t *testing.T) {
+func TestWriteTextSymbol(t *testing.T) {
 	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸'}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
@@ -266,7 +266,7 @@ func TestSymbol(t *testing.T) {
 	})
 }
 
-func TestString(t *testing.T) {
+func TestWriteTextString(t *testing.T) {
 	expected := `("hello" "" ("\\\"\n\"\\" zany::"🤪"))`
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
@@ -283,7 +283,7 @@ func TestString(t *testing.T) {
 	})
 }
 
-func TestBlob(t *testing.T) {
+func TestWriteTextBlob(t *testing.T) {
 	expected := "{{AAEC/f7/}}\n{{SGVsbG8gV29ybGQ=}}\nempty::{{}}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBlob([]byte{0, 1, 2, 0xFD, 0xFE, 0xFF})
@@ -293,7 +293,7 @@ func TestBlob(t *testing.T) {
 	})
 }
 
-func TestClob(t *testing.T) {
+func TestWriteTextClob(t *testing.T) {
 	expected := "{hello:{{\"world\"}},bits:{{\"\\0\\x01\\xFE\\xFF\"}}}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
@@ -305,7 +305,7 @@ func TestClob(t *testing.T) {
 	})
 }
 
-func TestFinish(t *testing.T) {
+func TestWriteTextFinish(t *testing.T) {
 	expected := "1\nfoo\n\"bar\"\n{}\n"
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteInt(1)
@@ -319,7 +319,7 @@ func TestFinish(t *testing.T) {
 	})
 }
 
-func TestBadFinish(t *testing.T) {
+func TestWriteTextBadFinish(t *testing.T) {
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
 
