@@ -3,7 +3,6 @@ package ion
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -115,6 +114,7 @@ type tokenizer struct {
 
 	token      token
 	unfinished bool
+	pos        uint64
 }
 
 func tokenizeString(in string) *tokenizer {
@@ -134,6 +134,10 @@ func tokenize(in io.Reader) *tokenizer {
 // Token returns the type of the current token.
 func (t *tokenizer) Token() token {
 	return t.token
+}
+
+func (t *tokenizer) Pos() uint64 {
+	return t.pos
 }
 
 // Next advances to the next token in the input stream.
@@ -241,7 +245,7 @@ func (t *tokenizer) Next() error {
 			}
 			if tt == tokenTimestamp {
 				// can't have negative timestamps.
-				return invalidChar(c2)
+				return t.invalidChar(c2)
 			}
 			t.unread(c2)
 			t.unread(c)
@@ -280,7 +284,7 @@ func (t *tokenizer) Next() error {
 		return t.ok(tt, true)
 
 	default:
-		return invalidChar(c)
+		return t.invalidChar(c)
 	}
 }
 
@@ -375,7 +379,7 @@ func (t *tokenizer) ReadNumber() (string, Type, error) {
 
 	if first == '0' {
 		if w.Len()-oldlen > 1 {
-			return "", NoType, errors.New("invalid leading zeroes")
+			return "", NoType, &SyntaxError{"invalid leading zeroes", t.pos - 1}
 		}
 	}
 
@@ -416,7 +420,7 @@ func (t *tokenizer) ReadNumber() (string, Type, error) {
 		return "", NoType, err
 	}
 	if !ok {
-		return "", NoType, invalidChar(c)
+		return "", NoType, t.invalidChar(c)
 	}
 	t.unread(c)
 
@@ -481,7 +485,7 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 
 		switch c {
 		case -1, '\n':
-			return "", invalidChar(c)
+			return "", t.invalidChar(c)
 
 		case '\'':
 			return ret.String(), nil
@@ -541,7 +545,7 @@ func (t *tokenizer) readString() (string, error) {
 
 		switch c {
 		case -1, '\n':
-			return "", invalidChar(c)
+			return "", t.invalidChar(c)
 
 		case '"':
 			return ret.String(), nil
@@ -581,7 +585,7 @@ func (t *tokenizer) readLongString() (string, error) {
 
 		switch c {
 		case -1:
-			return "", invalidChar(c)
+			return "", t.invalidChar(c)
 
 		case '\'':
 			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
@@ -652,7 +656,7 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 		return '\\', nil
 	case 'U':
 		if clob {
-			return 0, invalidChar('U')
+			return 0, t.invalidChar('U')
 		}
 		return t.readHexEscapeSeq(8)
 	case 'u':
@@ -661,7 +665,7 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 		return t.readHexEscapeSeq(2)
 	}
 
-	return 0, fmt.Errorf("bad escape sequence '\\%c'", c)
+	return 0, &SyntaxError{fmt.Sprintf("bad escape sequence '\\%c'", c), t.pos - 2}
 }
 
 func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
@@ -673,7 +677,7 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 			return 0, err
 		}
 
-		d, err := fromHex(c)
+		d, err := t.fromHex(c)
 		if err != nil {
 			return 0, err
 		}
@@ -685,7 +689,7 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 	return val, nil
 }
 
-func fromHex(c int) (int, error) {
+func (t *tokenizer) fromHex(c int) (int, error) {
 	if c >= '0' && c <= '9' {
 		return c - '0', nil
 	}
@@ -695,7 +699,7 @@ func fromHex(c int) (int, error) {
 	if c >= 'A' && c <= 'F' {
 		return 10 + (c - 'A'), nil
 	}
-	return 0, invalidChar(c)
+	return 0, t.invalidChar(c)
 }
 
 func (t *tokenizer) readBinary() (string, error) {
@@ -732,7 +736,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	}
 
 	if c != '0' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	w.WriteByte('0')
 
@@ -741,7 +745,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 		return "", err
 	}
 	if !pok(c) {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	w.WriteByte(byte(c))
 
@@ -755,7 +759,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	t.unread(c)
 
@@ -794,7 +798,7 @@ func (t *tokenizer) readTimestamp() (string, error) {
 		return w.String(), nil
 	}
 	if c != '-' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	w.WriteByte('-')
 
@@ -807,7 +811,7 @@ func (t *tokenizer) readTimestamp() (string, error) {
 		return w.String(), nil
 	}
 	if c != '-' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	w.WriteByte('-')
 
@@ -836,7 +840,7 @@ func (t *tokenizer) readTimestamp() (string, error) {
 		return "", err
 	}
 	if c != ':' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	w.WriteByte(':')
 
@@ -888,7 +892,7 @@ func (t *tokenizer) readTimestampOffsetOrZ(c int, w io.ByteWriter) (int, error) 
 		w.WriteByte(byte(c))
 		return t.read()
 	}
-	return 0, invalidChar(c)
+	return 0, t.invalidChar(c)
 }
 
 func (t *tokenizer) readTimestampOffset(c int, w io.ByteWriter) (int, error) {
@@ -902,7 +906,7 @@ func (t *tokenizer) readTimestampOffset(c int, w io.ByteWriter) (int, error) {
 		return 0, err
 	}
 	if c != ':' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 	w.WriteByte(':')
 	return t.readTimestampDigits(2, w)
@@ -915,7 +919,7 @@ func (t *tokenizer) readTimestampDigits(n int, w io.ByteWriter) (int, error) {
 			return 0, err
 		}
 		if !isDigit(c) {
-			return 0, invalidChar(c)
+			return 0, t.invalidChar(c)
 		}
 		w.WriteByte(byte(c))
 		n--
@@ -929,7 +933,7 @@ func (t *tokenizer) readTimestampFinish(c int, w fmt.Stringer) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 	t.unread(c)
 	return w.String(), nil
@@ -948,7 +952,7 @@ func (t *tokenizer) ReadBlob() (string, error) {
 			return "", err
 		}
 		if c == -1 {
-			return "", invalidChar(c)
+			return "", t.invalidChar(c)
 		}
 		if c == '}' {
 			break
@@ -960,7 +964,7 @@ func (t *tokenizer) ReadBlob() (string, error) {
 		return "", err
 	}
 	if c != '}' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 
 	t.unfinished = false
@@ -978,14 +982,14 @@ func (t *tokenizer) ReadShortClob() (string, error) {
 		return "", err
 	}
 	if c != '}' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 
 	if c, err = t.read(); err != nil {
 		return "", err
 	}
 	if c != '}' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 
 	t.unfinished = false
@@ -1003,14 +1007,14 @@ func (t *tokenizer) ReadLongClob() (string, error) {
 		return "", err
 	}
 	if c != '}' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 
 	if c, err = t.read(); err != nil {
 		return "", err
 	}
 	if c != '}' {
-		return "", invalidChar(c)
+		return "", t.invalidChar(c)
 	}
 
 	t.unfinished = false
@@ -1137,18 +1141,18 @@ func (t *tokenizer) expect(f matcher) error {
 		return err
 	}
 	if !f(c) {
-		return invalidChar(c)
+		return t.invalidChar(c)
 	}
 	return nil
 }
 
 // InvalidChar returns an error complaining that the given character was
 // unexpected.
-func invalidChar(c int) error {
+func (t *tokenizer) invalidChar(c int) error {
 	if c == -1 {
-		return errors.New("unexpected EOF")
+		return &UnexpectedEOFError{t.pos - 1}
 	}
-	return fmt.Errorf("unexpected char %q", c)
+	return &UnexpectedRuneError{rune(c), t.pos - 1}
 }
 
 // SkipN skips over the next n bytes of input. Presumably you've
@@ -1220,6 +1224,7 @@ func (t *tokenizer) peek() (int, error) {
 // returned as (-1, nil) rather than (0, io.EOF), because I find it
 // easier to reason about that way. Newlines are normalized to '\n'.
 func (t *tokenizer) read() (int, error) {
+	t.pos++
 	if len(t.buffer) > 0 {
 		// We've already peeked ahead; read from our buffer.
 		c := t.buffer[len(t.buffer)-1]
@@ -1232,7 +1237,7 @@ func (t *tokenizer) read() (int, error) {
 		return -1, nil
 	}
 	if err != nil {
-		return 0, err
+		return 0, &IOError{err}
 	}
 
 	// Normalize \r and \r\n to just \n.
@@ -1240,7 +1245,7 @@ func (t *tokenizer) read() (int, error) {
 		cs, err := t.in.Peek(1)
 		if err != nil && err != io.EOF {
 			// Not EOF, because we haven't dealt with the '\r' yet.
-			return 0, err
+			return 0, &IOError{err}
 		}
 		if len(cs) > 0 && cs[0] == '\n' {
 			// Skip over the '\n' as well.
@@ -1255,5 +1260,6 @@ func (t *tokenizer) read() (int, error) {
 // Unread pushes a character (or -1) back into the input stream to
 // be read again later.
 func (t *tokenizer) unread(c int) {
+	t.pos--
 	t.buffer = append(t.buffer, c)
 }

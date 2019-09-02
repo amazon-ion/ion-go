@@ -59,9 +59,9 @@ func TestWriteSymbol(t *testing.T) {
 	test("basic", "basic")
 	test("_basic_", "_basic_")
 	test("$basic$", "$basic$")
+	test("$123", "$123")
 
 	test("123", "'123'")
-	test("$123", "'$123'")
 	test("abc'def", "'abc\\'def'")
 	test("abc\"def", "'abc\"def'")
 }
@@ -87,9 +87,9 @@ func TestSymbolNeedsQuoting(t *testing.T) {
 	test("basic$123", false)
 	test("$", false)
 	test("$basic", false)
+	test("$123", false)
 
 	test("123", true)
-	test("$123", true)
 	test("abc.def", true)
 	test("abc,def", true)
 	test("abc:def", true)

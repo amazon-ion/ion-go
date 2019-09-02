@@ -9,17 +9,22 @@ import (
 
 // A Catalog provides access to shared symbol tables.
 type Catalog interface {
-	Find(name string, version int) SharedSymbolTable
+	FindExact(name string, version int) SharedSymbolTable
+	FindLatest(name string) SharedSymbolTable
 }
 
 // A basicCatalog wraps an in-memory collection of shared symbol tables.
 type basicCatalog struct {
-	ssts map[string]SharedSymbolTable
+	ssts   map[string]SharedSymbolTable
+	latest map[string]SharedSymbolTable
 }
 
 // NewCatalog creates a new basic catalog containing the given symbol tables.
 func NewCatalog(ssts ...SharedSymbolTable) Catalog {
-	cat := &basicCatalog{make(map[string]SharedSymbolTable)}
+	cat := &basicCatalog{
+		ssts:   make(map[string]SharedSymbolTable),
+		latest: make(map[string]SharedSymbolTable),
+	}
 	for _, sst := range ssts {
 		cat.add(sst)
 	}
@@ -30,12 +35,22 @@ func NewCatalog(ssts ...SharedSymbolTable) Catalog {
 func (c *basicCatalog) add(sst SharedSymbolTable) {
 	key := fmt.Sprintf("%v/%v", sst.Name(), sst.Version())
 	c.ssts[key] = sst
+
+	cur, ok := c.latest[sst.Name()]
+	if !ok || sst.Version() > cur.Version() {
+		c.latest[sst.Name()] = sst
+	}
 }
 
-// Find attempts to find a shared symbol table with the given name and version.
-func (c *basicCatalog) Find(name string, version int) SharedSymbolTable {
+// FindExact attempts to find a shared symbol table with the given name and version.
+func (c *basicCatalog) FindExact(name string, version int) SharedSymbolTable {
 	key := fmt.Sprintf("%v/%v", name, version)
 	return c.ssts[key]
+}
+
+// FindLatest finds the shared symbol table with the given name and largest version.
+func (c *basicCatalog) FindLatest(name string) SharedSymbolTable {
+	return c.latest[name]
 }
 
 // A System is a reader factory wrapping a catalog.

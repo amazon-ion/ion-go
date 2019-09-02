@@ -21,7 +21,7 @@ func TestSharedSymbolTable(t *testing.T) {
 	if st.Version() != 2 {
 		t.Errorf("wrong version: %v", st.Version())
 	}
-	if st.MaxID() != 5 {
+	if st.MaxID() != 6 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
 
@@ -32,9 +32,9 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 0, "")
 	testFindByID(t, st, 2, "def")
 	testFindByID(t, st, 4, "null")
-	testFindByID(t, st, 6, "")
+	testFindByID(t, st, 7, "")
 
-	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","ghi"]}`)
+	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
 }
 
 func TestLocalSymbolTable(t *testing.T) {
@@ -135,7 +135,7 @@ func TestSymbolTableBuilder(t *testing.T) {
 	testFindByID(t, st, 11, "")
 }
 
-func testFindByName(t *testing.T, st SymbolTable, sym string, expected int) {
+func testFindByName(t *testing.T, st SymbolTable, sym string, expected uint64) {
 	t.Run("FindByName("+sym+")", func(t *testing.T) {
 		actual, ok := st.FindByName(sym)
 		if expected == 0 {
@@ -153,7 +153,7 @@ func testFindByName(t *testing.T, st SymbolTable, sym string, expected int) {
 	})
 }
 
-func testFindByID(t *testing.T, st SymbolTable, id int, expected string) {
+func testFindByID(t *testing.T, st SymbolTable, id uint64, expected string) {
 	t.Run(fmt.Sprintf("FindByID(%v)", id), func(t *testing.T) {
 		actual, ok := st.FindByID(id)
 		if expected == "" {

@@ -34,8 +34,8 @@ func TestBitstream(t *testing.T) {
 		if b.Code() != code {
 			t.Errorf("expected code=%v, got %v", code, b.Code())
 		}
-		if b.Null() != null {
-			t.Errorf("expected null=%v, got %v", null, b.Null())
+		if b.IsNull() != null {
+			t.Errorf("expected null=%v, got %v", null, b.IsNull())
 		}
 		if b.Len() != len {
 			t.Errorf("expected len=%v, got %v", len, b.Len())
@@ -62,7 +62,7 @@ func TestBitstream(t *testing.T) {
 	}
 
 	next(bitcodeAnnotation, false, 31)
-	ids, err := b.ReadAnnotations()
+	ids, err := b.ReadAnnotationIDs()
 	if err != nil {
 		t.Fatal(err)
 	}

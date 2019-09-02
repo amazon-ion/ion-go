@@ -3,7 +3,6 @@ package ion
 import (
 	"bufio"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -132,7 +131,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("ion: unexpected token '}'")
+		return false, &UnexpectedTokenError{"}", t.tok.Pos() - 1}
 
 	case tokenCloseBracket:
 		// No more values in this list.
@@ -140,10 +139,10 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("ion: unexpected token ']'")
+		return false, &UnexpectedTokenError{"]", t.tok.Pos() - 1}
 
 	default:
-		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
+		return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 	}
 }
 
@@ -164,7 +163,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, err
 		}
 		if tok == tokenSymbol {
-			if err := verifyUnquotedSymbol(val, "field name"); err != nil {
+			if err := t.verifyUnquotedSymbol(val, "field name"); err != nil {
 				return false, err
 			}
 		}
@@ -174,7 +173,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, err
 		}
 		if tok = t.tok.Token(); tok != tokenColon {
-			return false, fmt.Errorf("ion: unexpected token '%v'", tok)
+			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
 		t.fieldName = val
@@ -183,7 +182,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		return false, nil
 
 	default:
-		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
+		return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 	}
 }
 
@@ -197,12 +196,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("ion: unexpected EOF")
+		return false, &UnexpectedEOFError{t.tok.Pos() - 1}
 
 	case tokenSymbolOperator, tokenDot:
 		if t.ctx.peek() != ctxInSexp {
 			// Operators can only appear inside an sexp.
-			return false, fmt.Errorf("ion: unexpected token '%v'", tok)
+			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 		fallthrough
 
@@ -220,7 +219,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		if ok {
 			// val was an annotation; remember it and keep going.
 			if tok == tokenSymbol {
-				if err := verifyUnquotedSymbol(val, "annotation"); err != nil {
+				if err := t.verifyUnquotedSymbol(val, "annotation"); err != nil {
 					return false, err
 				}
 			}
@@ -287,7 +286,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("ion: unexpected token ']'")
+		return false, &UnexpectedTokenError{"]", t.tok.Pos() - 1}
 
 	case tokenCloseParen:
 		// No more values in this sexp.
@@ -295,10 +294,10 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			t.eof = true
 			return true, nil
 		}
-		return false, errors.New("ion: unexpected token ')'")
+		return false, &UnexpectedTokenError{")", t.tok.Pos() - 1}
 
 	default:
-		return false, fmt.Errorf("ion: unexpected token '%v'", tok)
+		return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 	}
 }
 
@@ -308,7 +307,7 @@ func (t *textReader) StepIn() error {
 		return t.err
 	}
 	if t.state != trsBeforeContainer {
-		return errors.New("ion: StepIn called when not on a container")
+		return &UsageError{"Reader.StepIn", fmt.Sprintf("cannot step in to a %v", t.valueType)}
 	}
 
 	ctx := containerTypeToCtx(t.valueType)
@@ -334,7 +333,7 @@ func (t *textReader) StepOut() error {
 
 	ctx := t.ctx.peek()
 	if ctx == ctxAtTopLevel {
-		return errors.New("ion: StepOut called at top level")
+		return &UsageError{"Reader.StepOut", "cannot step out of top-level datagram"}
 	}
 	ctype := ctxToContainerType(ctx)
 
@@ -363,10 +362,10 @@ func (t *textReader) StepOut() error {
 
 // VerifyUnquotedSymbol checks for certain 'special' values that are returned from
 // the tokenizer as symbols but cannot be used as field names or annotations.
-func verifyUnquotedSymbol(val string, ctx string) error {
+func (t *textReader) verifyUnquotedSymbol(val string, ctx string) error {
 	switch val {
 	case "null", "true", "false", "nan":
-		return fmt.Errorf("ion: cannot use unquoted keyword %v as %v", val, ctx)
+		return &SyntaxError{fmt.Sprintf("unquoted keyword '%v' as %v", val, ctx), t.tok.Pos() - 1}
 	}
 	return nil
 }
@@ -427,7 +426,8 @@ func (t *textReader) readNullType() (Type, error) {
 		return NoType, err
 	}
 	if t.tok.Token() != tokenSymbol {
-		return NoType, fmt.Errorf("ion: invalid symbol null.%v", t.tok.Token())
+		msg := fmt.Sprintf("invalid symbol null.%v", t.tok.Token())
+		return NoType, &SyntaxError{msg, t.tok.Pos() - 1}
 	}
 
 	val, err := t.tok.ReadValue(tokenSymbol)
@@ -463,7 +463,8 @@ func (t *textReader) readNullType() (Type, error) {
 	case "sexp":
 		return SexpType, nil
 	default:
-		return NoType, fmt.Errorf("ion: invalid symbol null.%v", val)
+		msg := fmt.Sprintf("invalid symbol null.%v", t.tok.Token())
+		return NoType, &SyntaxError{msg, t.tok.Pos() - 1}
 	}
 }
 
@@ -588,7 +589,7 @@ func (t *textReader) onLob() error {
 			return err
 		}
 		if !ok {
-			return invalidChar(c)
+			return t.tok.invalidChar(c)
 		}
 
 		valType = ClobType

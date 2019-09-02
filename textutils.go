@@ -16,10 +16,6 @@ func symbolNeedsQuoting(sym string) bool {
 		return true
 	}
 
-	if isSymbolRef(sym) {
-		return true
-	}
-
 	if !isIdentifierStart(int(sym[0])) {
 		return true
 	}
@@ -382,5 +378,5 @@ func parseTimestamp(val string) (time.Time, error) {
 }
 
 func invalidTimestamp(val string) (time.Time, error) {
-	return time.Time{}, fmt.Errorf("invalid timestamp: %v", val)
+	return time.Time{}, fmt.Errorf("ion: invalid timestamp: %v", val)
 }

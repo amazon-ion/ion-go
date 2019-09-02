@@ -3,7 +3,6 @@ package ion
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"io"
 	"math"
 	"math/big"
@@ -121,6 +120,11 @@ type Reader interface {
 	// 64 bits to represent losslessly.
 	Int64Value() (int64, error)
 
+	// Uint64Value returns the current value as an unsigned 64-bit integer (if that makes
+	// sense). It returns an error if the current value is not an Ion integer, is negative,
+	// or requires more than 64 bits to represent losslessly.
+	Uint64Value() (uint64, error)
+
 	// BigIntValue returns the current value as a big.Integer (if that makes sense). It
 	// returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
@@ -213,19 +217,19 @@ func (r *reader) Annotations() []string {
 
 // BoolValue returns the current value as a bool.
 func (r *reader) BoolValue() (bool, error) {
-	if r.valueType == BoolType {
-		if r.value == nil {
-			return false, nil
-		}
-		return r.value.(bool), nil
+	if r.valueType != BoolType {
+		return false, &UsageError{"Reader.BoolValue", "value is not a bool"}
 	}
-	return false, errors.New("ion: value is not a bool")
+	if r.value == nil {
+		return false, nil
+	}
+	return r.value.(bool), nil
 }
 
 // IntSize returns the size of the current int value.
 func (r *reader) IntSize() (IntSize, error) {
 	if r.valueType != IntType {
-		return NullInt, errors.New("ion: value is not an int")
+		return NullInt, &UsageError{"Reader.IntSize", "value is not a int"}
 	}
 	if r.value == nil {
 		return NullInt, nil
@@ -238,6 +242,11 @@ func (r *reader) IntSize() (IntSize, error) {
 		return Int32, nil
 	}
 
+	i := r.value.(*big.Int)
+	if i.IsUint64() {
+		return Uint64, nil
+	}
+
 	return BigInt, nil
 }
 
@@ -248,101 +257,129 @@ func (r *reader) IntValue() (int, error) {
 		return 0, err
 	}
 	if i > math.MaxInt32 || i < math.MinInt32 {
-		return 0, errors.New("ion: int value out of bounds")
+		return 0, &UsageError{"Reader.IntValue", "value too large for an int32"}
 	}
 	return int(i), nil
 }
 
 // Int64Value returns the current value as an int64.
 func (r *reader) Int64Value() (int64, error) {
-	if r.valueType == IntType {
-		if r.value == nil {
-			return 0, nil
-		}
-
-		if i, ok := r.value.(int64); ok {
-			return i, nil
-		}
-
-		bi := r.value.(*big.Int)
-		if bi.IsInt64() {
-			return bi.Int64(), nil
-		}
-
-		return 0, errors.New("ion: int value out of bounds")
+	if r.valueType != IntType {
+		return 0, &UsageError{"Reader.Int64Value", "value is not an int"}
 	}
-	return 0, errors.New("ion: value is not an int")
+	if r.value == nil {
+		return 0, nil
+	}
+
+	if i, ok := r.value.(int64); ok {
+		return i, nil
+	}
+
+	bi := r.value.(*big.Int)
+	if bi.IsInt64() {
+		return bi.Int64(), nil
+	}
+
+	return 0, &UsageError{"Reader.Int64Value", "value too large for an int64"}
+}
+
+// Uint64Value returns the current value as a uint64.
+func (r *reader) Uint64Value() (uint64, error) {
+	if r.valueType != IntType {
+		return 0, &UsageError{"Reader.Uint64Value", "value is not an int"}
+	}
+	if r.value == nil {
+		return 0, nil
+	}
+
+	if i, ok := r.value.(int64); ok {
+		if i >= 0 {
+			return uint64(i), nil
+		}
+		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
+	}
+
+	bi := r.value.(*big.Int)
+	if bi.Sign() < 0 {
+		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
+	}
+	if !bi.IsUint64() {
+		return 0, &UsageError{"Reader.Uint64Value", "value too large for a uint64"}
+	}
+	return bi.Uint64(), nil
 }
 
 // BigIntValue returns the current value as a big int.
 func (r *reader) BigIntValue() (*big.Int, error) {
-	if r.valueType == IntType {
-		if r.value == nil {
-			return nil, nil
-		}
-		if i, ok := r.value.(int64); ok {
-			return big.NewInt(i), nil
-		}
-		return r.value.(*big.Int), nil
+	if r.valueType != IntType {
+		return nil, &UsageError{"Reader.BigIntValue", "value is not an int"}
 	}
-	return nil, errors.New("ion: value is not an int")
+	if r.value == nil {
+		return nil, nil
+	}
+
+	if i, ok := r.value.(int64); ok {
+		return big.NewInt(i), nil
+	}
+	return r.value.(*big.Int), nil
 }
 
 // FloatValue returns the current value as a float.
 func (r *reader) FloatValue() (float64, error) {
-	if r.valueType == FloatType {
-		if r.value == nil {
-			return 0.0, nil
-		}
-		return r.value.(float64), nil
+	if r.valueType != FloatType {
+		return 0, &UsageError{"Reader.FloatValue", "value is not a float"}
 	}
-	return 0.0, errors.New("ion: value is not a float")
+	if r.value == nil {
+		return 0.0, nil
+	}
+	return r.value.(float64), nil
 }
 
 // DecimalValue returns the current value as a Decimal.
 func (r *reader) DecimalValue() (*Decimal, error) {
-	if r.valueType == DecimalType {
-		if r.value == nil {
-			return nil, nil
-		}
-		return r.value.(*Decimal), nil
+	if r.valueType != DecimalType {
+		return nil, &UsageError{"Reader.DecimalValue", "value is not a decimal"}
 	}
-	return nil, errors.New("ion: value is not a decimal")
+	if r.value == nil {
+		return nil, nil
+	}
+	return r.value.(*Decimal), nil
 }
 
 // TimeValue returns the current value as a time.
 func (r *reader) TimeValue() (time.Time, error) {
-	if r.valueType == TimestampType {
-		if r.value == nil {
-			return time.Time{}, nil
-		}
-		return r.value.(time.Time), nil
+	if r.valueType != TimestampType {
+		return time.Time{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
 	}
-	return time.Time{}, errors.New("ion: value is not a timestamp")
+	if r.value == nil {
+		return time.Time{}, nil
+	}
+	return r.value.(time.Time), nil
 }
 
 // StringValue returns the current value as a string.
 func (r *reader) StringValue() (string, error) {
-	if r.valueType == StringType || r.valueType == SymbolType {
-		if r.value == nil {
-			return "", nil
-		}
-		return r.value.(string), nil
+	if r.valueType != StringType && r.valueType != SymbolType {
+		return "", &UsageError{"Reader.StringValue", "value is not a string"}
 	}
-	return "", errors.New("ion: value is not a string")
+	if r.value == nil {
+		return "", nil
+	}
+	return r.value.(string), nil
 }
 
 // ByteValue returns the current value as a byte slice.
 func (r *reader) ByteValue() ([]byte, error) {
-	if r.valueType == BlobType || r.valueType == ClobType {
-		if r.value == nil {
-			return nil, nil
-		}
-		return r.value.([]byte), nil
+	if r.valueType != BlobType && r.valueType != ClobType {
+		return nil, &UsageError{"Reader.ByteValue", "value is not a lob"}
 	}
-	return nil, errors.New("ion: value is not a byte array")
+	if r.value == nil {
+		return nil, nil
+	}
+	return r.value.([]byte), nil
 }
 
+// Clear clears the current value from the reader.
 func (r *reader) clear() {
 	r.fieldName = ""
 	r.annotations = nil

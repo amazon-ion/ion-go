@@ -139,12 +139,14 @@ func TestWriteBinarySymbol(t *testing.T) {
 		0x71, 0x04, // name
 		0x71, 0x05, // version
 		0x71, 0x09, // $ion_shared_symbol_table
+		0x74, 0xFF, 0xFF, 0xFF, 0xFF, // $4294967295
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteSymbol("$ion")
 		w.WriteSymbol("name")
 		w.WriteSymbol("version")
 		w.WriteSymbol("$ion_shared_symbol_table")
+		w.WriteSymbol("$4294967295")
 	})
 }
 

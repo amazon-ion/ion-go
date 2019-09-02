@@ -71,6 +71,8 @@ type Writer interface {
 
 	// WriteInt writes an integer value.
 	WriteInt(val int64) error
+	// WriteUint writes an unsigned integer value.
+	WriteUint(val uint64) error
 	// WriteBigInt writes a big integer value.
 	WriteBigInt(val *big.Int) error
 	// WriteFloat writes a floating-point value.

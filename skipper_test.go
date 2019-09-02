@@ -14,7 +14,7 @@ func TestSkipNumber(t *testing.T) {
 	test("1d45\n", '\n')
 	test("1.4e-12//", '/')
 
-	testErr("1.2d3d", "unexpected char 'd'")
+	testErr("1.2d3d", "ion: unexpected rune 'd' (offset 5)")
 }
 
 func TestSkipBinary(t *testing.T) {
@@ -24,7 +24,7 @@ func TestSkipBinary(t *testing.T) {
 	test("-0b10 ", ' ')
 	test("0b010101,", ',')
 
-	testErr("0b2", "unexpected char '2'")
+	testErr("0b2", "ion: unexpected rune '2' (offset 2)")
 }
 
 func TestSkipHex(t *testing.T) {
@@ -34,7 +34,7 @@ func TestSkipHex(t *testing.T) {
 	test("-0x0F ", ' ')
 	test("0x1234567890abcdefABCDEF,", ',')
 
-	testErr("0x0G", "unexpected char 'G'")
+	testErr("0x0G", "ion: unexpected rune 'G' (offset 3)")
 }
 
 func TestSkipTimestamp(t *testing.T) {
@@ -55,17 +55,17 @@ func TestSkipTimestamp(t *testing.T) {
 	test("2001-01-02T03:04:05.666Z ", ' ')
 	test("2001-01-02T03:04:05.666666z ", ' ')
 
-	testErr("", "unexpected EOF")
-	testErr("2001", "unexpected EOF")
-	testErr("2001z", "unexpected char 'z'")
-	testErr("20011", "unexpected char '1'")
-	testErr("2001-0", "unexpected EOF")
-	testErr("2001-01", "unexpected EOF")
-	testErr("2001-01-02Tz", "unexpected char 'z'")
-	testErr("2001-01-02T03", "unexpected EOF")
-	testErr("2001-01-02T03z", "unexpected char 'z'")
-	testErr("2001-01-02T03:04x ", "unexpected char 'x'")
-	testErr("2001-01-02T03:04:05x ", "unexpected char 'x'")
+	testErr("", "ion: unexpected end of input (offset 0)")
+	testErr("2001", "ion: unexpected end of input (offset 4)")
+	testErr("2001z", "ion: unexpected rune 'z' (offset 4)")
+	testErr("20011", "ion: unexpected rune '1' (offset 4)")
+	testErr("2001-0", "ion: unexpected end of input (offset 6)")
+	testErr("2001-01", "ion: unexpected end of input (offset 7)")
+	testErr("2001-01-02Tz", "ion: unexpected rune 'z' (offset 11)")
+	testErr("2001-01-02T03", "ion: unexpected end of input (offset 13)")
+	testErr("2001-01-02T03z", "ion: unexpected rune 'z' (offset 13)")
+	testErr("2001-01-02T03:04x ", "ion: unexpected rune 'x' (offset 16)")
+	testErr("2001-01-02T03:04:05x ", "ion: unexpected rune 'x' (offset 19)")
 }
 
 func TestSkipSymbol(t *testing.T) {
@@ -90,8 +90,8 @@ func TestSkipSymbolQuoted(t *testing.T) {
 	test("foo\\'bar':", ':')
 	test("foo\\\nbar',", ',')
 
-	testErr("foo", "unexpected EOF")
-	testErr("foo\n", "unexpected char '\\n'")
+	testErr("foo", "ion: unexpected end of input (offset 3)")
+	testErr("foo\n", "ion: unexpected rune '\\n' (offset 3)")
 }
 
 func TestSkipSymbolOperator(t *testing.T) {
@@ -111,8 +111,8 @@ func TestSkipString(t *testing.T) {
 	test("foo\\\"bar\"], \"\"", ']')
 	test("foo\\\nbar\" \t\t\t", ' ')
 
-	testErr("foobar", "unexpected EOF")
-	testErr("foobar\n", "unexpected char '\\n'")
+	testErr("foobar", "ion: unexpected end of input (offset 6)")
+	testErr("foobar\n", "ion: unexpected rune '\\n' (offset 6)")
 }
 
 func TestSkipLongString(t *testing.T) {
@@ -132,10 +132,10 @@ func TestSkipBlob(t *testing.T) {
 	test("oogboog}},{{}}", ',')
 	test("'''not encoded'''}}\n", '\n')
 
-	testErr("", "unexpected EOF")
-	testErr("oogboog", "unexpected EOF")
-	testErr("oogboog}", "unexpected EOF")
-	testErr("oog}{boog", "unexpected char '{'")
+	testErr("", "ion: unexpected end of input (offset 1)")
+	testErr("oogboog", "ion: unexpected end of input (offset 7)")
+	testErr("oogboog}", "ion: unexpected end of input (offset 8)")
+	testErr("oog}{boog", "ion: unexpected rune '{' (offset 4)")
 }
 
 func TestSkipList(t *testing.T) {
@@ -145,7 +145,7 @@ func TestSkipList(t *testing.T) {
 	test("[]],", ',')
 	test("[123, \"]\", ']']] ", ' ')
 
-	testErr("abc, def, ", "unexpected EOF")
+	testErr("abc, def, ", "ion: unexpected end of input (offset 10)")
 }
 
 type skipFunc func(*tokenizer) (int, error)

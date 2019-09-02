@@ -7,7 +7,7 @@ import (
 )
 
 func TestDecimalToString(t *testing.T) {
-	test := func(n int64, scale int, expected string) {
+	test := func(n int64, scale int32, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			d := Decimal{
 				n:     big.NewInt(n),
@@ -50,7 +50,7 @@ func TestDecimalToString(t *testing.T) {
 }
 
 func TestParseDecimal(t *testing.T) {
-	test := func(in string, n *big.Int, scale int) {
+	test := func(in string, n *big.Int, scale int32) {
 		t.Run(in, func(t *testing.T) {
 			d, err := ParseDecimal(in)
 			if err != nil {

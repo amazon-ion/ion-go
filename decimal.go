@@ -1,7 +1,6 @@
 package ion
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -9,16 +8,27 @@ import (
 	"strings"
 )
 
+// A ParseError is returned if ParseDecimal is called with a parameter that
+// cannot be parsed as a Decimal.
+type ParseError struct {
+	Num string
+	Msg string
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("ion: ParseDecimal(%v): %v", e.Num, e.Msg)
+}
+
 // TODO: Explicitly track precision?
 
 // Decimal is an arbitrary-precision decimal value.
 type Decimal struct {
 	n     *big.Int
-	scale int
+	scale int32
 }
 
 // NewDecimal creates a new decimal whose value is equal to n * 10^exp.
-func NewDecimal(n *big.Int, exp int) *Decimal {
+func NewDecimal(n *big.Int, exp int32) *Decimal {
 	return &Decimal{
 		n:     n,
 		scale: -exp,
@@ -44,25 +54,25 @@ func MustParseDecimal(in string) *Decimal {
 // returning an error on failure.
 func ParseDecimal(in string) (*Decimal, error) {
 	if len(in) == 0 {
-		return nil, errors.New("empty string")
+		return nil, &ParseError{in, "empty string"}
 	}
 
-	exponent := 0
+	exponent := int32(0)
 
 	d := strings.IndexAny(in, "Dd")
 	if d != -1 {
 		// There's an explicit exponent.
 		exp := in[d+1:]
 		if len(exp) == 0 {
-			return nil, errors.New("unexpected end of input after d")
+			return nil, &ParseError{in, "unexpected end of input after d"}
 		}
 
 		tmp, err := strconv.ParseInt(exp, 10, 32)
 		if err != nil {
-			return nil, err
+			return nil, &ParseError{in, err.Error()}
 		}
 
-		exponent = int(tmp)
+		exponent = int32(tmp)
 		in = in[:d]
 	}
 
@@ -72,21 +82,21 @@ func ParseDecimal(in string) (*Decimal, error) {
 		ipart := in[:d]
 		fpart := in[d+1:]
 
-		exponent -= len(fpart)
+		exponent -= int32(len(fpart))
 		in = ipart + fpart
 	}
 
 	n, ok := new(big.Int).SetString(in, 10)
 	if !ok {
 		// Unfortunately this is all we get?
-		return nil, fmt.Errorf("not a valid number: %v", in)
+		return nil, &ParseError{in, "cannot parse coefficient"}
 	}
 
 	return NewDecimal(n, exponent), nil
 }
 
 // CoEx returns this decimal's coefficient and exponent.
-func (d *Decimal) CoEx() (*big.Int, int) {
+func (d *Decimal) CoEx() (*big.Int, int32) {
 	return d.n, -d.scale
 }
 
@@ -135,7 +145,7 @@ func (d *Decimal) Mul(o *Decimal) *Decimal {
 
 	return &Decimal{
 		n:     new(big.Int).Mul(d.n, o.n),
-		scale: int(scale),
+		scale: int32(scale),
 	}
 }
 
@@ -150,7 +160,7 @@ func (d *Decimal) ShiftL(shift int) *Decimal {
 
 	return &Decimal{
 		n:     d.n,
-		scale: int(scale),
+		scale: int32(scale),
 	}
 }
 
@@ -165,7 +175,7 @@ func (d *Decimal) ShiftR(shift int) *Decimal {
 
 	return &Decimal{
 		n:     d.n,
-		scale: int(scale),
+		scale: int32(scale),
 	}
 }
 
@@ -206,7 +216,7 @@ var ten = big.NewInt(10)
 // do that. (1d100 -> 10d99). Makes comparisons and math easier, at the
 // expense of more storage space. Technically speaking implies adding
 // more precision, but we're not tracking that too closely.
-func (d *Decimal) upscale(scale int) *Decimal {
+func (d *Decimal) upscale(scale int32) *Decimal {
 	diff := int64(scale) - int64(d.scale)
 	if diff < 0 {
 		panic("can't upscale to a smaller scale")
@@ -221,22 +231,29 @@ func (d *Decimal) upscale(scale int) *Decimal {
 	}
 }
 
-// Trunc attempts to truncate this decimal to an int64. Use at your own risk.
+// Trunc attempts to truncate this decimal to an int64, dropping any fractional bits.
 func (d *Decimal) Trunc() (int64, error) {
 	if d.scale < 0 {
-		// TODO: safety in case scale is very small?
+		// Don't even bother trying this with numbers that *definitely* too big to represent
+		// as an int64, because upscale(0) will consume a bunch of memory.
+		if d.scale < -20 {
+			return 0, &strconv.NumError{
+				Func: "ParseInt",
+				Num:  d.String(),
+				Err:  strconv.ErrRange,
+			}
+		}
 		d = d.upscale(0)
 	}
 
 	str := d.n.String()
 
-	want := len(str) - d.scale
+	want := len(str) - int(d.scale)
 	if want <= 0 {
 		return 0, nil
 	}
 
-	trunc := str[:want]
-	return strconv.ParseInt(trunc, 10, 64)
+	return strconv.ParseInt(str[:want], 10, 64)
 }
 
 // Truncate returns a new decimal, truncated to the given number of
@@ -276,7 +293,7 @@ func (d *Decimal) Truncate(precision int) *Decimal {
 
 	return &Decimal{
 		n:     n,
-		scale: int(scale),
+		scale: int32(scale),
 	}
 }
 
@@ -294,7 +311,7 @@ func (d *Decimal) String() string {
 	default:
 		// Value is a downscaled integer nn.nn('d'-ss)?
 		str := d.n.String()
-		idx := len(str) - d.scale
+		idx := len(str) - int(d.scale)
 
 		prefix := 1
 		if d.n.Sign() < 0 {

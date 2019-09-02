@@ -245,7 +245,7 @@ func TestWriteTextTimestamp(t *testing.T) {
 }
 
 func TestWriteTextSymbol(t *testing.T) {
-	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸'}"
+	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸',$123:$456}"
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginStruct()
 
@@ -261,6 +261,9 @@ func TestWriteTextSymbol(t *testing.T) {
 		w.Annotation("b")
 		w.Annotation("u")
 		w.WriteSymbol("lo🇺🇸")
+
+		w.FieldName("$123")
+		w.WriteSymbol("$456")
 
 		w.EndStruct()
 	})

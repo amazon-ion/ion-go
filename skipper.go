@@ -91,7 +91,7 @@ func (t *tokenizer) skipValue() (int, error) {
 	case tokenOpenBracket:
 		c, err = t.skipList()
 	default:
-		err = fmt.Errorf("skipValue called with token=%v", t.token)
+		panic(fmt.Sprintf("skipValue called with token=%v", t.token))
 	}
 
 	if err != nil {
@@ -161,7 +161,7 @@ func (t *tokenizer) skipNumber() (int, error) {
 		return 0, err
 	}
 	if !ok {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 	return c, nil
 }
@@ -199,7 +199,7 @@ func (t *tokenizer) skipRadix(pok, dok matcher) (int, error) {
 	}
 
 	if c != '0' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 	if err = t.expect(pok); err != nil {
 		return 0, err
@@ -220,7 +220,7 @@ func (t *tokenizer) skipRadix(pok, dok matcher) (int, error) {
 		return 0, err
 	}
 	if !ok {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 
 	return c, nil
@@ -238,7 +238,7 @@ func (t *tokenizer) skipTimestamp() (int, error) {
 		return t.read()
 	}
 	if c != '-' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 
 	// Read the next two, yyyy-mm.
@@ -251,7 +251,7 @@ func (t *tokenizer) skipTimestamp() (int, error) {
 		return t.read()
 	}
 	if c != '-' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 
 	// Read the day.
@@ -283,7 +283,7 @@ func (t *tokenizer) skipTimestamp() (int, error) {
 		return 0, err
 	}
 	if c != ':' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 
 	c, err = t.skipTimestampDigits(2)
@@ -340,7 +340,7 @@ func (t *tokenizer) skipTimestampOffsetOrZ(c int) (int, error) {
 	if c == 'z' || c == 'Z' {
 		return t.read()
 	}
-	return 0, invalidChar(c)
+	return 0, t.invalidChar(c)
 }
 
 // SkipTimestampOffset skips an (optional) +-hh:mm timestamp zone offset
@@ -355,7 +355,7 @@ func (t *tokenizer) skipTimestampOffset(c int) (int, error) {
 		return 0, err
 	}
 	if c != ':' {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 	return t.skipTimestampDigits(2)
 }
@@ -383,7 +383,7 @@ func (t *tokenizer) skipTimestampFinish(c int) (int, error) {
 		return 0, err
 	}
 	if !ok {
-		return 0, invalidChar(c)
+		return 0, t.invalidChar(c)
 	}
 	return c, nil
 }
@@ -423,7 +423,7 @@ func (t *tokenizer) skipSymbolQuotedHelper() error {
 
 		switch c {
 		case -1, '\n':
-			return invalidChar(c)
+			return t.invalidChar(c)
 
 		case '\'':
 			return nil
@@ -471,7 +471,7 @@ func (t *tokenizer) skipStringHelper() error {
 
 		switch c {
 		case -1, '\n':
-			return invalidChar(c)
+			return t.invalidChar(c)
 
 		case '"':
 			return nil
@@ -503,7 +503,7 @@ func (t *tokenizer) skipLongStringHelper(handler commentHandler) error {
 
 		switch c {
 		case -1:
-			return invalidChar(c)
+			return t.invalidChar(c)
 
 		case '\'':
 			ok, err := t.skipEndOfLongString(handler)
@@ -586,7 +586,7 @@ func (t *tokenizer) skipBlobHelper() error {
 			return err
 		}
 		if c == -1 {
-			return invalidChar(c)
+			return t.invalidChar(c)
 		}
 	}
 
@@ -645,7 +645,7 @@ func (t *tokenizer) skipContainerHelper(term int) error {
 
 		switch c {
 		case -1:
-			return invalidChar(c)
+			return t.invalidChar(c)
 
 		case term:
 			return nil
@@ -832,7 +832,7 @@ func (t *tokenizer) skipBlockComment() error {
 			return err
 		}
 		if c == -1 {
-			return invalidChar(c)
+			return t.invalidChar(c)
 		}
 
 		if star && c == '/' {

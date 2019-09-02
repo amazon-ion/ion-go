@@ -100,6 +100,8 @@ const (
 	Int32
 	// Int64 is the size of an Ion integer that can be losslessly stored in an int64.
 	Int64
+	// Uint64 is the size of an Ion integer that can be losslessly stored in a uint64.
+	Uint64
 	// BigInt is the size of an Ion integer that can only be losslessly stored in a big.Int.
 	BigInt
 )
@@ -113,6 +115,8 @@ func (i IntSize) String() string {
 		return "int32"
 	case Int64:
 		return "int64"
+	case Uint64:
+		return "uint64"
 	case BigInt:
 		return "big.Int"
 	default:
