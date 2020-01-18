@@ -963,9 +963,24 @@ func TestBinaryStream(t *testing.T) {
 }
 
 func TestIonTests_Binary_Good(t *testing.T) {
+	filesToSkip := map[string]bool{
+		// TODO amzn/ion-go#4 (these test edge cases around various type codes)
+		"T14.10n":      true,
+		"T15.10n":      true,
+		"T5.10n":       true,
+		"T6-large.10n": true,
+		"T7-large.10n": true,
+	}
+
 	testFilePath := "../ion-tests/iontestdata/good"
 	walkFn := func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() || !strings.HasSuffix(path, ".10n") {
+			return nil
+		}
+
+		name := info.Name()
+		if _, ok := filesToSkip[name]; ok {
+			t.Log("skipping", name)
 			return nil
 		}
 
@@ -1049,6 +1064,8 @@ func TestIonTests_Binary_Bad(t *testing.T) {
 		"timestampSept31.10n":      true,
 		// Not performing string verification on parse.
 		"stringWithLatinEncoding.10n": true,
+		// TODO amzn/ion-go#4 ('null' annotation)
+		"type_14_length_15.10n": true,
 	}
 
 	testFilePath := "../ion-tests/iontestdata/bad"
