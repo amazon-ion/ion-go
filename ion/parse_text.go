@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"runtime"
 
-	"github.com/pkg/errors"
 	"github.com/amzn/ion-go/internal/lex"
+	"github.com/pkg/errors"
 )
 
 // ParseText parses all of the bytes from the given Reader into an
@@ -173,7 +173,7 @@ func (p *parser) parseValue(allowOperator bool) Value {
 		case lex.IonSExpStart:
 			return p.parseSExpression(annotations)
 		case lex.IonString:
-			return String{annotations: annotations, text: doStringReplacements(p.next().Val)}
+			return String{annotations: annotations, text: p.doStringReplacements(p.next().Val)}
 		case lex.IonStringLong:
 			return p.parseLongString(annotations)
 		case lex.IonStructStart:

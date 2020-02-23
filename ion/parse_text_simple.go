@@ -20,6 +20,7 @@ import (
 	"github.com/amzn/ion-go/internal/lex"
 	"math"
 	"strconv"
+	"unicode/utf8"
 )
 
 // This file contains text parsers for Null, Padding, Bool, Symbol, String, Blob, and Clob.
@@ -35,13 +36,13 @@ func (p *parser) parseBinary(annotations []Symbol) Value {
 	case lex.IonBlob:
 		value = Blob{annotations: annotations, text: removeAny(item.Val, []byte(" \t\n\r\f\v"))}
 	case lex.IonClobShort:
-		value = Clob{annotations: annotations, text: doClobReplacements(item.Val)}
+		value = Clob{annotations: annotations, text: p.doClobReplacements(item.Val)}
 	case lex.IonClobLong:
 		text := item.Val
 		for peek := p.peekNonComment(); peek.Type == lex.IonClobLong; peek = p.peekNonComment() {
 			text = append(text, p.next().Val...)
 		}
-		value = Clob{annotations: annotations, text: doClobReplacements(text)}
+		value = Clob{annotations: annotations, text: p.doClobReplacements(text)}
 	default:
 		p.panicf("expected a blob or clob but found %q", item)
 	}
@@ -56,15 +57,43 @@ func (p *parser) parseBinary(annotations []Symbol) Value {
 func (p *parser) parseLongString(annotations []Symbol) String {
 	text := []byte{}
 	for item := p.peekNonComment(); item.Type == lex.IonStringLong; item = p.peekNonComment() {
-		text = append(text, doStringReplacements(p.next().Val)...)
+		text = append(text, p.doStringReplacements(p.next().Val)...)
 	}
 
 	return String{annotations: annotations, text: text}
 }
 
+// decodeHex takes a slice that is a hex-encoded rune (up to 4 bytes large)
+// and decodes it into a slice containing UTF-8 code units.
+func (p *parser) decodeHex(hex []byte) []byte {
+	// must be a power of two and no larger that uint32
+	hexLen := len(hex)
+	if hexLen <= 0 || hexLen > 8 || hexLen%2 != 0 {
+		// calling code must give us a proper slice...
+		p.panicf("Unexpected hex slice handed to decoder: %v", hex)
+	}
+
+	// decode the hex string into a UTF-32 scalar
+	var cp uint64
+	buf := make([]byte, utf8.UTFMax)
+	for i := 0; i < hexLen; i += 2 {
+		octet, ok := strconv.ParseUint(string(hex[i:i+2]), 16, 8)
+		if ok != nil {
+			// invariant technically violated as the lexer should have validated this
+			p.panicf("bad hex literal not processed by lexer: %v", hex)
+		}
+		cp = (cp << 8) | octet
+	}
+
+	// now serialize back as UTF-8 code units
+	encodeLen := utf8.EncodeRune(buf, rune(cp))
+
+	return buf[0:encodeLen]
+}
+
 // doStringReplacements converts escaped characters into their equivalent
 // character while handling cases involving \r.
-func doStringReplacements(str []byte) []byte {
+func (p *parser) doStringReplacements(str []byte) []byte {
 	strLen := len(str)
 	ret := make([]byte, 0, strLen)
 	for index := 0; index < strLen; index++ {
@@ -101,6 +130,21 @@ func doStringReplacements(str []byte) []byte {
 			case '\'', '"', '\\':
 				ret = append(ret, next)
 				index++
+			case 'x':
+				index += 2
+				data := p.decodeHex(str[index : index+2])
+				index += 1
+				ret = append(ret, data...)
+			case 'u':
+				index += 2
+				data := p.decodeHex(str[index : index+4])
+				index += 3
+				ret = append(ret, data...)
+			case 'U':
+				index += 2
+				data := p.decodeHex(str[index : index+8])
+				index += 7
+				ret = append(ret, data...)
 			default:
 				// Don't have anything special to do with the next character, so
 				// just add the current character and let the next one get added
@@ -116,7 +160,7 @@ func doStringReplacements(str []byte) []byte {
 }
 
 // doClobReplacements is like doStringReplacements but is restricted to escapes that CLOBs have.
-func doClobReplacements(str []byte) []byte {
+func (p *parser) doClobReplacements(str []byte) []byte {
 	strLen := len(str)
 	ret := make([]byte, 0, strLen)
 	for index := 0; index < strLen; index++ {
@@ -154,11 +198,10 @@ func doClobReplacements(str []byte) []byte {
 				ret = append(ret, next)
 				index++
 			case 'x':
-				// Decode the hex sequence
 				index += 2
-				octet, _ := strconv.ParseUint(string(str[index:index+2]), 16, 8)
-				index += 2
-				ret = append(ret, byte(octet))
+				data := p.decodeHex(str[index : index+2])
+				index += 1
+				ret = append(ret, data...)
 			default:
 				// Don't have anything special to do with the next character, so
 				// just add the current character and let the next one get added
@@ -270,5 +313,5 @@ func (p *parser) parseSymbol(annotations []Symbol, allowOperator bool) Value {
 	// TODO: Figure out why the bytes in item.Val get overwritten when we don't
 	//       make an explicit copy of the data.
 	//return Symbol{annotations: annotations, quoted: quoted, text: doStringReplacements(item.Val)}
-	return Symbol{annotations: annotations, quoted: quoted, text: append([]byte{}, doStringReplacements(item.Val)...)}
+	return Symbol{annotations: annotations, quoted: quoted, text: append([]byte{}, p.doStringReplacements(item.Val)...)}
 }
