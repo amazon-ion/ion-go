@@ -22,12 +22,12 @@ const (
 	SymbolIDUnknown = -1
 )
 
-// A location from a shared symbol table
+// ImportSource is a reference to a SID within a shared symbol table.
 type ImportSource struct {
-	// The name of the shared symbol table that this token refers to
+	// The desc of the shared symbol table that this token refers to.
 	Table string
-	// The ID within that table that the symbol text is located.
-	// This must be greater than 1
+	// The ID of the interned symbol text within the shared SymbolTable.
+	// This must be greater than 1.
 	SID int64
 }
 
@@ -41,9 +41,9 @@ func newSource(table string, sid int64) *ImportSource {
 
 // A symbolic token for Ion.
 // Symbol tokens are the values that annotations, field names, and the textual content of Ion symbol values.
-// The `nil` value for SymbolToken is $0
+// The `nil` value for SymbolToken is $0.
 type SymbolToken struct {
-	// The string text of the token or nil if unknown
+	// The string text of the token or nil if unknown.
 	Text *string
 	// Local symbol ID associated with the token.
 	localSID int64
@@ -67,7 +67,7 @@ func (t SymbolToken) String() string {
 
 	source := "nil"
 	if t.Source != nil {
-		source = fmt.Sprintf("%v", *t.Source)
+		source = fmt.Sprintf("{%q %d}", t.Source.Table, t.Source.SID)
 	}
 
 	return fmt.Sprintf("{%s %d %s}", text, t.localSID, source)

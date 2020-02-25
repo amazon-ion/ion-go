@@ -131,9 +131,9 @@ type StructField struct {
 }
 
 // Struct is an unordered collection of tagged values.
-// When two fields in the same struct have the same name we say there
+// When two fields in the same struct have the same desc we say there
 // are “repeated names” or “repeated fields”. All such fields must be
-// preserved, any StructField that has a repeated name must not be discarded.
+// preserved, any StructField that has a repeated desc must not be discarded.
 type Struct struct {
 	annotations []Symbol
 	fields      []StructField

@@ -26,7 +26,7 @@ const (
 	symbolTextTable = "$ion_symbol_table"
 	symbolIDTable   = 3
 
-	symbolTextName = "name"
+	symbolTextName = "desc"
 	symbolIDName   = 4
 
 	symbolTextVersion = "version"

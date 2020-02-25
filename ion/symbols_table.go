@@ -23,7 +23,9 @@ const (
 	symbolTableKindLocal
 )
 
-// SymbolTable is the core lookup structure for Tokens from their symbolic ID
+// TODO Consider using `maligned` from `golangci-lint` on this struct.
+
+// SymbolTable is the core lookup structure for Tokens from their symbolic ID.
 type SymbolTable struct {
 	kind    symbolTableKind
 	name    string
@@ -44,22 +46,23 @@ func newSymbolTableRaw(kind symbolTableKind, name string, version int32) *Symbol
 	return &table
 }
 
-// newSymbolTable constructs a new empty symbol table of the given type
-// Imports are the tables to load into this one.
+// newSymbolTable constructs a new empty symbol table of the given type.
+// The desc and version are applicable for shared/system symbol tables and should be default
+// values for local symbol tables.
+// The given imports will be loaded into the newly constructed symbol table.
 func newSymbolTable(kind symbolTableKind, name string, version int32, imports ...SymbolTable) *SymbolTable {
 	table := newSymbolTableRaw(kind, name, version)
-	// copy in the import "references"
+	// Copy in the import "references."
 	table.imports = append(imports[:0:0], imports...)
 	if kind == symbolTableKindLocal {
-		// for local symbol table, import system symbol table
+		// For local symbol table, import system symbol table.
 		imports = append([]SymbolTable{systemSymbolTable}, imports...)
 	}
 	for _, importTable := range imports {
-		// TODO Consider if we should not inline the imports or make this delegate to the imports or configurable
+		// TODO Consider if we should not inline the imports or make this delegate to the imports or configurable.
 		table.tokens = append(table.tokens, importTable.tokens...)
 		for text, newToken := range importTable.textMap {
-			_, exists := table.textMap[text]
-			if !exists {
+			if _, exists := table.textMap[text]; !exists {
 				table.textMap[text] = newToken
 			}
 		}
@@ -69,13 +72,13 @@ func newSymbolTable(kind symbolTableKind, name string, version int32, imports ..
 }
 
 // newLocalSymbolTable creates an instance with symbolTableKindLocal.
-// The name is empty and the version is zero, these fields are inapplicable to local symbol tables.
+// The desc is empty and the version is zero. These fields are inapplicable to local symbol tables.
 func newLocalSymbolTable(imports ...SymbolTable) *SymbolTable {
 	return newSymbolTable(symbolTableKindLocal, "", 0, imports...)
 }
 
 // newSharedSymbolTable creates an instance with symbolTableKindShared.
-// returns `nil` if the version is not positive.
+// Returns `nil` if the version is not positive.
 func newSharedSymbolTable(name string, version int32, imports ...SymbolTable) *SymbolTable {
 	if version <= 0 {
 		return nil
@@ -84,7 +87,7 @@ func newSharedSymbolTable(name string, version int32, imports ...SymbolTable) *S
 }
 
 // BySID returns the underlying SymbolToken by local ID.
-func (t SymbolTable) BySID(sid int64) (SymbolToken, bool) {
+func (t *SymbolTable) BySID(sid int64) (SymbolToken, bool) {
 	if sid <= 0 || sid > t.maxSID {
 		return symbolTokenUndefined, false
 	}
@@ -92,33 +95,33 @@ func (t SymbolTable) BySID(sid int64) (SymbolToken, bool) {
 }
 
 // ByText returns the underlying SymbolToken by text lookup.
-func (t SymbolTable) ByText(text string) (SymbolToken, bool) {
-	tok, ok := t.textMap[text]
-	if !ok {
-		return symbolTokenUndefined, false
+func (t *SymbolTable) ByText(text string) (SymbolToken, bool) {
+	if tok, exists := t.textMap[text]; exists {
+		return tok, true
 	}
-	return tok, true
+	return symbolTokenUndefined, false
 }
 
 // InternToken adds a symbol to the given table if it does not exist.
 func (t *SymbolTable) InternToken(symText string) SymbolToken {
-	tok, exists := t.textMap[symText]
-	if !exists {
-		t.maxSID += 1
-		var source *ImportSource = nil
-		if t.kind != symbolTableKindLocal {
-			// defining a token within a shared/system table makes the token have a source referring to its
-			// own table and SID
-			source = newSource(t.name, t.maxSID)
-		}
-
-		tok = SymbolToken{
-			Text:     &symText,
-			localSID: t.maxSID,
-			Source:   source,
-		}
-		t.tokens = append(t.tokens, tok)
-		t.textMap[symText] = tok
+	if tok, exists := t.textMap[symText]; exists {
+		return tok
 	}
+
+	t.maxSID += 1
+	var source *ImportSource = nil
+	if t.kind != symbolTableKindLocal {
+		// defining a token within a shared/system table makes the token have a source referring to its
+		// own table and SID
+		source = newSource(t.name, t.maxSID)
+	}
+
+	tok := SymbolToken{
+		Text:     &symText,
+		localSID: t.maxSID,
+		Source:   source,
+	}
+	t.tokens = append(t.tokens, tok)
+	t.textMap[symText] = tok
 	return tok
 }

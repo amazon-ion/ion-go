@@ -95,7 +95,7 @@ type Value interface {
 
 // Padding represents no-op padding in a binary stream.
 type padding struct {
-	// Note that the name "length" is a little bit of a misnomer since a
+	// Note that the desc "length" is a little bit of a misnomer since a
 	// padding of length n pads n+1 bytes.
 	binary []byte
 }

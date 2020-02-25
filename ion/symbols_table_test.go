@@ -78,7 +78,7 @@ func makeSystemSymbolTableCase() symbolTableCase {
 			Source:   newSource(symbolTextIon, symbolIDTable),
 		},
 		{
-			Text:     newString("name"),
+			Text:     newString("desc"),
 			localSID: symbolIDName,
 			Source:   newSource(symbolTextIon, symbolIDName),
 		},
@@ -211,11 +211,12 @@ func TestSymbolTable(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
+			// TODO Consider using cmp.Transform to make these tests less verbose...
 			if c.kind != c.table.kind {
 				t.Errorf("Table kind mismatch: %d != %d", c.kind, c.table.kind)
 			}
 			if c.name != c.table.name {
-				t.Errorf("Table name mismatch: %s != %s", c.name, c.table.name)
+				t.Errorf("Table desc mismatch: %s != %s", c.name, c.table.name)
 			}
 			if c.version != c.table.version {
 				t.Errorf("Table version mismatch: %d != %d", c.version, c.table.version)
