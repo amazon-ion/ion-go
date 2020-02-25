@@ -63,29 +63,39 @@ func (p *parser) parseLongString(annotations []Symbol) String {
 	return String{annotations: annotations, text: text}
 }
 
-// decodeHex takes a slice that is a hex-encoded rune (up to 4 bytes large)
-// and decodes it into a slice containing UTF-8 code units.
-func (p *parser) decodeHex(hex []byte) []byte {
-	// must be a power of two and no larger that uint32
-	hexLen := len(hex)
+// decodeHex takes a slice that is the input buffer and decodes it into a slice containing UTF-8 code units.
+// The start parameter is the index in the slice start of a hex-encoded rune to decode.
+// The escapeLen parameter is the length of the escape to decode and must be a length
+// that is a power of two, no longer than size of uint32, and within the length of the input slice.
+func (p *parser) decodeHex(input []byte, start int, hexLen int) []byte {
+	// Length must be a power of two and no larger that size of uint32.
 	if hexLen <= 0 || hexLen > 8 || hexLen%2 != 0 {
 		// calling code must give us a proper slice...
-		p.panicf("Unexpected hex slice handed to decoder: %v", hex)
+		p.panicf("hex escape is invalid length (%d)", hexLen)
 	}
+	// Construct a working slice to decode with.
+	inLen := len(input)
+	if start < 0 || start >= inLen {
+		p.panicf("start of hex escape (%d) is negative or greater than or equal to input length (%d)", start, inLen)
+	}
+	end := start + hexLen
+	if end > inLen {
+		p.panicf("end of hex escape (%d) is greater than input length (%d)", end, inLen)
+	}
+	hex := input[start:end]
 
-	// decode the hex string into a UTF-32 scalar
-	var cp uint64
+	// Decode the hex string into a UTF-32 scalar.
 	buf := make([]byte, utf8.UTFMax)
+	var cp uint64
 	for i := 0; i < hexLen; i += 2 {
-		octet, ok := strconv.ParseUint(string(hex[i:i+2]), 16, 8)
-		if ok != nil {
-			// invariant technically violated as the lexer should have validated this
-			p.panicf("bad hex literal not processed by lexer: %v", hex)
+		octet, errParse := strconv.ParseUint(string(hex[i:i+2]), 16, 8)
+		if errParse != nil {
+			p.panicf("invalid hex escape (%q) was not caught by lexer: %v", hex, errParse)
 		}
 		cp = (cp << 8) | octet
 	}
 
-	// now serialize back as UTF-8 code units
+	// Now serialize back as UTF-8 code units.
 	encodeLen := utf8.EncodeRune(buf, rune(cp))
 
 	return buf[0:encodeLen]
@@ -132,17 +142,17 @@ func (p *parser) doStringReplacements(str []byte) []byte {
 				index++
 			case 'x':
 				index += 2
-				data := p.decodeHex(str[index : index+2])
+				data := p.decodeHex(str, index, 2)
 				index += 1
 				ret = append(ret, data...)
 			case 'u':
 				index += 2
-				data := p.decodeHex(str[index : index+4])
+				data := p.decodeHex(str, index, 4)
 				index += 3
 				ret = append(ret, data...)
 			case 'U':
 				index += 2
-				data := p.decodeHex(str[index : index+8])
+				data := p.decodeHex(str, index, 8)
 				index += 7
 				ret = append(ret, data...)
 			default:
@@ -199,7 +209,7 @@ func (p *parser) doClobReplacements(str []byte) []byte {
 				index++
 			case 'x':
 				index += 2
-				data := p.decodeHex(str[index : index+2])
+				data := p.decodeHex(str, index, 2)
 				index += 1
 				ret = append(ret, data...)
 			default:
