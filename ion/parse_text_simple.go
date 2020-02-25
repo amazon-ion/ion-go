@@ -115,14 +115,14 @@ func doStringReplacements(str []byte) []byte {
 	return ret
 }
 
-// doClobReplacements is like doStringReplacements but is restricted to escapes that CLOBs have
+// doClobReplacements is like doStringReplacements but is restricted to escapes that CLOBs have.
 func doClobReplacements(str []byte) []byte {
 	strLen := len(str)
 	ret := make([]byte, 0, strLen)
 	for index := 0; index < strLen; index++ {
 		switch ch := str[index]; ch {
 		case '\r':
-			// We need to treat "\r\n" as "\n", so skip extra if what comes next is "\n".
+			// We normalize "\r" and "\r\n" as "\n".
 			if index < strLen-1 && str[index+1] == '\n' {
 				index++
 			}
