@@ -45,6 +45,31 @@ func TestParseText(t *testing.T) {
 				String{text: []byte("longstring")},
 			}},
 		},
+		{
+			name: "escaped strings",
+			text: `"H\x48\u0048\U00000048" '''h\x68\u0068\U00000068'''`,
+			expected: &Digest{values: []Value{
+				String{text: []byte("HHHH")},
+				String{text: []byte("hhhh")},
+			}},
+		},
+
+		// Symbols
+
+		{
+			name: "symbol",
+			text: "'short symbol'",
+			expected: &Digest{values: []Value{
+				Symbol{text: []byte("short symbol")},
+			}},
+		},
+		{
+			name: "escaped symbols",
+			text: `'H\x48\u0048\U00000048'`,
+			expected: &Digest{values: []Value{
+				Symbol{text: []byte("HHHH")},
+			}},
+		},
 
 		// Numeric
 
@@ -141,6 +166,14 @@ func TestParseText(t *testing.T) {
 			name:     "multiple long clobs",
 			text:     "{{ '''A\\nB'''\n'''foo''' }}",
 			expected: &Digest{values: []Value{Clob{text: []byte("A\nBfoo")}}},
+		},
+		{
+			name: "escaped clobs",
+			text: `{{"H\x48\x48H"}} {{'''h\x68\x68h'''}}`,
+			expected: &Digest{values: []Value{
+				Clob{text: []byte("HHHH")},
+				Clob{text: []byte("hhhh")},
+			}},
 		},
 
 		// Containers

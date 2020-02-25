@@ -15,34 +15,16 @@
 
 package ion
 
-import (
-	"strconv"
-)
-
 // This file contains the string-like types: String and Symbol.
 
 // String is a unicode text literal of arbitrary length.
 type String struct {
 	annotations []Symbol
 	text        []byte
-	unquoted    string
 }
 
 func (s String) Value() string {
-	if len(s.text) == 0 || len(s.unquoted) != 0 {
-		return s.unquoted
-	}
-
-	// Unquote translates escape sequences, e.g. `\u00ff`, into their utf8
-	// normalized value, e.g. "ÿ".  We need to surround the text with double
-	// quotes so that Unquote knows whether to treat it as literal text or not.
-	var err error
-	s.unquoted, err = strconv.Unquote(`"` + string(s.text) + `"`)
-	if err != nil {
-		s.unquoted = string(s.text)
-	}
-
-	return s.unquoted
+	return string(s.text)
 }
 
 // Annotations satisfies Value.
