@@ -78,7 +78,7 @@ func makeSystemSymbolTableCase() symbolTableCase {
 			Source:   newSource(symbolTextIon, symbolIDTable),
 		},
 		{
-			Text:     newString("desc"),
+			Text:     newString("name"),
 			localSID: symbolIDName,
 			Source:   newSource(symbolTextIon, symbolIDName),
 		},
@@ -216,7 +216,7 @@ func TestSymbolTable(t *testing.T) {
 				t.Errorf("Table kind mismatch: %d != %d", c.kind, c.table.kind)
 			}
 			if c.name != c.table.name {
-				t.Errorf("Table desc mismatch: %s != %s", c.name, c.table.name)
+				t.Errorf("Table name mismatch: %s != %s", c.name, c.table.name)
 			}
 			if c.version != c.table.version {
 				t.Errorf("Table version mismatch: %d != %d", c.version, c.table.version)

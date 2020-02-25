@@ -24,7 +24,7 @@ const (
 
 // ImportSource is a reference to a SID within a shared symbol table.
 type ImportSource struct {
-	// The desc of the shared symbol table that this token refers to.
+	// The name of the shared symbol table that this token refers to.
 	Table string
 	// The ID of the interned symbol text within the shared SymbolTable.
 	// This must be greater than 1.

@@ -47,7 +47,7 @@ func newSymbolTableRaw(kind symbolTableKind, name string, version int32) *Symbol
 }
 
 // newSymbolTable constructs a new empty symbol table of the given type.
-// The desc and version are applicable for shared/system symbol tables and should be default
+// The name and version are applicable for shared/system symbol tables and should be default
 // values for local symbol tables.
 // The given imports will be loaded into the newly constructed symbol table.
 func newSymbolTable(kind symbolTableKind, name string, version int32, imports ...SymbolTable) *SymbolTable {
@@ -72,7 +72,7 @@ func newSymbolTable(kind symbolTableKind, name string, version int32, imports ..
 }
 
 // newLocalSymbolTable creates an instance with symbolTableKindLocal.
-// The desc is empty and the version is zero. These fields are inapplicable to local symbol tables.
+// The name is empty and the version is zero. These fields are inapplicable to local symbol tables.
 func newLocalSymbolTable(imports ...SymbolTable) *SymbolTable {
 	return newSymbolTable(symbolTableKindLocal, "", 0, imports...)
 }

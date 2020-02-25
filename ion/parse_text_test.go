@@ -346,7 +346,7 @@ func TestIonTests_Text_Equivalents(t *testing.T) {
 		"localSymbolTablesValuesWithAnnotations.ion": true,
 		"nonIVMNoOps.ion":                            true,
 		"systemSymbols.ion":                          true,
-		// "Structures are unordered collections of desc/value pairs."  Comparing
+		// "Structures are unordered collections of name/value pairs."  Comparing
 		// the structs for equivalency requires specialized logic that is not part
 		// of the spec.
 		"structsFieldsDiffOrder.ion":     true,

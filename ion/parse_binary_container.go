@@ -70,7 +70,7 @@ func parseBinaryStruct(ann []Symbol, lengthByte byte, r io.Reader) (Value, error
 	var numBytes uint32
 	var errLength error
 	// "When L is 1, the struct has at least one symbol/value pair, the length
-	// field exists, and the field desc integers are sorted in increasing order."
+	// field exists, and the field name integers are sorted in increasing order."
 	if lengthByte == 1 {
 		numBytes, errLength = readVarUInt32(r)
 	} else {
