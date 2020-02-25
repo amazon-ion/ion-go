@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"runtime"
 
-	"github.com/pkg/errors"
 	"github.com/amzn/ion-go/internal/lex"
+	"github.com/pkg/errors"
 )
 
 // ParseText parses all of the bytes from the given Reader into an

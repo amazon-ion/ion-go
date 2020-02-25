@@ -16,8 +16,9 @@ package ion
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // Make sure SymbolToken conforms to Stringer

@@ -16,10 +16,11 @@
 package ion
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestNewSharedSymbolTableBadVersion(t *testing.T) {
