@@ -110,6 +110,11 @@ Loop:
 				return x.error("unterminated short clob")
 			case !isEscapeAble(r):
 				return x.errorf("invalid character after escape: %#U", r)
+			case r == '\r':
+				// check for CR LF
+				if x.peek() == '\n' {
+					x.next()
+				}
 			case r == 'x' || r == 'X':
 				// If what is being escaped is a hex character, then we still
 				// need to make sure that escaped character is allowed.

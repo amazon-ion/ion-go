@@ -17,9 +17,9 @@ package ion
 
 import (
 	"bytes"
-	"math"
-
 	"github.com/amzn/ion-go/internal/lex"
+	"math"
+	"strconv"
 )
 
 // This file contains text parsers for Null, Padding, Bool, Symbol, String, Blob, and Clob.
@@ -115,20 +115,18 @@ func doStringReplacements(str []byte) []byte {
 	return ret
 }
 
-// doClobReplacements is like doStringReplacements, but keeps \r characters as-is.
+// doClobReplacements is like doStringReplacements but is restricted to escapes that CLOBs have.
 func doClobReplacements(str []byte) []byte {
 	strLen := len(str)
 	ret := make([]byte, 0, strLen)
 	for index := 0; index < strLen; index++ {
 		switch ch := str[index]; ch {
 		case '\r':
-			// We need to treat "\r\n" as "\n", so skip extra if what comes next is "\n".
+			// We normalize "\r" and "\r\n" as "\n".
 			if index < strLen-1 && str[index+1] == '\n' {
-				ret = append(ret, '\n')
 				index++
-			} else {
-				ret = append(ret, '\r')
 			}
+			ret = append(ret, '\n')
 		case '\\':
 			if index >= strLen-1 {
 				continue
@@ -155,6 +153,12 @@ func doClobReplacements(str []byte) []byte {
 			case '\'', '"', '\\':
 				ret = append(ret, next)
 				index++
+			case 'x':
+				// Decode the hex sequence
+				index += 2
+				octet, _ := strconv.ParseUint(string(str[index:index+2]), 16, 8)
+				index += 2
+				ret = append(ret, byte(octet))
 			default:
 				// Don't have anything special to do with the next character, so
 				// just add the current character and let the next one get added

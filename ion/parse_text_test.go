@@ -291,8 +291,6 @@ func TestIonTests_Text_Good(t *testing.T) {
 	filesToSkip := map[string]bool{
 		"utf16.ion": true,
 		"utf32.ion": true,
-		// TODO amzn/ion-go#3 (newline normalization in CLOB)
-		"clobNewlines.ion": true,
 	}
 
 	testFilePath := "../ion-tests/iontestdata/good"
@@ -357,8 +355,6 @@ func TestIonTests_Text_Equivalents(t *testing.T) {
 		// These files contain UTF16 and UTF32 which we do not support.
 		"stringU0001D11E.ion": true,
 		"stringUtf8.ion":      true,
-		// TODO amzn/ion-go#3 (newline normalization in CLOB)
-		"clobNewlines.ion": true,
 	}
 
 	testFilePath := "../ion-tests/iontestdata/good/equivs"
