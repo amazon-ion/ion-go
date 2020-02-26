@@ -49,6 +49,14 @@ Running all the tests can be executed with:
 $ go test -v ./...
 ```
 
+We use [`goimports`](https://pkg.go.dev/golang.org/x/tools/cmd/goimports?tab=doc) to format
+our imports and files in general.  Running this before commit is advised:
+
+```
+$ goimports -w .
+```
+
+It is recommended that you hook this in your favorite IDE (`Tools` > `File Watchers` in Goland, for example).
 
 ## Notes
 
