@@ -37,14 +37,55 @@ const (
 )
 
 var typeNameMap = map[Type]string{
-	TypeNull: "Null", TypeAnnotation: "Annotation", TypeBlob: "Blob", TypeClob: "Clob", TypeDecimal: "Decimal",
-	TypeFloat: "Float", TypeInt: "Int", TypeList: "List", TypeLongString: "LongString", TypePadding: "Padding",
-	TypeSExp: "S-Expression", TypeString: "String", TypeStruct: "Struct", TypeSymbol: "Symbol", TypeTimestamp: "Timestamp",
+	TypeNull		: "Null",
+	TypeAnnotation	: "Annotation",
+	TypeBlob		: "Blob",
+	TypeBool		: "Bool",
+	TypeClob		: "Clob",
+	TypeDecimal		: "Decimal",
+	TypeFloat		: "Float",
+	TypeInt			: "Int",
+	TypeList		: "List",
+	TypeLongString	: "LongString",
+	TypePadding		: "Padding",
+	TypeSExp		: "S-Expression",
+	TypeString		: "String",
+	TypeStruct		: "Struct",
+	TypeSymbol		: "Symbol",
+	TypeTimestamp	: "Timestamp",
 }
 
 // String satisfies Stringer.
 func (t Type) String() string {
 	if s, ok := typeNameMap[t]; ok {
+		return s
+	}
+	return "Unknown"
+}
+
+// Indicates the smallest-possible Go type of an Ion Int value.
+type IntSize int
+
+const (
+	// Int32 is the size of an Ion Integer that can be losslessly stored in an int32.
+	Int32 = iota
+
+	// Int64 is the size of an Ion Integer that can be losslessly stored in an int64.
+	Int64
+
+	// BigInt is the size of an Ion Integer that can only be losslessly stored in a big.Int.
+	BigInt
+)
+
+var intSizeMap = map[IntSize]string{
+	Int32	: "int32",
+	Int64	: "int64",
+	BigInt	: "big.int",
+}
+
+// String satisfies Stringer.
+func (i IntSize) String() string {
+	if s, ok := intSizeMap[i]; ok {
 		return s
 	}
 	return "Unknown"
