@@ -65,7 +65,3 @@ func NewReaderCatalog(in io.Reader, cat Catalog) Reader {
 
 	return newTextReader(br)
 }
-
-type reader struct {
-	event event
-}

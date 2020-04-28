@@ -12,27 +12,33 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+
 package ion
 
 import "bufio"
 
-// A binaryReader reads binary Ion.
+// A readerBinary reads binary Ion.
 type readerBinary struct {
-	reader
+	catalog Catalog
+	event eventBinary
 }
 
-func newBinaryReader(in *bufio.Reader, cat Catalog) Reader {
-	return nil
+func newBinaryReader(in *bufio.Reader, catalog Catalog) Reader {
+	r := &readerBinary{
+		catalog: catalog,
+	}
+
+	return r
 }
 
-func (r *readerBinary) Next() event {
+func (r *readerBinary) Next() Event {
 	return r.event
 }
 
-func (r *readerBinary) StepIn() bool {
-	return false
+func (r *readerBinary) StepIn() error {
+	return nil
 }
 
-func (r *readerBinary) StepOut() bool {
-	return false
+func (r *readerBinary) StepOut() error {
+	return nil
 }

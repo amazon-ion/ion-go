@@ -15,25 +15,31 @@
 
 package ion
 
-import "bufio"
-
-// A readerText reads text Ion.
-type readerText struct {
-	event eventText
+type eventBinary struct {
+	event
 }
 
-func newTextReader(in *bufio.Reader) Reader {
+// Returns the current value's annotations.
+func (e eventBinary) TypeAnnotations() []string {
 	return nil
 }
 
-func (r *readerText) Next() Event {
-	return r.event
-}
-
-func (r *readerText) StepIn() error {
+// Returns the current value's annotations.
+func (e eventBinary) TypeAnnotationSymbols() []SymbolToken {
 	return nil
 }
 
-func (r *readerText) StepOut() error {
-	return nil
+// Returns true if the current value has the specified annotation.
+func (e eventBinary) HasAnnotation(annotation string) bool {
+    return false
+}
+
+// Returns the current value's field name.
+func (e eventBinary) FieldName() string {
+	return ""
+}
+
+// Returns the current value's field name symbol.
+func (e eventBinary) FieldNameSymbol() SymbolToken {
+	return symbolTokenUndefined
 }

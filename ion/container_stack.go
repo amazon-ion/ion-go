@@ -15,25 +15,31 @@
 
 package ion
 
-import "bufio"
+type container int
 
-// A readerText reads text Ion.
-type readerText struct {
-	event eventText
+const (
+    AtTopLevel container = iota
+    InStruct
+    InList
+    InSexp
+)
+
+type containerStack struct {
+    stack []container
 }
 
-func newTextReader(in *bufio.Reader) Reader {
-	return nil
+func (c *containerStack) len() int {
+    return len(c.stack)
 }
 
-func (r *readerText) Next() Event {
-	return r.event
+func (c *containerStack) peek() container {
+    return AtTopLevel
 }
 
-func (r *readerText) StepIn() error {
-	return nil
+func (c *containerStack) push(container container) {
+
 }
 
-func (r *readerText) StepOut() error {
-	return nil
+func (c *containerStack) pop() {
+
 }

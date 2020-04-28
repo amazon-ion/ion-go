@@ -49,10 +49,6 @@ type Event interface {
 	// Determines whether the current value is a null Ion value of any type.
 	IsNullValue() bool
 
-	// Determines whether this reader is currently traversing the fields of an Ion struct. It returns false if
-	// the iteration is in a list, a sexp, or a datagram.
-	IsInStruct() bool
-
 	// Returns the current value as a bool. It returns an error if the current value is not an Ion Bool.
 	BoolValue() (bool, error)
 
@@ -93,135 +89,93 @@ type Event interface {
 	// or an Ion Blob.
 	ByteValue() ([]byte, error)
 
-	EventType() EventType
+	EventType() container
 }
 
-type EventType int
-
-const (
-	EOF EventType = iota
-	StartContainer
-	EndContainer
-)
-
+// Holds the commonalities between binary and text readers.
 type event struct {
-	depth					int
+	containerStack 			containerStack
 	symbolTable				SymbolTable
-	typeAnnotations 		[]string			// Do we need? Can figure from SymbolTable.
-	typeAnnotationSymbols	[]SymbolToken		// Do we need? Can figure from SymbolTable.
-	fieldName 				string				// Do we need? Can figure from SymbolTable.
-	fieldNameSymbol			SymbolToken			// Do we need? Can figure from SymbolTable.
 	valueType				Type
 	value					interface{}
-	eventType				EventType
 }
 
 // Returns the current value's depth.
-func (e *event) Depth() int {
-	return e.depth
+func (e event) Depth() int {
+	return e.containerStack.len()
 }
 
 // Returns the current value's symbol table.
-func (e *event) SymbolTable() SymbolTable {
+func (e event) SymbolTable() SymbolTable {
 	return e.symbolTable
 }
 
 // Returns the current value's type.
-func (e *event) Type() Type {
+func (e event) Type() Type {
 	return e.valueType
 }
 
-// Returns the current value's annotations.
-func (e *event) TypeAnnotations() []string {
-	return e.typeAnnotations
-}
-
-// Returns the current value's annotations.
-func (e *event) TypeAnnotationSymbols() []SymbolToken {
-	return e.typeAnnotationSymbols
-}
-
-// Returns true if the current value has the specified annotation.
-func (e *event) HasAnnotation() bool {
-	return false
-}
-
-// Returns the current value's field name.
-func (e *event) FieldName() string {
-	return e.fieldName
-}
-
-// Returns the current value's field name symbol.
-func (e *event) FieldNameSymbol() SymbolToken {
-	return e.fieldNameSymbol
-}
-
 // Returns true if the current value is null.
-func (e *event) IsNullValue() bool {
+func (e event) IsNullValue() bool {
 	return e.value == nil
 }
 
-// Returns true if the current value is in struct.
-func (e *event) IsInStruct() bool {
-	return false
-}
-
 // Returns the current value as a bool.
-func (e *event) BoolValue() (bool, error) {
+func (e event) BoolValue() (bool, error) {
 	return e.value.(bool), nil
 }
 
 // Returns the size of the current int value.
-func (e *event) IntSize() (IntSize, error) {
+func (e event) IntSize() (IntSize, error) {
 	return e.value.(IntSize), nil
 }
 
 // Returns the current value as an int.
-func (e *event) IntValue() (int, error) {
+func (e event) IntValue() (int, error) {
 	return e.value.(int), nil
 }
 
 // Returns the current value as an int64.
-func (e *event) Int64Value() (int64, error) {
+func (e event) Int64Value() (int64, error) {
 	return e.value.(int64), nil
 }
 
 // Returns the current value as a big int.
-func (e *event) BigIntValue() (*big.Int, error) {
+func (e event) BigIntValue() (*big.Int, error) {
 	return e.value.(*big.Int), nil
 }
 
 // Returns the current value as a float.
-func (e *event) FloatValue() (float64, error) {
+func (e event) FloatValue() (float64, error) {
 	return e.value.(float64), nil
 }
 
 // Returns the current value as a Decimal.
-func (e *event) DecimalValue() (*Decimal, error) {
+func (e event) DecimalValue() (*Decimal, error) {
 	return e.value.(*Decimal), nil
 }
 
 // Returns the current value as a time.
-func (e *event) TimeValue() (time.Time, error) {
+func (e event) TimeValue() (time.Time, error) {
 	return e.value.(time.Time), nil
 }
 
 // Returns the current value as a string.
-func (e *event) StringValue() (string, error) {
+func (e event) StringValue() (string, error) {
 	return e.value.(string), nil
 }
 
-// Returns the current value as a symbol token.
-func (e *event) SymbolValue() (SymbolToken, error) {
-	return e.value.(SymbolToken), nil
-}
-
 // Returns the current value as a byte slice.
-func (e *event) ByteValue() ([]byte, error) {
+func (e event) ByteValue() ([]byte, error) {
 	return e.value.([]byte), nil
 }
 
+// Returns the current value as a symbol token.
+func (e event) SymbolValue() (SymbolToken, error) {
+	return e.value.(SymbolToken), nil
+}
+
 // Returns the current value's event type.
-func (e *event) EventType() EventType {
-	return e.eventType
+func (e event) EventType() container {
+	return e.containerStack.peek()
 }
