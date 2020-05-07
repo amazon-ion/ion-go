@@ -1,6 +1,9 @@
 # Ion Go
 A Golang implementation of Amazon's [Ion data notation](https://amzn.github.io/ion-docs/).
 
+| ❗ | You should probably use [amzn/ion-go](https://github.com/amzn/ion-go) now instead of this 😊 |
+|---|----|
+
 ## Using the Library
 Import `github.com/fernomac/ion-go` and you're off to the races.
 
