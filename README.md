@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Amazon Ion Go
 
 [![Build Status](https://github.com/amzn/ion-go/workflows/Go%20Build/badge.svg)](https://github.com/amzn/ion-go/actions?query=workflow%3A%22Go+Build%22)
