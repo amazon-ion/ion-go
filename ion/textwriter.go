@@ -16,13 +16,18 @@ const (
 	// know you're only emiting one datagram; dangerous if there's a chance you're going
 	// to emit another datagram using the same Writer.
 	TextWriterQuietFinish TextWriterOpts = 1
+
+	// TextWriterPretty enables pretty-printing mode.
+	TextWriterPretty TextWriterOpts = 2
 )
 
 // textWriter is a writer that writes human-readable text
 type textWriter struct {
 	writer
-	needsSeparator bool
 	opts           TextWriterOpts
+	needsSeparator bool
+	emptyContainer bool
+	indent         int
 }
 
 // NewTextWriter returns a new text writer.
@@ -255,6 +260,11 @@ func (w *textWriter) Finish() error {
 	return nil
 }
 
+// pretty returns true if we're pretty-printing.
+func (w *textWriter) pretty() bool {
+	return w.opts&TextWriterPretty == TextWriterPretty
+}
+
 // writeValue writes a stringified value to the output stream.
 func (w *textWriter) writeValue(api string, val string) error {
 	if w.err != nil {
@@ -277,47 +287,105 @@ func (w *textWriter) writeValue(api string, val string) error {
 // annotations (if any).
 func (w *textWriter) beginValue(api string) error {
 	if w.needsSeparator {
-		var sep byte
-		switch w.ctx.peek() {
-		case ctxInStruct, ctxInList:
-			sep = ','
-		case ctxInSexp:
-			sep = ' '
-		default:
-			sep = '\n'
+		if err := w.writeSeparator(); err != nil {
+			return err
 		}
+	}
 
-		if err := writeRawChar(sep, w.out); err != nil {
+	if w.emptyContainer {
+		if w.pretty() {
+			if err := writeRawChar('\n', w.out); err != nil {
+				return err
+			}
+		}
+	}
+
+	if w.pretty() {
+		if err := w.writeIndent(); err != nil {
 			return err
 		}
 	}
 
 	if w.inStruct() {
-		if w.fieldName == "" {
-			return &UsageError{api, "field name not set"}
-		}
-		name := w.fieldName
-		w.fieldName = ""
-
-		if err := writeSymbol(name, w.out); err != nil {
-			return err
-		}
-		if err := writeRawChar(':', w.out); err != nil {
+		if err := w.writeFieldName(api); err != nil {
 			return err
 		}
 	}
 
 	if len(w.annotations) > 0 {
-		as := w.annotations
-		w.annotations = nil
+		if err := w.writeAnnotations(); err != nil {
+			return err
+		}
+	}
 
-		for _, a := range as {
-			if err := writeSymbol(a, w.out); err != nil {
-				return err
-			}
-			if err := writeRawString("::", w.out); err != nil {
-				return err
-			}
+	return nil
+}
+
+// writeSeparator writes out the character or characters that separate values.
+func (w *textWriter) writeSeparator() error {
+	var sep string
+
+	switch w.ctx.peek() {
+	case ctxInStruct, ctxInList:
+		// In a struct or a list, values are separated by commas.
+		if w.pretty() {
+			sep = ",\n"
+		} else {
+			sep = ","
+		}
+
+	case ctxInSexp:
+		// In an sexp, values are separated by whitespace.
+		if w.pretty() {
+			sep = "\n"
+		} else {
+			sep = " "
+		}
+
+	default:
+		// At the top level, values are separated by newlines.
+		sep = "\n"
+	}
+
+	return writeRawString(sep, w.out)
+}
+
+// writeFieldName writes a field name inside a struct.
+func (w *textWriter) writeFieldName(api string) error {
+	if w.fieldName == "" {
+		return &UsageError{api, "field name not set"}
+	}
+	name := w.fieldName
+	w.fieldName = ""
+
+	if err := writeSymbol(name, w.out); err != nil {
+		return err
+	}
+
+	sep := ":"
+	if w.pretty() {
+		sep = " : "
+	}
+
+	return writeRawString(sep, w.out)
+}
+
+// writeAnnotations writes out the annotations for a value.
+func (w *textWriter) writeAnnotations() error {
+	as := w.annotations
+	w.annotations = nil
+
+	sep := "::"
+	if w.pretty() {
+		sep = " :: "
+	}
+
+	for _, a := range as {
+		if err := writeSymbol(a, w.out); err != nil {
+			return err
+		}
+		if err := writeRawString(sep, w.out); err != nil {
+			return err
 		}
 	}
 
@@ -327,6 +395,7 @@ func (w *textWriter) beginValue(api string) error {
 // endValue finishes the process of writing a value.
 func (w *textWriter) endValue() {
 	w.needsSeparator = true
+	w.emptyContainer = false
 }
 
 // begin starts writing a container of the given type.
@@ -336,15 +405,32 @@ func (w *textWriter) begin(api string, t ctx, c byte) error {
 	}
 
 	w.ctx.push(t)
+	w.indent++
 	w.needsSeparator = false
+	w.emptyContainer = true
 
-	return writeRawChar(c, w.out)
+	if err := writeRawChar(c, w.out); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // end finishes writing a container of the given type
 func (w *textWriter) end(api string, t ctx, c byte) error {
 	if w.ctx.peek() != t {
 		return &UsageError{api, "not in that kind of container"}
+	}
+
+	w.indent--
+
+	if !w.emptyContainer && w.pretty() {
+		if err := writeRawChar('\n', w.out); err != nil {
+			return err
+		}
+		if err := w.writeIndent(); err != nil {
+			return err
+		}
 	}
 
 	if err := writeRawChar(c, w.out); err != nil {
@@ -355,5 +441,15 @@ func (w *textWriter) end(api string, t ctx, c byte) error {
 	w.ctx.pop()
 	w.endValue()
 
+	return nil
+}
+
+// writeIndent writes out tabs to indent a pretty-printed value.
+func (w *textWriter) writeIndent() error {
+	for i := 0; i < w.indent; i++ {
+		if err := writeRawChar('\t', w.out); err != nil {
+			return err
+		}
+	}
 	return nil
 }

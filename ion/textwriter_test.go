@@ -334,6 +334,69 @@ func TestWriteTextBadFinish(t *testing.T) {
 	}
 }
 
+func TestWriteTextPretty(t *testing.T) {
+	buf := strings.Builder{}
+	w := NewTextWriterOpts(&buf, TextWriterPretty)
+
+	w.BeginStruct()
+	{
+		w.FieldName("struct")
+		w.BeginStruct()
+		w.EndStruct()
+
+		w.FieldName("list")
+		w.Annotations("i", "am", "a", "list")
+		w.BeginList()
+		{
+			w.WriteString("value")
+			w.WriteNullType(StringType)
+		}
+		w.EndList()
+
+		w.FieldName("sexp")
+		w.BeginSexp()
+		{
+			w.WriteSymbol("+")
+			w.WriteInt(123)
+			w.BeginSexp()
+			{
+				w.WriteSymbol("*")
+				w.WriteInt(456)
+				w.WriteInt(789)
+			}
+			w.EndSexp()
+		}
+		w.EndSexp()
+	}
+	w.EndStruct()
+
+	if err := w.Finish(); err != nil {
+		t.Fatal(err)
+	}
+
+	actual := buf.String()
+	expected := `{
+	struct : {},
+	list : i :: am :: a :: list :: [
+		"value",
+		null.string
+	],
+	sexp : (
+		'+'
+		123
+		(
+			'*'
+			456
+			789
+		)
+	)
+}
+`
+	if actual != expected {
+		t.Errorf("expected:\n%v\ngot:\n%v", expected, actual)
+	}
+}
+
 func testTextWriter(t *testing.T, expected string, f func(Writer)) {
 	actual := writeText(f)
 	if actual != expected {
