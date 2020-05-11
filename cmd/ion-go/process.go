@@ -1,0 +1,361 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+
+	"github.com/amzn/ion-go/ion"
+)
+
+// process reads the specified input file(s) and re-writes the contents in the
+// specified format.
+func process(args []string) error {
+	p, err := newProcessor(args)
+	if err != nil {
+		return err
+	}
+	return p.run()
+}
+
+type processor struct {
+	infs []string
+	outf string
+	errf string
+
+	format string
+
+	// catalog  []string
+	// imports  []string
+	// perf     string
+	// filter   string
+	// traverse string
+
+	out ion.Writer
+	err *ErrorReport
+	loc string
+	idx int
+}
+
+func newProcessor(args []string) (*processor, error) {
+	ret := &processor{}
+
+	i := 0
+	for ; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "-") {
+			break
+		}
+		if arg == "-" || arg == "--" {
+			i++
+			break
+		}
+
+		switch arg {
+		case "-o", "--output":
+			i++
+			if i >= len(args) {
+				return nil, errors.New("no output file specified")
+			}
+			ret.outf = args[i]
+
+		case "-f", "--output-format":
+			i++
+			if i >= len(args) {
+				return nil, errors.New("no output format specified")
+			}
+			ret.format = args[i]
+
+		case "-e", "--error-report":
+			i++
+			if i >= len(args) {
+				return nil, errors.New("no error report file specified")
+			}
+			ret.errf = args[i]
+
+		// TODO: Add more flags here.
+
+		default:
+			return nil, errors.New("unrecognized option \"" + arg + "\"")
+		}
+	}
+
+	// Any remaining args are input files.
+	for ; i < len(args); i++ {
+		ret.infs = append(ret.infs, args[i])
+	}
+
+	return ret, nil
+}
+
+func (p *processor) run() error {
+	outf, err := OpenOutput(p.outf)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+
+	switch p.format {
+	case "", "pretty":
+		p.out = ion.NewTextWriterOpts(outf, ion.TextWriterPretty)
+	case "text":
+		p.out = ion.NewTextWriter(outf)
+	case "binary":
+		p.out = ion.NewBinaryWriter(outf)
+	case "events":
+		p.out = NewEventWriter(outf)
+	case "none":
+		p.out = NewNopWriter()
+	default:
+		return errors.New("unrecognized output format \"" + p.format + "\"")
+	}
+
+	errf, err := OpenError(p.errf)
+	if err != nil {
+		return err
+	}
+	defer errf.Close()
+
+	p.err = NewErrorReport(errf)
+	defer p.err.Finish()
+
+	if len(p.infs) == 0 {
+		p.processStdin()
+		return nil
+	}
+
+	if err := p.processFiles(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *processor) processStdin() {
+	p.loc = "stdin"
+	p.processReader(stdin{})
+	p.loc = ""
+
+	if err := p.out.Finish(); err != nil {
+		p.error("WRITE", err)
+	}
+}
+
+func (p *processor) processFiles() error {
+	for _, inf := range p.infs {
+		if err := p.processFile(inf); err != nil {
+			return err
+		}
+	}
+
+	if err := p.out.Finish(); err != nil {
+		p.error("WRITE", err)
+	}
+
+	return nil
+}
+
+func (p *processor) processFile(in string) error {
+	f, err := OpenInput(in)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	p.loc = in
+	p.processReader(f)
+	p.loc = ""
+
+	return nil
+}
+
+func (p *processor) processReader(in io.Reader) {
+	// We intentionally ignore the returned error; it's been written
+	// to p.err, and only gets returned to short-circuit further execution.
+	p.process(ion.NewReader(in))
+}
+
+func (p *processor) process(in ion.Reader) error {
+	var err error
+
+	for in.Next() {
+		p.idx++
+
+		name := in.FieldName()
+		if name != "" {
+			if err = p.out.FieldName(name); err != nil {
+				return p.error("WRITE", err)
+			}
+		}
+
+		annos := in.Annotations()
+		if len(annos) > 0 {
+			if err = p.out.Annotations(annos...); err != nil {
+				return p.error("WRITE", err)
+			}
+		}
+
+		switch in.Type() {
+		case ion.NullType:
+			err = p.out.WriteNull()
+
+		case ion.BoolType:
+			val, err := in.BoolValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteBool(val)
+
+		case ion.IntType:
+			size, err := in.IntSize()
+			if err != nil {
+				return p.error("READ", err)
+			}
+
+			switch size {
+			case ion.Int32:
+				val, err := in.IntValue()
+				if err != nil {
+					return p.error("READ", err)
+				}
+				err = p.out.WriteInt(int64(val))
+
+			case ion.Int64:
+				val, err := in.Int64Value()
+				if err != nil {
+					return p.error("READ", err)
+				}
+				err = p.out.WriteInt(val)
+
+			case ion.Uint64:
+				val, err := in.Uint64Value()
+				if err != nil {
+					return p.error("READ", err)
+				}
+				err = p.out.WriteUint(val)
+
+			case ion.BigInt:
+				val, err := in.BigIntValue()
+				if err != nil {
+					return p.error("READ", err)
+				}
+				err = p.out.WriteBigInt(val)
+
+			default:
+				panic(fmt.Sprintf("bad int size: %v", size))
+			}
+
+		case ion.FloatType:
+			val, err := in.FloatValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteFloat(val)
+
+		case ion.DecimalType:
+			val, err := in.DecimalValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteDecimal(val)
+
+		case ion.TimestampType:
+			val, err := in.TimeValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteTimestamp(val)
+
+		case ion.SymbolType:
+			val, err := in.StringValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteSymbol(val)
+
+		case ion.StringType:
+			val, err := in.StringValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteString(val)
+
+		case ion.ClobType:
+			val, err := in.ByteValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteClob(val)
+
+		case ion.BlobType:
+			val, err := in.ByteValue()
+			if err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.WriteBlob(val)
+
+		case ion.ListType:
+			if err := in.StepIn(); err != nil {
+				return p.error("READ", err)
+			}
+			if err := p.out.BeginList(); err != nil {
+				return p.error("WRITE", err)
+			}
+			if err := p.process(in); err != nil {
+				return err
+			}
+			if err := in.StepOut(); err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.EndList()
+
+		case ion.SexpType:
+			if err := in.StepIn(); err != nil {
+				return p.error("READ", err)
+			}
+			if err := p.out.BeginSexp(); err != nil {
+				return p.error("WRITE", err)
+			}
+			if err := p.process(in); err != nil {
+				return err
+			}
+			if err := in.StepOut(); err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.EndSexp()
+
+		case ion.StructType:
+			if err := in.StepIn(); err != nil {
+				return p.error("READ", err)
+			}
+			if err := p.out.BeginStruct(); err != nil {
+				return p.error("WRITE", err)
+			}
+			if err := p.process(in); err != nil {
+				return err
+			}
+			if err := in.StepOut(); err != nil {
+				return p.error("READ", err)
+			}
+			err = p.out.EndStruct()
+
+		default:
+			panic(fmt.Sprintf("bad ion type: %v", in.Type()))
+		}
+
+		if err != nil {
+			return p.error("WRITE", err)
+		}
+	}
+
+	if err := in.Err(); err != nil {
+		return p.error("READ", err)
+	}
+	return nil
+}
+
+func (p *processor) error(typ string, err error) error {
+	p.err.Append(typ, err.Error(), p.loc, p.idx)
+	return err
+}
