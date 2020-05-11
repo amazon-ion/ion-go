@@ -12,6 +12,29 @@ type field struct {
 	typ       reflect.Type
 	path      []int
 	omitEmpty bool
+	hint      Type
+}
+
+func (f *field) setopts(opts string) {
+	for opts != "" {
+		var o string
+
+		i := strings.Index(opts, ",")
+		if i >= 0 {
+			o, opts = opts[:i], opts[i+1:]
+		} else {
+			o, opts = opts, ""
+		}
+
+		switch o {
+		case "omitempty":
+			f.omitEmpty = true
+		case "symbol":
+			f.hint = SymbolType
+		case "clob":
+			f.hint = ClobType
+		}
+	}
 }
 
 // A fielder maps out the fields of a type.
@@ -67,12 +90,14 @@ func (f *fielder) inspect(t reflect.Type, path []int) {
 			}
 			f.index[name] = true
 
-			f.fields = append(f.fields, field{
-				name:      name,
-				typ:       ft,
-				path:      newpath,
-				omitEmpty: omitEmpty(opts),
-			})
+			field := field{
+				name: name,
+				typ:  ft,
+				path: newpath,
+			}
+			field.setopts(opts)
+
+			f.fields = append(f.fields, field)
 		}
 	}
 }
@@ -100,23 +125,4 @@ func parseJSONTag(tag string) (string, string) {
 		return tag[:idx], tag[idx+1:]
 	}
 	return tag, ""
-}
-
-// OmitEmpty returns true if opts includes "omitempty".
-func omitEmpty(opts string) bool {
-	for opts != "" {
-		var o string
-
-		i := strings.Index(opts, ",")
-		if i >= 0 {
-			o, opts = opts[:i], opts[i+1:]
-		} else {
-			o, opts = opts, ""
-		}
-
-		if o == "omitempty" {
-			return true
-		}
-	}
-	return false
 }

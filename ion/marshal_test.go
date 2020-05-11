@@ -160,3 +160,47 @@ func TestMarshalNestedStructs(t *testing.T) {
 		t.Errorf("expected %v, got %v", eval, string(val))
 	}
 }
+
+func TestMarshalHints(t *testing.T) {
+	type hints struct {
+		String  string            `json:"str,omitempty,string"`
+		Symbol  string            `json:"sym,omitempty,symbol"`
+		Strings []string          `json:"strs,string"`
+		Symbols []string          `json:"syms,symbol"`
+		StrMap  map[string]string `json:"strm"`
+		SymMap  map[string]string `json:"symm,symbol"`
+		Blob    []byte            `json:"bl,blob,omitempty"`
+		Clob    []byte            `json:"cl,clob,omitempty"`
+	}
+
+	v := hints{
+		String:  "string",
+		Symbol:  "symbol",
+		Strings: []string{"a", "b"},
+		Symbols: []string{"c", "d"},
+		StrMap:  map[string]string{"a": "b"},
+		SymMap:  map[string]string{"c": "d"},
+		Blob:    []byte("blob"),
+		Clob:    []byte("clob"),
+	}
+
+	val, err := MarshalText(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eval := `{` +
+		`str:"string",` +
+		`sym:symbol,` +
+		`strs:["a","b"],` +
+		`syms:[c,d],` +
+		`strm:{a:"b"},` +
+		`symm:{c:d},` +
+		`bl:{{YmxvYg==}},` +
+		`cl:{{"clob"}}` +
+		`}`
+
+	if string(val) != eval {
+		t.Errorf("expected %v, got %v", eval, string(val))
+	}
+}

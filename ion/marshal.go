@@ -115,7 +115,7 @@ func NewBinaryEncoderLST(w io.Writer, lst SymbolTable) *Encoder {
 
 // Encode marshals the given value to Ion, writing it to the underlying writer.
 func (m *Encoder) Encode(v interface{}) error {
-	return m.encodeValue(reflect.ValueOf(v))
+	return m.encodeValue(reflect.ValueOf(v), NoType)
 }
 
 // Finish finishes writing the current Ion datagram.
@@ -124,10 +124,9 @@ func (m *Encoder) Finish() error {
 }
 
 // EncodeValue recursively encodes a value.
-func (m *Encoder) encodeValue(v reflect.Value) error {
+func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 	if !v.IsValid() {
-		m.w.WriteNull()
-		return nil
+		return m.w.WriteNull()
 	}
 
 	t := v.Type()
@@ -150,22 +149,25 @@ func (m *Encoder) encodeValue(v reflect.Value) error {
 		return m.w.WriteFloat(v.Float())
 
 	case reflect.String:
+		if hint == SymbolType {
+			return m.w.WriteSymbol(v.String())
+		}
 		return m.w.WriteString(v.String())
 
 	case reflect.Interface, reflect.Ptr:
-		return m.encodePtr(v)
+		return m.encodePtr(v, hint)
 
 	case reflect.Struct:
-		return m.encodeStruct(v)
+		return m.encodeStruct(v, hint)
 
 	case reflect.Map:
-		return m.encodeMap(v)
+		return m.encodeMap(v, hint)
 
 	case reflect.Slice:
-		return m.encodeSlice(v)
+		return m.encodeSlice(v, hint)
 
 	case reflect.Array:
-		return m.encodeArray(v)
+		return m.encodeArray(v, hint)
 
 	default:
 		return fmt.Errorf("ion: unsupported type: %v", v.Type().String())
@@ -174,15 +176,15 @@ func (m *Encoder) encodeValue(v reflect.Value) error {
 
 // EncodePtr encodes an Ion null if the pointer is nil, and otherwise encodes the value that
 // the pointer is pointing to.
-func (m *Encoder) encodePtr(v reflect.Value) error {
+func (m *Encoder) encodePtr(v reflect.Value, hint Type) error {
 	if v.IsNil() {
 		return m.w.WriteNull()
 	}
-	return m.encodeValue(v.Elem())
+	return m.encodeValue(v.Elem(), hint)
 }
 
 // EncodeMap encodes a map to the output writer as an Ion struct.
-func (m *Encoder) encodeMap(v reflect.Value) error {
+func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	if v.IsNil() {
 		return m.w.WriteNull()
 	}
@@ -197,7 +199,7 @@ func (m *Encoder) encodeMap(v reflect.Value) error {
 	for _, key := range keys {
 		m.w.FieldName(key.s)
 		value := v.MapIndex(key.v)
-		if err := m.encodeValue(value); err != nil {
+		if err := m.encodeValue(value, hint); err != nil {
 			return err
 		}
 	}
@@ -231,32 +233,35 @@ func keysFor(v reflect.Value) []mapkey {
 }
 
 // EncodeSlice encodes a slice to the output writer as an appropriate Ion type.
-func (m *Encoder) encodeSlice(v reflect.Value) error {
+func (m *Encoder) encodeSlice(v reflect.Value, hint Type) error {
 	if v.Type().Elem().Kind() == reflect.Uint8 {
-		return m.encodeBlob(v)
+		return m.encodeBlob(v, hint)
 	}
 
 	if v.IsNil() {
 		return m.w.WriteNull()
 	}
 
-	return m.encodeArray(v)
+	return m.encodeArray(v, hint)
 }
 
 // EncodeBlob encodes a []byte to the output writer as an Ion blob.
-func (m *Encoder) encodeBlob(v reflect.Value) error {
+func (m *Encoder) encodeBlob(v reflect.Value, hint Type) error {
 	if v.IsNil() {
 		return m.w.WriteNull()
+	}
+	if hint == ClobType {
+		return m.w.WriteClob(v.Bytes())
 	}
 	return m.w.WriteBlob(v.Bytes())
 }
 
 // EncodeArray encodes an array to the output writer as an Ion list.
-func (m *Encoder) encodeArray(v reflect.Value) error {
+func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 	m.w.BeginList()
 
 	for i := 0; i < v.Len(); i++ {
-		if err := m.encodeValue(v.Index(i)); err != nil {
+		if err := m.encodeValue(v.Index(i), hint); err != nil {
 			return err
 		}
 	}
@@ -265,7 +270,7 @@ func (m *Encoder) encodeArray(v reflect.Value) error {
 }
 
 // EncodeStruct encodes a struct to the output writer as an Ion struct.
-func (m *Encoder) encodeStruct(v reflect.Value) error {
+func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
 	t := v.Type()
 	if t == timeType {
 		return m.encodeTime(v)
@@ -298,7 +303,7 @@ FieldLoop:
 		}
 
 		m.w.FieldName(f.name)
-		if err := m.encodeValue(fv); err != nil {
+		if err := m.encodeValue(fv, f.hint); err != nil {
 			return err
 		}
 	}
