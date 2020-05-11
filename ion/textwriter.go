@@ -27,6 +27,7 @@ type textWriter struct {
 	opts           TextWriterOpts
 	needsSeparator bool
 	emptyContainer bool
+	emptyStream    bool
 	indent         int
 }
 
@@ -38,10 +39,9 @@ func NewTextWriter(out io.Writer) Writer {
 // NewTextWriterOpts returns a new text writer with the given options.
 func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	return &textWriter{
-		writer: writer{
-			out: out,
-		},
-		opts: opts,
+		writer:      writer{out: out},
+		opts:        opts,
+		emptyStream: true,
 	}
 }
 
@@ -249,11 +249,12 @@ func (w *textWriter) Finish() error {
 		return &UsageError{"Writer.Finish", "not at top level"}
 	}
 
-	if w.opts&TextWriterQuietFinish == 0 {
+	if !w.emptyStream && w.opts&TextWriterQuietFinish == 0 {
 		if w.err = writeRawChar('\n', w.out); w.err != nil {
 			return w.err
 		}
 		w.needsSeparator = false
+		w.emptyStream = true
 	}
 
 	w.clear()
@@ -396,6 +397,7 @@ func (w *textWriter) writeAnnotations() error {
 func (w *textWriter) endValue() {
 	w.needsSeparator = true
 	w.emptyContainer = false
+	w.emptyStream = false
 }
 
 // begin starts writing a container of the given type.
