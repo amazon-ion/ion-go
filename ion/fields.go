@@ -33,6 +33,8 @@ func (f *field) setopts(opts string) {
 			f.hint = SymbolType
 		case "clob":
 			f.hint = ClobType
+		case "sexp":
+			f.hint = SexpType
 		}
 	}
 }

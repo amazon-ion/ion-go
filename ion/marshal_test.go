@@ -3,6 +3,7 @@ package ion
 import (
 	"bytes"
 	"math"
+	"strings"
 	"testing"
 	"time"
 )
@@ -171,6 +172,7 @@ func TestMarshalHints(t *testing.T) {
 		SymMap  map[string]string `json:"symm,symbol"`
 		Blob    []byte            `json:"bl,blob,omitempty"`
 		Clob    []byte            `json:"cl,clob,omitempty"`
+		Sexp    []int             `json:"sx,sexp"`
 	}
 
 	v := hints{
@@ -182,6 +184,7 @@ func TestMarshalHints(t *testing.T) {
 		SymMap:  map[string]string{"c": "d"},
 		Blob:    []byte("blob"),
 		Clob:    []byte("clob"),
+		Sexp:    []int{1, 2, 3},
 	}
 
 	val, err := MarshalText(v)
@@ -197,10 +200,71 @@ func TestMarshalHints(t *testing.T) {
 		`strm:{a:"b"},` +
 		`symm:{c:d},` +
 		`bl:{{YmxvYg==}},` +
-		`cl:{{"clob"}}` +
+		`cl:{{"clob"}},` +
+		`sx:(1 2 3)` +
 		`}`
 
 	if string(val) != eval {
 		t.Errorf("expected %v, got %v", eval, string(val))
+	}
+}
+
+type marshalme uint8
+
+var _ Marshaler = marshalme(0)
+
+const (
+	one marshalme = iota
+	two
+	three
+	four
+)
+
+func (m marshalme) String() string {
+	switch m {
+	case one:
+		return "ONE"
+	case two:
+		return "TWO"
+	case three:
+		return "THREE"
+	case four:
+		return "FOUR"
+	default:
+		panic("unexpected value")
+	}
+}
+
+func (m marshalme) MarshalIon(w Writer) error {
+	return w.WriteSymbol(m.String())
+}
+
+func TestMarshalCustomMarshaler(t *testing.T) {
+	buf := strings.Builder{}
+	enc := NewTextEncoder(&buf)
+
+	if err := enc.Encode(one); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.EncodeAs([]marshalme{two, three}, SexpType); err != nil {
+		t.Fatal(err)
+	}
+
+	v := struct {
+		Num marshalme `json:"num"`
+	}{four}
+	if err := enc.Encode(v); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := enc.Finish(); err != nil {
+		t.Fatal(err)
+	}
+
+	val := buf.String()
+	eval := "ONE\n(TWO THREE)\n{num:FOUR}\n"
+
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
 	}
 }

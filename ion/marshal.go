@@ -18,6 +18,11 @@ const (
 	EncodeSortMaps EncoderOpts = 1
 )
 
+// Marshaler is the interface implemented by types that can marshal themselves to Ion.
+type Marshaler interface {
+	MarshalIon(w Writer) error
+}
+
 // MarshalText marshals values to text ion.
 func MarshalText(v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
@@ -118,10 +123,19 @@ func (m *Encoder) Encode(v interface{}) error {
 	return m.encodeValue(reflect.ValueOf(v), NoType)
 }
 
+// EncodeAs marshals the given value to Ion with the given type hint. Use it to
+// encode symbols, clobs, or sexps (which by default get encoded to strings, blobs,
+// and lists respectively).
+func (m *Encoder) EncodeAs(v interface{}, hint Type) error {
+	return m.encodeValue(reflect.ValueOf(v), hint)
+}
+
 // Finish finishes writing the current Ion datagram.
 func (m *Encoder) Finish() error {
 	return m.w.Finish()
 }
+
+var marshalerType = reflect.TypeOf((*Marshaler)(nil)).Elem()
 
 // EncodeValue recursively encodes a value.
 func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
@@ -130,6 +144,13 @@ func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 	}
 
 	t := v.Type()
+	if t.Kind() != reflect.Ptr && v.CanAddr() && reflect.PtrTo(t).Implements(marshalerType) {
+		return v.Addr().Interface().(Marshaler).MarshalIon(m.w)
+	}
+	if t.Implements(marshalerType) {
+		return v.Interface().(Marshaler).MarshalIon(m.w)
+	}
+
 	switch t.Kind() {
 	case reflect.Bool:
 		return m.w.WriteBool(v.Bool())
@@ -234,7 +255,8 @@ func keysFor(v reflect.Value) []mapkey {
 
 // EncodeSlice encodes a slice to the output writer as an appropriate Ion type.
 func (m *Encoder) encodeSlice(v reflect.Value, hint Type) error {
-	if v.Type().Elem().Kind() == reflect.Uint8 {
+	elem := v.Type().Elem()
+	if elem.Kind() == reflect.Uint8 && !elem.Implements(marshalerType) {
 		return m.encodeBlob(v, hint)
 	}
 
@@ -256,9 +278,13 @@ func (m *Encoder) encodeBlob(v reflect.Value, hint Type) error {
 	return m.w.WriteBlob(v.Bytes())
 }
 
-// EncodeArray encodes an array to the output writer as an Ion list.
+// EncodeArray encodes an array to the output writer as an Ion list (or sexp).
 func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
-	m.w.BeginList()
+	if hint == SexpType {
+		m.w.BeginSexp()
+	} else {
+		m.w.BeginList()
+	}
 
 	for i := 0; i < v.Len(); i++ {
 		if err := m.encodeValue(v.Index(i), hint); err != nil {
@@ -266,6 +292,9 @@ func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 		}
 	}
 
+	if hint == SexpType {
+		return m.w.EndSexp()
+	}
 	return m.w.EndList()
 }
 
