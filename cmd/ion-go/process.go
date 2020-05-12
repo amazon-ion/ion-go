@@ -138,7 +138,7 @@ func (p *processor) processStdin() {
 	p.loc = ""
 
 	if err := p.out.Finish(); err != nil {
-		p.error("WRITE", err)
+		p.error(write, err)
 	}
 }
 
@@ -150,7 +150,7 @@ func (p *processor) processFiles() error {
 	}
 
 	if err := p.out.Finish(); err != nil {
-		p.error("WRITE", err)
+		p.error(write, err)
 	}
 
 	return nil
@@ -181,18 +181,17 @@ func (p *processor) process(in ion.Reader) error {
 
 	for in.Next() {
 		p.idx++
-
 		name := in.FieldName()
 		if name != "" {
 			if err = p.out.FieldName(name); err != nil {
-				return p.error("WRITE", err)
+				return p.error(write, err)
 			}
 		}
 
 		annos := in.Annotations()
 		if len(annos) > 0 {
 			if err = p.out.Annotations(annos...); err != nil {
-				return p.error("WRITE", err)
+				return p.error(write, err)
 			}
 		}
 
@@ -203,42 +202,42 @@ func (p *processor) process(in ion.Reader) error {
 		case ion.BoolType:
 			val, err := in.BoolValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteBool(val)
 
 		case ion.IntType:
 			size, err := in.IntSize()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 
 			switch size {
 			case ion.Int32:
 				val, err := in.IntValue()
 				if err != nil {
-					return p.error("READ", err)
+					return p.error(read, err)
 				}
 				err = p.out.WriteInt(int64(val))
 
 			case ion.Int64:
 				val, err := in.Int64Value()
 				if err != nil {
-					return p.error("READ", err)
+					return p.error(read, err)
 				}
 				err = p.out.WriteInt(val)
 
 			case ion.Uint64:
 				val, err := in.Uint64Value()
 				if err != nil {
-					return p.error("READ", err)
+					return p.error(read, err)
 				}
 				err = p.out.WriteUint(val)
 
 			case ion.BigInt:
 				val, err := in.BigIntValue()
 				if err != nil {
-					return p.error("READ", err)
+					return p.error(read, err)
 				}
 				err = p.out.WriteBigInt(val)
 
@@ -249,94 +248,97 @@ func (p *processor) process(in ion.Reader) error {
 		case ion.FloatType:
 			val, err := in.FloatValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteFloat(val)
 
 		case ion.DecimalType:
 			val, err := in.DecimalValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteDecimal(val)
 
 		case ion.TimestampType:
 			val, err := in.TimeValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteTimestamp(val)
 
 		case ion.SymbolType:
 			val, err := in.StringValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteSymbol(val)
 
 		case ion.StringType:
 			val, err := in.StringValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteString(val)
 
 		case ion.ClobType:
 			val, err := in.ByteValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteClob(val)
 
 		case ion.BlobType:
 			val, err := in.ByteValue()
 			if err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.WriteBlob(val)
 
 		case ion.ListType:
 			if err := in.StepIn(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			if err := p.out.BeginList(); err != nil {
-				return p.error("WRITE", err)
+				return p.error(write, err)
 			}
 			if err := p.process(in); err != nil {
 				return err
 			}
+			p.idx++
 			if err := in.StepOut(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.EndList()
 
 		case ion.SexpType:
 			if err := in.StepIn(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			if err := p.out.BeginSexp(); err != nil {
-				return p.error("WRITE", err)
+				return p.error(write, err)
 			}
 			if err := p.process(in); err != nil {
 				return err
 			}
+			p.idx++
 			if err := in.StepOut(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.EndSexp()
 
 		case ion.StructType:
 			if err := in.StepIn(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			if err := p.out.BeginStruct(); err != nil {
-				return p.error("WRITE", err)
+				return p.error(write, err)
 			}
 			if err := p.process(in); err != nil {
 				return err
 			}
+			p.idx++
 			if err := in.StepOut(); err != nil {
-				return p.error("READ", err)
+				return p.error(read, err)
 			}
 			err = p.out.EndStruct()
 
@@ -345,17 +347,17 @@ func (p *processor) process(in ion.Reader) error {
 		}
 
 		if err != nil {
-			return p.error("WRITE", err)
+			return p.error(write, err)
 		}
 	}
 
 	if err := in.Err(); err != nil {
-		return p.error("READ", err)
+		return p.error(read, err)
 	}
 	return nil
 }
 
-func (p *processor) error(typ string, err error) error {
+func (p *processor) error(typ errortype, err error) error {
 	p.err.Append(typ, err.Error(), p.loc, p.idx)
 	return err
 }

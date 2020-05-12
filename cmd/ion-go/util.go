@@ -62,7 +62,7 @@ func NewErrorReport(w io.Writer) *ErrorReport {
 }
 
 // Append appends an error to this report.
-func (r *ErrorReport) Append(typ, msg, loc string, idx int) {
+func (r *ErrorReport) Append(typ errortype, msg, loc string, idx int) {
 	if err := r.w.Encode(errordescription{typ, msg, loc, idx}); err != nil {
 		panic(err)
 	}
