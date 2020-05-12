@@ -44,24 +44,23 @@ func (e *eventwriter) Annotations(vals ...string) error {
 func (e *eventwriter) WriteNull() error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "NULL",
+		IonType:   iontype(ion.NullType),
 		ValueText: "null",
 	})
 }
 
 func (e *eventwriter) WriteNullType(val ion.Type) error {
-	ts := val.String()
 	return e.write(event{
 		EventType: scalar,
-		IonType:   strings.ToUpper(ts),
-		ValueText: "null." + ts,
+		IonType:   iontype(val),
+		ValueText: "null." + val.String(),
 	})
 }
 
 func (e *eventwriter) WriteBool(val bool) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "BOOL",
+		IonType:   iontype(ion.BoolType),
 		ValueText: stringify(val),
 	})
 }
@@ -69,7 +68,7 @@ func (e *eventwriter) WriteBool(val bool) error {
 func (e *eventwriter) WriteInt(val int64) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "INT",
+		IonType:   iontype(ion.IntType),
 		ValueText: stringify(val),
 	})
 }
@@ -77,7 +76,7 @@ func (e *eventwriter) WriteInt(val int64) error {
 func (e *eventwriter) WriteUint(val uint64) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "INT",
+		IonType:   iontype(ion.IntType),
 		ValueText: stringify(val),
 	})
 }
@@ -85,7 +84,7 @@ func (e *eventwriter) WriteUint(val uint64) error {
 func (e *eventwriter) WriteBigInt(val *big.Int) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "INT",
+		IonType:   iontype(ion.IntType),
 		ValueText: stringify(val),
 	})
 }
@@ -93,7 +92,7 @@ func (e *eventwriter) WriteBigInt(val *big.Int) error {
 func (e *eventwriter) WriteFloat(val float64) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "FLOAT",
+		IonType:   iontype(ion.FloatType),
 		ValueText: stringify(val),
 	})
 }
@@ -101,7 +100,7 @@ func (e *eventwriter) WriteFloat(val float64) error {
 func (e *eventwriter) WriteDecimal(val *ion.Decimal) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "DECIMAL",
+		IonType:   iontype(ion.DecimalType),
 		ValueText: stringify(val),
 	})
 }
@@ -109,7 +108,7 @@ func (e *eventwriter) WriteDecimal(val *ion.Decimal) error {
 func (e *eventwriter) WriteTimestamp(val time.Time) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "TIMESTAMP",
+		IonType:   iontype(ion.TimestampType),
 		ValueText: stringify(val),
 	})
 }
@@ -117,7 +116,7 @@ func (e *eventwriter) WriteTimestamp(val time.Time) error {
 func (e *eventwriter) WriteSymbol(val string) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "SYMBOL",
+		IonType:   iontype(ion.SymbolType),
 		ValueText: symbolify(val),
 	})
 }
@@ -125,7 +124,7 @@ func (e *eventwriter) WriteSymbol(val string) error {
 func (e *eventwriter) WriteString(val string) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "STRING",
+		IonType:   iontype(ion.StringType),
 		ValueText: stringify(val),
 	})
 }
@@ -133,7 +132,7 @@ func (e *eventwriter) WriteString(val string) error {
 func (e *eventwriter) WriteClob(val []byte) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "CLOB",
+		IonType:   iontype(ion.ClobType),
 		ValueText: clobify(val),
 	})
 }
@@ -141,7 +140,7 @@ func (e *eventwriter) WriteClob(val []byte) error {
 func (e *eventwriter) WriteBlob(val []byte) error {
 	return e.write(event{
 		EventType: scalar,
-		IonType:   "BLOB",
+		IonType:   iontype(ion.BlobType),
 		ValueText: stringify(val),
 	})
 }
@@ -149,7 +148,7 @@ func (e *eventwriter) WriteBlob(val []byte) error {
 func (e *eventwriter) BeginList() error {
 	err := e.write(event{
 		EventType: containerStart,
-		IonType:   "LIST",
+		IonType:   iontype(ion.ListType),
 	})
 	if err != nil {
 		return err
@@ -162,14 +161,14 @@ func (e *eventwriter) EndList() error {
 	e.depth--
 	return e.write(event{
 		EventType: containerEnd,
-		IonType:   "LIST",
+		IonType:   iontype(ion.ListType),
 	})
 }
 
 func (e *eventwriter) BeginSexp() error {
 	err := e.write(event{
 		EventType: containerStart,
-		IonType:   "SEXP",
+		IonType:   iontype(ion.SexpType),
 	})
 	if err != nil {
 		return err
@@ -182,14 +181,14 @@ func (e *eventwriter) EndSexp() error {
 	e.depth--
 	return e.write(event{
 		EventType: containerEnd,
-		IonType:   "SEXP",
+		IonType:   iontype(ion.SexpType),
 	})
 }
 
 func (e *eventwriter) BeginStruct() error {
 	err := e.write(event{
 		EventType: containerStart,
-		IonType:   "STRUCT",
+		IonType:   iontype(ion.StructType),
 	})
 	if err != nil {
 		return err
@@ -202,7 +201,7 @@ func (e *eventwriter) EndStruct() error {
 	e.depth--
 	return e.write(event{
 		EventType: containerEnd,
-		IonType:   "STRUCT",
+		IonType:   iontype(ion.StructType),
 	})
 }
 
