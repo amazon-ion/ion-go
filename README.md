@@ -64,10 +64,10 @@ Import `github.com/amzn/ion-go/ion` and you're off to the races.
 
 ### Marshaling and Unmarshaling
 
-Similar to Golang's built-in [json](https://golang.org/pkg/encoding/json/) package,
-you can marshal and unmarshal go types to Ion. Marshaling requires you to specify
+Similar to GoLang's built-in [json](https://golang.org/pkg/encoding/json/) package,
+you can marshal and unmarshal Go types to Ion. Marshaling requires you to specify
 whether you'd like text or binary Ion. Unmarshaling is smart enough to do the right
-thing. Both respect json name tags, and `Marshal` honors omitempty.
+thing. Both respect json name tags, and `Marshal` honors `omitempty`.
 
 ```Go
 type T struct {
@@ -81,7 +81,7 @@ type T struct {
 func main() {
   t := T{}
 
-  err := ion.Unmarshal([]byte("{A:\"Ion!\",B:{C:2,D:[3,4]}}"), &t)
+  err := ion.Unmarshal([]byte(`{A:"Ion!",B:{C:2,D:[3,4]}}`), &t)
   if err != nil {
     panic(err)
   }
