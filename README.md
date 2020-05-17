@@ -60,7 +60,7 @@ It is recommended that you hook this in your favorite IDE (`Tools` > `File Watch
 
 ## Usage
 
-Import `github.com/amzn/ion-go` and you're off to the races.
+Import `github.com/amzn/ion-go/ion` and you're off to the races.
 
 ### Marshaling and Unmarshaling
 
