@@ -30,5 +30,12 @@ jobs:
     - name: Build
       run: go build -v ./...
     
-    - name: Test
-      run: go test -v ./...
+    - name: Test with coverage
+      run: go test -v ./... -coverprofile coverage.txt
+      
+      
+    - name: Upload Coverage report to CodeCov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        file: ./coverage.txt
