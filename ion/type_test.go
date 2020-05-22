@@ -19,3 +19,32 @@ func TestIntSizeToString(t *testing.T) {
 		}
 	}
 }
+
+func TestIsScalar(t *testing.T) {
+	if NoType.IsScalar() {
+		t.Errorf("Expected IsScalar() to return false for type NoType")
+	}
+	for i := NullType; i <= BlobType; i++ {
+		if !i.IsScalar() {
+			t.Errorf("Expected IsScalar() to return true for type %s", i.String())
+		}
+	}
+	for i := ListType; i <= StructType; i++ {
+		if i.IsScalar() {
+			t.Errorf("Expected IsScalar() to return false for type %s", i.String())
+		}
+	}
+}
+
+func TestIsContainer(t *testing.T) {
+	for i := NoType; i <= BlobType; i++ {
+		if i.IsContainer() {
+			t.Errorf("Expected IsContainer() to return false for type %s", i.String())
+		}
+	}
+	for i := ListType; i <= StructType; i++ {
+		if !i.IsContainer() {
+			t.Errorf("Expected IsContainer() to return true for type %s", i.String())
+		}
+	}
+}
