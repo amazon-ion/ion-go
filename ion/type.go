@@ -92,22 +92,12 @@ func (t Type) String() string {
 
 // IsScalar determines if the type is a scalar type
 func (t Type) IsScalar() bool {
-	switch t {
-	case NullType, BoolType, IntType, FloatType, DecimalType, TimestampType, SymbolType, StringType, ClobType, BlobType:
-		return true
-	}
-
-	return false
+	return NullType <= t && t <= BlobType
 }
 
 // IsContainer determines if the type is a container type
 func (t Type) IsContainer() bool {
-	switch t {
-	case ListType, SexpType, StructType:
-		return true
-	}
-
-	return false
+	return ListType <= t && t <= StructType
 }
 
 // IntSize represents the size of an integer.
