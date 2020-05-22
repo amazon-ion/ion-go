@@ -303,13 +303,13 @@ var nonEquivsSkipList = []string{
 
 func TestBinaryRoundTrip(t *testing.T) {
 	readFilesAndTest(t, goodPath, binaryRoundTripSkipList, func(t *testing.T, path string) {
-		binaryRoundTrip(t, path)
+		testBinaryRoundTrip(t, path)
 	})
 }
 
 func TestTextRoundTrip(t *testing.T) {
 	readFilesAndTest(t, goodPath, textRoundTripSkipList, func(t *testing.T, path string) {
-		textRoundTrip(t, path)
+		testTextRoundTrip(t, path)
 	})
 }
 
@@ -331,64 +331,64 @@ func TestNonEquivalency(t *testing.T) {
 	})
 }
 
-func binaryRoundTrip(t *testing.T, fp string) {
-	b := loadFile(t, fp)
+// Execute round trip testing for BinaryWriter. Create a BinaryWriter, using the BinaryWriter creat a
+// TextWriter and back to BinaryWriter again. Validate that the first and last Writers are equal.
+func testBinaryRoundTrip(t *testing.T, fp string) {
+	fileBytes := loadFile(t, fp)
 
 	// Make a binary writer from the file
-	r := NewReaderBytes(b)
-	buf := bytes.Buffer{}
-	bw := NewBinaryWriter(&buf)
-	writeToWriterFromReader(t, r, bw)
-	bw.Finish()
+	binWriter, buf := makeBinaryWiter(t, fileBytes)
 
 	// Make a text writer from the binary writer
-	r = NewReaderBytes(buf.Bytes())
-	str := strings.Builder{}
-	tw := NewTextWriter(&str)
-	writeToWriterFromReader(t, r, tw)
-	tw.Finish()
+	_, str := makeTextWriter(t, buf.String())
 
-	// Make another binary writer using the text writer
-	r = NewReaderStr(str.String())
-	buf2 := bytes.Buffer{}
-	bw2 := NewBinaryWriter(&buf2)
-	writeToWriterFromReader(t, r, bw2)
-	bw2.Finish()
+	// Make another binary writer using writer
+	binWriter2, _ := makeBinaryWiter(t, []byte(str.String()))
 
 	// Compare the 2 binary writers
-	if !reflect.DeepEqual(bw, bw2) {
+	if !reflect.DeepEqual(binWriter, binWriter2) {
 		t.Errorf("Round trip test failed on: " + fp)
 	}
 }
 
-func textRoundTrip(t *testing.T, fp string) {
-	b := loadFile(t, fp)
+// Execute round trip testing for TextWriter. Create a TextWriter, using the TextWriter creat a
+// BinaryWriter and back to TextWriter again. Validate that the first and last Writers are equal.
+func testTextRoundTrip(t *testing.T, fp string) {
+	fileBytes := loadFile(t, fp)
 
 	// Make a text writer from the file
-	r := NewReaderBytes(b)
-	str := strings.Builder{}
-	tw := NewTextWriter(&str)
-	writeToWriterFromReader(t, r, tw)
-	tw.Finish()
+	txtWriter, str := makeTextWriter(t, string(fileBytes))
 
 	// Make a binary writer from the text writer
-	r = NewReaderStr(str.String())
-	buf := bytes.Buffer{}
-	bw := NewBinaryWriter(&buf)
-	writeToWriterFromReader(t, r, bw)
-	bw.Finish()
+	_, buf := makeBinaryWiter(t, []byte(str.String()))
 
 	// Make another text writer using the binary writer
-	r = NewReaderBytes(buf.Bytes())
-	str2 := strings.Builder{}
-	tw2 := NewTextWriter(&str2)
-	writeToWriterFromReader(t, r, tw2)
-	tw2.Finish()
+	txtWriter2, _ := makeTextWriter(t, buf.String())
 
 	//compare the 2 text writers
-	if !reflect.DeepEqual(tw, tw2) {
+	if !reflect.DeepEqual(txtWriter, txtWriter2) {
 		t.Errorf("Round trip test failed on: " + fp)
 	}
+}
+
+// Create a TextWriter from data parameter. Return the writer and string builder containing writer's contents
+func makeTextWriter(t *testing.T, data string) (Writer, strings.Builder) {
+	reader := NewReader(strings.NewReader(data))
+	str := strings.Builder{}
+	txtWriter := NewTextWriter(&str)
+	writeToWriterFromReader(t, reader, txtWriter)
+	txtWriter.Finish()
+	return txtWriter, str
+}
+
+// Create a BinaryWriter from data parameter. Return the writer and buffer containing writer's contents
+func makeBinaryWiter(t *testing.T, data []byte) (Writer, bytes.Buffer) {
+	reader := NewReader(bytes.NewReader(data))
+	buf2 := bytes.Buffer{}
+	binWriter2 := NewBinaryWriter(&buf2)
+	writeToWriterFromReader(t, reader, binWriter2)
+	binWriter2.Finish()
+	return binWriter2, buf2
 }
 
 // Execute loading malformed Ion values into a Reader and validate the Reader.
