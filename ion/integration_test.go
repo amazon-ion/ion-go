@@ -21,15 +21,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 	"testing"
 )
 
-// To debug/run one specific file in any of below paths, put the
-// file name with its extension. Works even if the file is listed in skip lists.
-// For example: const debugFile = "ints.ion"
-const debugFile = ""
 const goodPath = "../ion-tests/iontestdata/good"
 const badPath = "../ion-tests/iontestdata/bad"
 const equivsPath = "../ion-tests/iontestdata/good/equivs"
@@ -396,6 +391,7 @@ func textRoundTrip(t *testing.T, fp string) {
 	}
 }
 
+// Execute loading malformed Ion values into a Reader and validate the Reader.
 func testLoadBad(t *testing.T, fp string) {
 	file, er := os.Open(fp)
 	if er != nil {
@@ -405,7 +401,7 @@ func testLoadBad(t *testing.T, fp string) {
 
 	r := NewReader(file)
 
-	err := testBrokenReader(t, r)
+	err := testInvalidReader(t, r)
 
 	if r.Err() == nil && err == nil {
 		t.Fatal("Should have failed loading \"" + fp + "\".")
@@ -414,12 +410,13 @@ func testLoadBad(t *testing.T, fp string) {
 	}
 }
 
-func testBrokenReader(t *testing.T, r Reader) error {
+// Traverse the reader and check if it is an invalid reader, containing malformed Ion values.
+func testInvalidReader(t *testing.T, r Reader) error {
 	for r.Next() {
 		switch r.Type() {
 		case StructType, ListType, SexpType:
 			r.StepIn()
-			testBrokenReader(t, r)
+			testInvalidReader(t, r)
 			r.StepOut()
 		}
 	}
@@ -430,6 +427,8 @@ func testBrokenReader(t *testing.T, r Reader) error {
 	return nil
 }
 
+// Execute equivalency and non-equivalency tests, where true for eq means
+// equivalency and false denotes non-equivalency test.
 func testEquivalency(t *testing.T, fp string, eq bool) {
 	file, er := os.Open(fp)
 	if er != nil {
@@ -445,10 +444,10 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 			var values []item
 			r.StepIn()
 			if embDoc {
-				values = handleEmbDoc(t, r)
+				values = handleEmbeddedDoc(t, r)
 			} else {
 				for r.Next() {
-					values = append(values, eqv(t, r))
+					values = append(values, readCurrentValue(t, r))
 				}
 			}
 			equivalencyAssertion(t, values, eq)
@@ -460,7 +459,9 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	}
 }
 
-func handleEmbDoc(t *testing.T, r Reader) []item {
+// Ion values in top-level sequence annotated with "embedded_documents" parse as Ion string and each
+// of the string values in turn, parse as a document and put in an item struct (defined in this file).
+func handleEmbeddedDoc(t *testing.T, r Reader) []item {
 	var values []item
 	for r.Next() {
 		str, err := r.StringValue()
@@ -469,7 +470,7 @@ func handleEmbDoc(t *testing.T, r Reader) []item {
 		}
 		newReader := NewReaderStr(str)
 		for newReader.Next() {
-			values = append(values, eqv(t, newReader))
+			values = append(values, readCurrentValue(t, newReader))
 		}
 	}
 	return values
@@ -508,29 +509,23 @@ func equivalencyAssertion(t *testing.T, values []item, eq bool) {
 	}
 }
 
-func readFilesAndTest(t *testing.T, path string, skipList []string, tf testingFunc) {
+// Read and load the files in testing path and pass them to testing functions.
+func readFilesAndTest(t *testing.T, path string, skipList []string, testingFunc testingFunc) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if debugFile != "" {
-		fp := filepath.Join(path, debugFile)
-		t.Run(fp, func(t *testing.T) {
-			tf(t, fp)
-		})
-	} else {
-		for _, file := range files {
-			fp := filepath.Join(path, file.Name())
-			if file.IsDir() {
-				readFilesAndTest(t, fp, skipList, tf)
-			} else if skipFile(skipList, file.Name()) {
-				continue
-			} else {
-				t.Run(fp, func(t *testing.T) {
-					tf(t, fp)
-				})
-			}
+	for _, file := range files {
+		fp := filepath.Join(path, file.Name())
+		if file.IsDir() {
+			readFilesAndTest(t, fp, skipList, testingFunc)
+		} else if skipFile(skipList, file.Name()) {
+			continue
+		} else {
+			t.Run(fp, func(t *testing.T) {
+				testingFunc(t, fp)
+			})
 		}
 	}
 }
@@ -543,11 +538,12 @@ func loadFile(t *testing.T, path string) []byte {
 	return b
 }
 
+// Files with extensions other than "ion" or "10n", or in skip list. Return True to skip the file, false otherwise.
 func skipFile(skipList []string, fn string) bool {
-	ion, _ := regexp.MatchString(`.ion$`, fn)
-	bin, _ := regexp.MatchString(`.10n$`, fn)
+	ionFile := strings.HasSuffix(fn, "ion") ||
+		strings.HasSuffix(fn, "10n")
 
-	return !ion && !bin || isInSkipList(skipList, fn)
+	return !ionFile || isInSkipList(skipList, fn)
 }
 
 func isInSkipList(skipList []string, fn string) bool {
@@ -559,251 +555,253 @@ func isInSkipList(skipList []string, fn string) bool {
 	return false
 }
 
-func writeToWriterFromReader(t *testing.T, r Reader, w Writer) {
-	for r.Next() {
-		name := r.FieldName()
+// Read all the values in the reader and write them in the writer
+func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
+	for reader.Next() {
+		name := reader.FieldName()
 		if name != "" {
-			w.FieldName(name)
+			writer.FieldName(name)
 		}
 
-		an := r.Annotations()
+		an := reader.Annotations()
 		if len(an) > 0 {
-			w.Annotations(an...)
+			writer.Annotations(an...)
 		}
 
-		switch r.Type() {
+		switch reader.Type() {
 		case NullType:
-			err := w.WriteNull()
+			err := writer.WriteNull()
 			if err != nil {
 				t.Errorf("Something went wrong when writing Null value. " + err.Error())
 			}
 
 		case BoolType:
-			val, err := r.BoolValue()
+			val, err := reader.BoolValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
 			}
-			err = w.WriteBool(val)
+			err = writer.WriteBool(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Boolean value. " + err.Error())
 			}
 
 		case IntType:
-			val, err := r.Int64Value()
+			val, err := reader.Int64Value()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Int value. " + err.Error())
 			}
-			err = w.WriteInt(val)
+			err = writer.WriteInt(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Int value. " + err.Error())
 			}
 
 		case FloatType:
-			val, err := r.FloatValue()
+			val, err := reader.FloatValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Float value. " + err.Error())
 			}
-			err = w.WriteFloat(val)
+			err = writer.WriteFloat(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Float value. " + err.Error())
 			}
 
 		case DecimalType:
-			val, err := r.DecimalValue()
+			val, err := reader.DecimalValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
 			}
-			err = w.WriteDecimal(val)
+			err = writer.WriteDecimal(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Decimal value. " + err.Error())
 			}
 
 		case TimestampType:
-			val, err := r.TimeValue()
+			val, err := reader.TimeValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 			}
-			err = w.WriteTimestamp(val)
+			err = writer.WriteTimestamp(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Timestamp value. " + err.Error())
 			}
 
 		case SymbolType:
-			val, err := r.StringValue()
+			val, err := reader.StringValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 			}
-			err = w.WriteSymbol(val)
+			err = writer.WriteSymbol(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Symbol value. " + err.Error())
 			}
 
 		case StringType:
-			val, err := r.StringValue()
+			val, err := reader.StringValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading String value. " + err.Error())
 			}
-			err = w.WriteString(val)
+			err = writer.WriteString(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing String value. " + err.Error())
 			}
 
 		case ClobType:
-			val, err := r.ByteValue()
+			val, err := reader.ByteValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Clob value. " + err.Error())
 			}
-			err = w.WriteClob(val)
+			err = writer.WriteClob(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Clob value. " + err.Error())
 			}
 
 		case BlobType:
-			val, err := r.ByteValue()
+			val, err := reader.ByteValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Blob value. " + err.Error())
 			}
-			err = w.WriteBlob(val)
+			err = writer.WriteBlob(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Blob value. " + err.Error())
 			}
 
 		case SexpType:
-			r.StepIn()
-			w.BeginSexp()
-			writeToWriterFromReader(t, r, w)
-			r.StepOut()
-			w.EndSexp()
+			reader.StepIn()
+			writer.BeginSexp()
+			writeToWriterFromReader(t, reader, writer)
+			reader.StepOut()
+			writer.EndSexp()
 
 		case ListType:
-			r.StepIn()
-			w.BeginList()
-			writeToWriterFromReader(t, r, w)
-			r.StepOut()
-			w.EndList()
+			reader.StepIn()
+			writer.BeginList()
+			writeToWriterFromReader(t, reader, writer)
+			reader.StepOut()
+			writer.EndList()
 
 		case StructType:
-			r.StepIn()
-			w.BeginStruct()
-			writeToWriterFromReader(t, r, w)
-			r.StepOut()
-			w.EndStruct()
+			reader.StepIn()
+			writer.BeginStruct()
+			writeToWriterFromReader(t, reader, writer)
+			reader.StepOut()
+			writer.EndStruct()
 		}
 	}
 
-	if r.Err() != nil {
-		t.Errorf(r.Err().Error())
+	if reader.Err() != nil {
+		t.Errorf(reader.Err().Error())
 	}
 }
 
-func eqv(t *testing.T, r Reader) item {
-	var i item
+// Read the current value in the reader and put that in an item struct (defined in this file).
+func readCurrentValue(t *testing.T, reader Reader) item {
+	var item item
 
-	an := r.Annotations()
+	an := reader.Annotations()
 	if len(an) > 0 {
-		i.annotations = an
+		item.annotations = an
 	}
 
-	switch r.Type() {
+	switch reader.Type() {
 	case NullType:
-		i.value = append(i.value, textNulls[NoType])
-		i.ionType = NullType
+		item.value = append(item.value, textNulls[NoType])
+		item.ionType = NullType
 
 	case BoolType:
-		val, err := r.BoolValue()
+		val, err := reader.BoolValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = BoolType
+		item.value = append(item.value, val)
+		item.ionType = BoolType
 
 	case IntType:
-		val, err := r.Int64Value()
+		val, err := reader.Int64Value()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Int value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = IntType
+		item.value = append(item.value, val)
+		item.ionType = IntType
 
 	case FloatType:
-		val, err := r.FloatValue()
+		val, err := reader.FloatValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Float value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = FloatType
+		item.value = append(item.value, val)
+		item.ionType = FloatType
 
 	case DecimalType:
-		val, err := r.DecimalValue()
+		val, err := reader.DecimalValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = DecimalType
+		item.value = append(item.value, val)
+		item.ionType = DecimalType
 
 	case TimestampType:
-		val, err := r.TimeValue()
+		val, err := reader.TimeValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = TimestampType
+		item.value = append(item.value, val)
+		item.ionType = TimestampType
 
 	case SymbolType:
-		val, err := r.StringValue()
+		val, err := reader.StringValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = SymbolType
+		item.value = append(item.value, val)
+		item.ionType = SymbolType
 
 	case StringType:
-		val, err := r.StringValue()
+		val, err := reader.StringValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading String value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = StringType
+		item.value = append(item.value, val)
+		item.ionType = StringType
 
 	case ClobType:
-		val, err := r.ByteValue()
+		val, err := reader.ByteValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Clob value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = ClobType
+		item.value = append(item.value, val)
+		item.ionType = ClobType
 
 	case BlobType:
-		val, err := r.ByteValue()
+		val, err := reader.ByteValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Blob value. " + err.Error())
 		}
-		i.value = append(i.value, val)
-		i.ionType = BlobType
+		item.value = append(item.value, val)
+		item.ionType = BlobType
 
 	case SexpType:
-		r.StepIn()
-		for r.Next() {
-			i.value = append(i.value, eqv(t, r))
+		reader.StepIn()
+		for reader.Next() {
+			item.value = append(item.value, readCurrentValue(t, reader))
 		}
-		i.ionType = SexpType
-		r.StepOut()
+		item.ionType = SexpType
+		reader.StepOut()
 
 	case ListType:
-		r.StepIn()
-		for r.Next() {
-			i.value = append(i.value, eqv(t, r))
+		reader.StepIn()
+		for reader.Next() {
+			item.value = append(item.value, readCurrentValue(t, reader))
 		}
-		i.ionType = ListType
-		r.StepOut()
+		item.ionType = ListType
+		reader.StepOut()
 
 	case StructType:
-		r.StepIn()
-		for r.Next() {
-			i.value = append(i.value, eqv(t, r))
+		reader.StepIn()
+		for reader.Next() {
+			item.value = append(item.value, readCurrentValue(t, reader))
 		}
-		i.ionType = StructType
-		r.StepOut()
+		item.ionType = StructType
+		reader.StepOut()
 	}
-	return i
+	return item
 }
