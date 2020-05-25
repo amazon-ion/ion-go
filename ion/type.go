@@ -91,12 +91,12 @@ func (t Type) String() string {
 }
 
 // IsScalar determines if the type is a scalar type
-func (t Type) IsScalar() bool {
+func IsScalar(t Type) bool {
 	return NullType <= t && t <= BlobType
 }
 
 // IsContainer determines if the type is a container type
-func (t Type) IsContainer() bool {
+func IsContainer(t Type) bool {
 	return ListType <= t && t <= StructType
 }
 
