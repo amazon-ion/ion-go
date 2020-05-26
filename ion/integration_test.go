@@ -32,7 +32,7 @@ const nonEquivsPath = "../ion-tests/iontestdata/good/non-equivs"
 
 type testingFunc func(t *testing.T, path string)
 
-type item struct {
+type ionItem struct {
 	ionType     Type
 	annotations []string
 	value       []interface{}
@@ -331,19 +331,19 @@ func TestNonEquivalency(t *testing.T) {
 	})
 }
 
-// Execute round trip testing for BinaryWriter. Create a BinaryWriter, using the BinaryWriter creat a
-// TextWriter and back to BinaryWriter again. Validate that the first and last Writers are equal.
+// Execute round trip testing for BinaryWriter. Create a BinaryWriter, using the BinaryWriter create
+// a TextWriter and back to BinaryWriter again. Validate that the first and last Writers are equal.
 func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
 	// Make a binary writer from the file
-	binWriter, buf := makeBinaryWiter(t, fileBytes)
+	binWriter, buf := encodeAsBinaryIon(t, fileBytes)
 
-	// Make a text writer from the binary writer
-	_, str := makeTextWriter(t, buf.String())
+	// Re-encode binWriter's stream as text into a string builder
+	_, str := encodeAsTextIon(t, buf.String())
 
-	// Make another binary writer using writer
-	binWriter2, _ := makeBinaryWiter(t, []byte(str.String()))
+	// Re-encode str as binary in another binary writer
+	binWriter2, _ := encodeAsBinaryIon(t, []byte(str.String()))
 
 	// Compare the 2 binary writers
 	if !reflect.DeepEqual(binWriter, binWriter2) {
@@ -357,13 +357,13 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
 	// Make a text writer from the file
-	txtWriter, str := makeTextWriter(t, string(fileBytes))
+	txtWriter, str := encodeAsTextIon(t, string(fileBytes))
 
-	// Make a binary writer from the text writer
-	_, buf := makeBinaryWiter(t, []byte(str.String()))
+	// Re-encode txtWriter's stream as binary into a bytes.Buffer
+	_, buf := encodeAsBinaryIon(t, []byte(str.String()))
 
-	// Make another text writer using the binary writer
-	txtWriter2, _ := makeTextWriter(t, buf.String())
+	// Re-encode buf's stream as text in another text writer
+	txtWriter2, _ := encodeAsTextIon(t, buf.String())
 
 	//compare the 2 text writers
 	if !reflect.DeepEqual(txtWriter, txtWriter2) {
@@ -372,7 +372,7 @@ func testTextRoundTrip(t *testing.T, fp string) {
 }
 
 // Create a TextWriter from data parameter. Return the writer and string builder containing writer's contents
-func makeTextWriter(t *testing.T, data string) (Writer, strings.Builder) {
+func encodeAsTextIon(t *testing.T, data string) (Writer, strings.Builder) {
 	reader := NewReader(strings.NewReader(data))
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
@@ -382,7 +382,7 @@ func makeTextWriter(t *testing.T, data string) (Writer, strings.Builder) {
 }
 
 // Create a BinaryWriter from data parameter. Return the writer and buffer containing writer's contents
-func makeBinaryWiter(t *testing.T, data []byte) (Writer, bytes.Buffer) {
+func encodeAsBinaryIon(t *testing.T, data []byte) (Writer, bytes.Buffer) {
 	reader := NewReader(bytes.NewReader(data))
 	buf2 := bytes.Buffer{}
 	binWriter2 := NewBinaryWriter(&buf2)
@@ -438,10 +438,10 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 
 	r := NewReader(file)
 	for r.Next() {
-		embDoc := embeddedDoc(r.Annotations())
+		embDoc := isEmbeddedDoc(r.Annotations())
 		switch r.Type() {
 		case StructType, ListType, SexpType:
-			var values []item
+			var values []ionItem
 			r.StepIn()
 			if embDoc {
 				values = handleEmbeddedDoc(t, r)
@@ -459,10 +459,9 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	}
 }
 
-// Ion values in top-level sequence annotated with "embedded_documents" parse as Ion string and each
-// of the string values in turn, parse as a document and put in an item struct (defined in this file).
-func handleEmbeddedDoc(t *testing.T, r Reader) []item {
-	var values []item
+// Handle equivalency tests with embedded_documents annotation
+func handleEmbeddedDoc(t *testing.T, r Reader) []ionItem {
+	var values []ionItem
 	for r.Next() {
 		str, err := r.StringValue()
 		if err != nil {
@@ -476,7 +475,7 @@ func handleEmbeddedDoc(t *testing.T, r Reader) []item {
 	return values
 }
 
-func embeddedDoc(an []string) bool {
+func isEmbeddedDoc(an []string) bool {
 	for _, a := range an {
 		if a == "embedded_documents" {
 			return true
@@ -485,8 +484,8 @@ func embeddedDoc(an []string) bool {
 	return false
 }
 
-func equivalencyAssertion(t *testing.T, values []item, eq bool) {
-	// Nested for loops to evaluate each item with all the other items in the list/struct/sexp
+func equivalencyAssertion(t *testing.T, values []ionItem, eq bool) {
+	// Nested for loops to evaluate each ionItem value with all the other values in the list/struct/sexp
 	for i := 0; i < len(values); i++ {
 		for j := i + 1; j < len(values); j++ {
 			if i == j {
@@ -496,13 +495,15 @@ func equivalencyAssertion(t *testing.T, values []item, eq bool) {
 				if !reflect.DeepEqual(values[i].value, values[j].value) ||
 					!reflect.DeepEqual(values[i].annotations, values[j].annotations) ||
 					!reflect.DeepEqual(values[i].ionType, values[j].ionType) {
-					t.Error("Equivalency test failed. All values should interpret equal.")
+					t.Errorf("Equivalency test failed. All values should be interpreted as"+
+						"equal for %v and %v", values[i].value, values[j].value)
 				}
 			} else {
 				if reflect.DeepEqual(values[i].value, values[j].value) &&
 					reflect.DeepEqual(values[i].annotations, values[j].annotations) &&
 					reflect.DeepEqual(values[i].ionType, values[j].ionType) {
-					t.Error("Non-Equivalency test failed. Values should not interpret equal.")
+					t.Errorf("Non-Equivalency test failed. Values should not be interpreted as"+
+						"equal for %v and %v", values[i].value, values[j].value)
 				}
 			}
 		}
@@ -693,115 +694,115 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 	}
 }
 
-// Read the current value in the reader and put that in an item struct (defined in this file).
-func readCurrentValue(t *testing.T, reader Reader) item {
-	var item item
+// Read the current value in the reader and put that in an ionItem struct (defined in this file).
+func readCurrentValue(t *testing.T, reader Reader) ionItem {
+	var ionItem ionItem
 
 	an := reader.Annotations()
 	if len(an) > 0 {
-		item.annotations = an
+		ionItem.annotations = an
 	}
 
 	switch reader.Type() {
 	case NullType:
-		item.value = append(item.value, textNulls[NoType])
-		item.ionType = NullType
+		ionItem.value = append(ionItem.value, textNulls[NoType])
+		ionItem.ionType = NullType
 
 	case BoolType:
 		val, err := reader.BoolValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = BoolType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = BoolType
 
 	case IntType:
 		val, err := reader.Int64Value()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Int value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = IntType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = IntType
 
 	case FloatType:
 		val, err := reader.FloatValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Float value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = FloatType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = FloatType
 
 	case DecimalType:
 		val, err := reader.DecimalValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = DecimalType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = DecimalType
 
 	case TimestampType:
 		val, err := reader.TimeValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = TimestampType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = TimestampType
 
 	case SymbolType:
 		val, err := reader.StringValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = SymbolType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = SymbolType
 
 	case StringType:
 		val, err := reader.StringValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading String value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = StringType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = StringType
 
 	case ClobType:
 		val, err := reader.ByteValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Clob value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = ClobType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = ClobType
 
 	case BlobType:
 		val, err := reader.ByteValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Blob value. " + err.Error())
 		}
-		item.value = append(item.value, val)
-		item.ionType = BlobType
+		ionItem.value = append(ionItem.value, val)
+		ionItem.ionType = BlobType
 
 	case SexpType:
 		reader.StepIn()
 		for reader.Next() {
-			item.value = append(item.value, readCurrentValue(t, reader))
+			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
-		item.ionType = SexpType
+		ionItem.ionType = SexpType
 		reader.StepOut()
 
 	case ListType:
 		reader.StepIn()
 		for reader.Next() {
-			item.value = append(item.value, readCurrentValue(t, reader))
+			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
-		item.ionType = ListType
+		ionItem.ionType = ListType
 		reader.StepOut()
 
 	case StructType:
 		reader.StepIn()
 		for reader.Next() {
-			item.value = append(item.value, readCurrentValue(t, reader))
+			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
-		item.ionType = StructType
+		ionItem.ionType = StructType
 		reader.StepOut()
 	}
-	return item
+	return ionItem
 }
