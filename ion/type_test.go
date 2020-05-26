@@ -21,91 +21,39 @@ func TestIntSizeToString(t *testing.T) {
 }
 
 func TestIsScalar(t *testing.T) {
-	if IsScalar(NoType) {
-		t.Errorf("Expected IsScalar() to return false for type NoType")
+	scalarTypes := []Type{NullType, BoolType, IntType, FloatType, DecimalType,
+		TimestampType, SymbolType, StringType, ClobType, BlobType}
+
+	for _, ionType := range scalarTypes {
+		if !IsScalar(ionType) {
+			t.Errorf("Expected IsScalar() to return true for type %s", ionType.String())
+		}
 	}
-	if !IsScalar(NullType) {
-		t.Errorf("Expected IsScalar() to return true for type NullType")
-	}
-	if !IsScalar(BoolType) {
-		t.Errorf("Expected IsScalar() to return true for type BoolType")
-	}
-	if !IsScalar(IntType) {
-		t.Errorf("Expected IsScalar() to return true for type IntType")
-	}
-	if !IsScalar(FloatType) {
-		t.Errorf("Expected IsScalar() to return true for type FloatType")
-	}
-	if !IsScalar(DecimalType) {
-		t.Errorf("Expected IsScalar() to return true for type DecimalType")
-	}
-	if !IsScalar(TimestampType) {
-		t.Errorf("Expected IsScalar() to return true for type TimestampType")
-	}
-	if !IsScalar(SymbolType) {
-		t.Errorf("Expected IsScalar() to return true for type SymbolType")
-	}
-	if !IsScalar(StringType) {
-		t.Errorf("Expected IsScalar() to return true for type StringType")
-	}
-	if !IsScalar(ClobType) {
-		t.Errorf("Expected IsScalar() to return true for type ClobType")
-	}
-	if !IsScalar(BlobType) {
-		t.Errorf("Expected IsScalar() to return true for type BlobType")
-	}
-	if IsScalar(ListType) {
-		t.Errorf("Expected IsScalar() to return false for type ListType")
-	}
-	if IsScalar(SexpType) {
-		t.Errorf("Expected IsScalar() to return false for type SexpType")
-	}
-	if IsScalar(StructType) {
-		t.Errorf("Expected IsScalar() to return false for type StructType")
+
+	nonScalarTypes := []Type{NoType, ListType, SexpType, StructType}
+
+	for _, ionType := range nonScalarTypes {
+		if IsScalar(ionType) {
+			t.Errorf("Expected IsScalar() to return false for type %s", ionType.String())
+		}
 	}
 }
 
 func TestIsContainer(t *testing.T) {
-	if IsContainer(NoType) {
-		t.Errorf("Expected IsContainer() to return false for type NoType")
+	containerTypes := []Type{ListType, SexpType, StructType}
+
+	for _, ionType := range containerTypes {
+		if !IsContainer(ionType) {
+			t.Errorf("Expected IsContainer() to return true for type %s", ionType.String())
+		}
 	}
-	if IsContainer(NullType) {
-		t.Errorf("Expected IsContainer() to return false for type NullType")
-	}
-	if IsContainer(BoolType) {
-		t.Errorf("Expected IsContainer() to return false for type BoolType")
-	}
-	if IsContainer(IntType) {
-		t.Errorf("Expected IsContainer() to return false for type IntType")
-	}
-	if IsContainer(FloatType) {
-		t.Errorf("Expected IsContainer() to return false for type FloatType")
-	}
-	if IsContainer(DecimalType) {
-		t.Errorf("Expected IsContainer() to return false for type DecimalType")
-	}
-	if IsContainer(TimestampType) {
-		t.Errorf("Expected IsContainer() to return false for type TimestampType")
-	}
-	if IsContainer(SymbolType) {
-		t.Errorf("Expected IsContainer() to return false for type SymbolType")
-	}
-	if IsContainer(StringType) {
-		t.Errorf("Expected IsContainer() to return false for type StringType")
-	}
-	if IsContainer(ClobType) {
-		t.Errorf("Expected IsContainer() to return false for type ClobType")
-	}
-	if IsContainer(BlobType) {
-		t.Errorf("Expected IsContainer() to return false for type BlobType")
-	}
-	if !IsContainer(ListType) {
-		t.Errorf("Expected IsContainer() to return true for type ListType")
-	}
-	if !IsContainer(SexpType) {
-		t.Errorf("Expected IsContainer() to return true for type SexpType")
-	}
-	if !IsContainer(StructType) {
-		t.Errorf("Expected IsContainer() to return true for type StructType")
+
+	nonContainerTypes := []Type{NoType, NullType, BoolType, IntType, FloatType, DecimalType,
+		TimestampType, SymbolType, StringType, ClobType, BlobType}
+
+	for _, ionType := range nonContainerTypes {
+		if IsContainer(ionType) {
+			t.Errorf("Expected IsContainer() to return false for type %s", ionType.String())
+		}
 	}
 }
