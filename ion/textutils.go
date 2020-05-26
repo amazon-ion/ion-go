@@ -309,7 +309,7 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	year, err := strconv.ParseInt(val[:4], 10, 32)
-	if err != nil {
+	if err != nil || year < 0 {
 		return invalidTimestamp(val)
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
@@ -325,7 +325,7 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	month, err := strconv.ParseInt(val[5:7], 10, 32)
-	if err != nil {
+	if err != nil || month < 0 {
 		return invalidTimestamp(val)
 	}
 
@@ -342,13 +342,19 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	day, err := strconv.ParseInt(val[8:10], 10, 32)
-	if err != nil {
+	if err != nil || day < 0 {
 		return invalidTimestamp(val)
 	}
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC), nil
+		//tt := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+		//if int(year) != tt.Year() || time.Month(month) != tt.Month() || int(day) != tt.Day() {
+		//	return time.Time{}, fmt.Errorf("Changedddd  ")
+		//}
+		//return tt, nil
+		tt, e := time.Parse("2006-01-02", val)
+		return tt, e
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
