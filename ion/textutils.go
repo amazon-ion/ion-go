@@ -314,7 +314,7 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return time.Date(int(year), 1, 1, 0, 0, 0, 0, time.UTC), nil
+		return TryCreateTimeDate(val, year, 1, 1, time.UTC)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +331,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return time.Date(int(year), time.Month(month), 1, 0, 0, 0, 0, time.UTC), nil
+		return TryCreateTimeDate(val, year, month, 1, time.UTC)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,13 +348,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		//tt := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
-		//if int(year) != tt.Year() || time.Month(month) != tt.Month() || int(day) != tt.Day() {
-		//	return time.Time{}, fmt.Errorf("Changedddd  ")
-		//}
-		//return tt, nil
-		tt, e := time.Parse("2006-01-02", val)
-		return tt, e
+		return TryCreateTimeDate(val, year, month, day, time.UTC)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -381,6 +375,15 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	return time.Parse(time.RFC3339Nano, val)
+}
+
+func TryCreateTimeDate(val string, year int64, month int64, day int64, loc *time.Location) (time.Time, error) {
+	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, loc)
+	// time.Date converts 2000-01-32 input to 2000-02-01
+	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
+		return invalidTimestamp(val)
+	}
+	return date, nil
 }
 
 func invalidTimestamp(val string) (time.Time, error) {
