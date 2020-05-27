@@ -40,47 +40,51 @@ type ionItem struct {
 
 var binaryRoundTripSkipList = []string{
 	"allNulls.ion",
-	"bigInts.ion",
-	"clobWithNonAsciiCharacter.10n",
-	"clobs.ion",
-	"decimal64BitBoundary.ion",
-	"decimals.ion",
-	"float32.10n",
-	"floats.ion",
-	"intBigSize1201.10n",
-	"intBigSize13.10n",
-	"intBigSize14.10n",
-	"intBigSize16.10n",
-	"intBigSize256.10n",
-	"intBigSize256.ion",
-	"intBigSize512.ion",
-	"intLongMaxValuePlusOne.10n",
-	"localSymbolTableImportZeroMaxId.ion",
-	"nullDecimal.10n",
 	"nulls.ion",
-	"structWhitespace.ion",
-	"subfieldInt.ion",
-	"subfieldUInt.ion",
-	"subfieldVarInt.ion",
-	"subfieldVarUInt.ion",
-	"subfieldVarUInt15bit.ion",
-	"subfieldVarUInt16bit.ion",
-	"subfieldVarUInt32bit.ion",
-	"symbolEmpty.ion",
-	"symbols.ion",
-	"T2.10n",
-	"T3.10n",
-	"T5.10n",
-	"T7-large.10n",
-	"T9.10n",
+	"nullDecimal.10n",
 	"testfile22.ion",
-	"testfile23.ion",
-	"testfile31.ion",
-	"testfile35.ion",
-	"testfile37.ion",
-	"utf16.ion",
-	"utf32.ion",
-	"whitespace.ion",
+	"T5.10n", /*
+		"bigInts.ion",
+		"clobWithNonAsciiCharacter.10n",
+		"clobs.ion",
+		"decimal64BitBoundary.ion",
+		"decimals.ion",
+		"float32.10n",
+		"floats.ion",
+		"intBigSize1201.10n",
+		"intBigSize13.10n",
+		"intBigSize14.10n",
+		"intBigSize16.10n",
+		"intBigSize256.10n",
+		"intBigSize256.ion",
+		"intBigSize512.ion",
+		"intLongMaxValuePlusOne.10n",
+		"localSymbolTableImportZeroMaxId.ion",
+		"nullDecimal.10n",
+		"nulls.ion",
+		"structWhitespace.ion",
+		"subfieldInt.ion",
+		"subfieldUInt.ion",
+		"subfieldVarInt.ion",
+		"subfieldVarUInt.ion",
+		"subfieldVarUInt15bit.ion",
+		"subfieldVarUInt16bit.ion",
+		"subfieldVarUInt32bit.ion",
+		"symbolEmpty.ion",
+		"symbols.ion",
+		"T2.10n",
+		"T3.10n",
+		"T5.10n",
+		"T7-large.10n",
+		"T9.10n",
+		"testfile22.ion",
+		"testfile23.ion",
+		"testfile31.ion",
+		"testfile35.ion",
+		"testfile37.ion",
+		"utf16.ion",
+		"utf32.ion",
+		"whitespace.ion",*/
 }
 
 var textRoundTripSkipList = []string{
@@ -337,17 +341,24 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
 	// Make a binary writer from the file
-	binWriter, buf := encodeAsBinaryIon(t, fileBytes)
+	buf := encodeAsBinaryIon(t, fileBytes)
 
 	// Re-encode binWriter's stream as text into a string builder
-	_, str := encodeAsTextIon(t, buf.String())
+	str := encodeAsTextIon(t, buf.String())
 
-	// Re-encode str as binary in another binary writer
-	binWriter2, _ := encodeAsBinaryIon(t, []byte(str.String()))
+	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
+	reader2 := NewReader(strings.NewReader(str.String()))
 
-	// Compare the 2 binary writers
-	if !reflect.DeepEqual(binWriter, binWriter2) {
-		t.Errorf("Round trip test failed on: " + fp)
+	for reader1.Next() {
+		i1 := readCurrentValue(t, reader1)
+		reader2.Next()
+		i2 := readCurrentValue(t, reader2)
+
+		if !reflect.DeepEqual(i1.value, i2.value) ||
+			!reflect.DeepEqual(i1.annotations, i2.annotations) ||
+			!reflect.DeepEqual(i1.ionType, i2.ionType) {
+			t.Errorf("failed %s %v vs %v", fp, i1.value, i2.value)
+		}
 	}
 }
 
@@ -357,38 +368,45 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
 	// Make a text writer from the file
-	txtWriter, str := encodeAsTextIon(t, string(fileBytes))
+	str := encodeAsTextIon(t, string(fileBytes))
 
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
-	_, buf := encodeAsBinaryIon(t, []byte(str.String()))
+	buf := encodeAsBinaryIon(t, []byte(str.String()))
 
-	// Re-encode buf's stream as text in another text writer
-	txtWriter2, _ := encodeAsTextIon(t, buf.String())
+	reader1 := NewReader(strings.NewReader(str.String()))
+	reader2 := NewReader(bytes.NewReader(buf.Bytes()))
 
-	//compare the 2 text writers
-	if !reflect.DeepEqual(txtWriter, txtWriter2) {
-		t.Errorf("Round trip test failed on: " + fp)
+	for reader1.Next() {
+		i1 := readCurrentValue(t, reader1)
+		reader2.Next()
+		i2 := readCurrentValue(t, reader2)
+
+		if !reflect.DeepEqual(i1.value, i2.value) ||
+			!reflect.DeepEqual(i1.annotations, i2.annotations) ||
+			!reflect.DeepEqual(i1.ionType, i2.ionType) {
+			t.Errorf("failed %s %v vs %v", fp, i1.value, i2.value)
+		}
 	}
 }
 
 // Create a TextWriter from data parameter. Return the writer and string builder containing writer's contents
-func encodeAsTextIon(t *testing.T, data string) (Writer, strings.Builder) {
+func encodeAsTextIon(t *testing.T, data string) strings.Builder {
 	reader := NewReader(strings.NewReader(data))
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
 	writeToWriterFromReader(t, reader, txtWriter)
 	txtWriter.Finish()
-	return txtWriter, str
+	return str
 }
 
 // Create a BinaryWriter from data parameter. Return the writer and buffer containing writer's contents
-func encodeAsBinaryIon(t *testing.T, data []byte) (Writer, bytes.Buffer) {
+func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	reader := NewReader(bytes.NewReader(data))
 	buf2 := bytes.Buffer{}
 	binWriter2 := NewBinaryWriter(&buf2)
 	writeToWriterFromReader(t, reader, binWriter2)
 	binWriter2.Finish()
-	return binWriter2, buf2
+	return buf2
 }
 
 // Execute loading malformed Ion values into a Reader and validate the Reader.
