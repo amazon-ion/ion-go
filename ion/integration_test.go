@@ -45,8 +45,6 @@ func (i *ionItem) equal(o ionItem) bool {
 }
 
 var binaryRoundTripSkipList = []string{
-	"allNulls.ion",
-	"bigInts.ion",
 	"clobNewlines.ion",
 	"clobWithNonAsciiCharacter.10n",
 	"clobs.ion",
@@ -56,14 +54,6 @@ var binaryRoundTripSkipList = []string{
 	"float32.10n",
 	"floatSpecials.ion",
 	"floats.ion",
-	"intBigSize1201.10n",
-	"intBigSize13.10n",
-	"intBigSize14.10n",
-	"intBigSize16.10n",
-	"intBigSize256.10n",
-	"intBigSize256.ion",
-	"intBigSize512.ion",
-	"intLongMaxValuePlusOne.10n",
 	"item1.10n",
 	"leapDay.ion",
 	"leapDayRollover.ion",
@@ -71,28 +61,16 @@ var binaryRoundTripSkipList = []string{
 	"localSymbolTableImportZeroMaxId.ion",
 	"nonNulls.ion",
 	"nonNulls.ion",
-	"nullInt2.10n",
-	"nullInt3.10n",
-	"nullBlob.10n",
-	"nullClob.10n",
-	"nullDecimal.10n",
-	"nullTimestamp.10n",
-	"nulls.ion",
 	"structWhitespace.ion",
 	"subfieldInt.ion",
-	"subfieldUInt.ion",
 	"subfieldVarInt.ion",
 	"symbolEmpty.ion",
 	"symbols.ion",
-	"T10.10n",
-	"T2.10n",
-	"T3.10n",
-	"T5.10n",
 	"T6-large.10n",
 	"T6-small.10n",
 	"T7-large.10n",
 	"T9.10n",
-	"testfile22.ion",
+	"T10.10n",
 	"testfile25.ion",
 	"testfile33.ion",
 	"testfile35.ion",
@@ -107,6 +85,7 @@ var binaryRoundTripSkipList = []string{
 	"timestamps.ion",
 	"timestamps.ion",
 	"timestamps.ion",
+	"timestamps.ion",
 	"timestampsLargeFractionalPrecision.ion",
 	"utf16.ion",
 	"utf32.ion",
@@ -114,9 +93,7 @@ var binaryRoundTripSkipList = []string{
 }
 
 var textRoundTripSkipList = []string{
-	"allNulls.ion",
 	"annotations.ion",
-	"bigInts.ion",
 	"clobNewlines.ion",
 	"clobs.ion",
 	"clobs.ion",
@@ -127,14 +104,6 @@ var textRoundTripSkipList = []string{
 	"float32.10n",
 	"floatSpecials.ion",
 	"floats.ion",
-	"intBigSize1201.10n",
-	"intBigSize13.10n",
-	"intBigSize14.10n",
-	"intBigSize16.10n",
-	"intBigSize256.10n",
-	"intBigSize256.ion",
-	"intBigSize512.ion",
-	"intLongMaxValuePlusOne.10n",
 	"item1.10n",
 	"leapDay.ion",
 	"leapDayRollover.ion",
@@ -143,16 +112,8 @@ var textRoundTripSkipList = []string{
 	"nonNulls.ion",
 	"nonNulls.ion",
 	"notVersionMarkers.ion",
-	"nullInt2.10n",
-	"nullInt3.10n",
-	"nullBlob.10n",
-	"nullClob.10n",
-	"nullDecimal.10n",
-	"nullTimestamp.10n",
-	"nulls.ion",
 	"structWhitespace.ion",
 	"subfieldInt.ion",
-	"subfieldUInt.ion",
 	"subfieldVarInt.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
@@ -164,15 +125,11 @@ var textRoundTripSkipList = []string{
 	"symbols.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
-	"T2.10n",
-	"T3.10n",
-	"T5.10n",
 	"T6-large.10n",
 	"T6-small.10n",
 	"T7-large.10n",
 	"T9.10n",
 	"T10.10n",
-	"testfile22.ion",
 	"testfile23.ion",
 	"testfile25.ion",
 	"testfile31.ion",
@@ -324,7 +281,6 @@ var malformedIonsSkipList = []string{
 
 var equivsSkipList = []string{
 	"annotatedIvms.ion",
-	"bigInts.ion",
 	"clobs.ion",
 	"localSymbolTableAppend.ion",
 	"localSymbolTableNullSlots.ion",
@@ -345,7 +301,6 @@ var equivsSkipList = []string{
 }
 
 var nonEquivsSkipList = []string{
-	"bools.ion",
 	"decimals.ion",
 	"documents.ion",
 	"floats.ion",
@@ -446,7 +401,10 @@ func encodeAsTextIon(t *testing.T, data string) strings.Builder {
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
 	writeToWriterFromReader(t, reader, txtWriter)
-	txtWriter.Finish()
+	err := txtWriter.Finish()
+	if err != nil {
+		t.Fatal(err)
+	}
 	return str
 }
 
@@ -456,7 +414,10 @@ func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	buf2 := bytes.Buffer{}
 	binWriter2 := NewBinaryWriter(&buf2)
 	writeToWriterFromReader(t, reader, binWriter2)
-	binWriter2.Finish()
+	err := binWriter2.Finish()
+	if err != nil {
+		t.Fatal(err)
+	}
 	return buf2
 }
 
@@ -466,7 +427,6 @@ func testLoadBad(t *testing.T, fp string) {
 	if er != nil {
 		t.Fatal(er)
 	}
-	defer file.Close()
 
 	r := NewReader(file)
 
@@ -477,6 +437,11 @@ func testLoadBad(t *testing.T, fp string) {
 	} else {
 		t.Log("expectedly failed loading " + r.Err().Error())
 	}
+
+	err = file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Traverse the reader and check if it is an invalid reader, containing malformed Ion values.
@@ -484,9 +449,18 @@ func testInvalidReader(t *testing.T, r Reader) error {
 	for r.Next() {
 		switch r.Type() {
 		case StructType, ListType, SexpType:
-			r.StepIn()
-			testInvalidReader(t, r)
-			r.StepOut()
+			err := r.StepIn()
+			if err != nil {
+				return err
+			}
+			err = testInvalidReader(t, r)
+			if err != nil {
+				return err
+			}
+			err = r.StepOut()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if r.Err() != nil {
@@ -503,7 +477,6 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	if er != nil {
 		t.Fatal(er)
 	}
-	defer file.Close()
 
 	r := NewReader(file)
 	for r.Next() {
@@ -511,7 +484,10 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 		switch r.Type() {
 		case StructType, ListType, SexpType:
 			var values []ionItem
-			r.StepIn()
+			err := r.StepIn()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if embDoc {
 				values = handleEmbeddedDoc(t, r)
 			} else {
@@ -520,11 +496,18 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 				}
 			}
 			equivalencyAssertion(t, values, eq)
-			r.StepOut()
+			err = r.StepOut()
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	if r.Err() != nil {
 		t.Error()
+	}
+	err := file.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -626,21 +609,30 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		name := reader.FieldName()
 		if name != "" {
-			writer.FieldName(name)
+			err := writer.FieldName(name)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 
 		an := reader.Annotations()
 		if len(an) > 0 {
-			writer.Annotations(an...)
+			err := writer.Annotations(an...)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 
-		switch reader.Type() {
-		case NullType:
-			err := writer.WriteNull()
+		currentType := reader.Type()
+		if reader.IsNull() {
+			err := writer.WriteNullType(currentType)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Null value. " + err.Error())
+				t.Fatal(err)
 			}
+			return
+		}
 
+		switch currentType {
 		case BoolType:
 			val, err := reader.BoolValue()
 			if err != nil {
@@ -732,25 +724,61 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case SexpType:
-			reader.StepIn()
-			writer.BeginSexp()
+			err := reader.StepIn()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.BeginSexp()
+			if err != nil {
+				t.Fatal(err)
+			}
 			writeToWriterFromReader(t, reader, writer)
-			reader.StepOut()
-			writer.EndSexp()
+			err = reader.StepOut()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.EndSexp()
+			if err != nil {
+				t.Fatal(err)
+			}
 
 		case ListType:
-			reader.StepIn()
-			writer.BeginList()
+			err := reader.StepIn()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.BeginList()
+			if err != nil {
+				t.Fatal(err)
+			}
 			writeToWriterFromReader(t, reader, writer)
-			reader.StepOut()
-			writer.EndList()
+			err = reader.StepOut()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.EndList()
+			if err != nil {
+				t.Fatal(err)
+			}
 
 		case StructType:
-			reader.StepIn()
-			writer.BeginStruct()
+			err := reader.StepIn()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.BeginStruct()
+			if err != nil {
+				t.Fatal(err)
+			}
 			writeToWriterFromReader(t, reader, writer)
-			reader.StepOut()
-			writer.EndStruct()
+			err = reader.StepOut()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = writer.EndStruct()
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
@@ -768,11 +796,15 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.annotations = an
 	}
 
-	switch reader.Type() {
-	case NullType:
-		ionItem.value = append(ionItem.value, textNulls[NoType])
-		ionItem.ionType = NullType
+	currentType := reader.Type()
+	if reader.IsNull() {
+		ionItem.value = append(ionItem.value, textNulls[currentType])
+		ionItem.ionType = currentType
 
+		return ionItem
+	}
+
+	switch currentType {
 	case BoolType:
 		val, err := reader.BoolValue()
 		if err != nil {
@@ -846,28 +878,46 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = BlobType
 
 	case SexpType:
-		reader.StepIn()
+		err := reader.StepIn()
+		if err != nil {
+			t.Fatal(err)
+		}
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = SexpType
-		reader.StepOut()
+		err = reader.StepOut()
+		if err != nil {
+			t.Fatal(err)
+		}
 
 	case ListType:
-		reader.StepIn()
+		err := reader.StepIn()
+		if err != nil {
+			t.Fatal(err)
+		}
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = ListType
-		reader.StepOut()
+		err = reader.StepOut()
+		if err != nil {
+			t.Fatal(err)
+		}
 
 	case StructType:
-		reader.StepIn()
+		err := reader.StepIn()
+		if err != nil {
+			t.Fatal(err)
+		}
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = StructType
-		reader.StepOut()
+		err = reader.StepOut()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	return ionItem
 }
