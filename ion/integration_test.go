@@ -38,69 +38,24 @@ type ionItem struct {
 	value       []interface{}
 }
 
-var binaryRoundTripSkipList = []string{
-	"allNulls.ion",
-	"nulls.ion",
-	"nullDecimal.10n",
-	"testfile22.ion",
-	"T5.10n", /*
-		"bigInts.ion",
-		"clobWithNonAsciiCharacter.10n",
-		"clobs.ion",
-		"decimal64BitBoundary.ion",
-		"decimals.ion",
-		"float32.10n",
-		"floats.ion",
-		"intBigSize1201.10n",
-		"intBigSize13.10n",
-		"intBigSize14.10n",
-		"intBigSize16.10n",
-		"intBigSize256.10n",
-		"intBigSize256.ion",
-		"intBigSize512.ion",
-		"intLongMaxValuePlusOne.10n",
-		"localSymbolTableImportZeroMaxId.ion",
-		"nullDecimal.10n",
-		"nulls.ion",
-		"structWhitespace.ion",
-		"subfieldInt.ion",
-		"subfieldUInt.ion",
-		"subfieldVarInt.ion",
-		"subfieldVarUInt.ion",
-		"subfieldVarUInt15bit.ion",
-		"subfieldVarUInt16bit.ion",
-		"subfieldVarUInt32bit.ion",
-		"symbolEmpty.ion",
-		"symbols.ion",
-		"T2.10n",
-		"T3.10n",
-		"T5.10n",
-		"T7-large.10n",
-		"T9.10n",
-		"testfile22.ion",
-		"testfile23.ion",
-		"testfile31.ion",
-		"testfile35.ion",
-		"testfile37.ion",
-		"utf16.ion",
-		"utf32.ion",
-		"whitespace.ion",*/
+func (i *ionItem) equal(o ionItem) bool {
+	return reflect.DeepEqual(i.value, o.value) &&
+		reflect.DeepEqual(i.annotations, o.annotations) &&
+		reflect.DeepEqual(i.ionType, o.ionType)
 }
 
-var textRoundTripSkipList = []string{
+var binaryRoundTripSkipList = []string{
 	"allNulls.ion",
-	"annotations.ion",
 	"bigInts.ion",
+	"clobNewlines.ion",
 	"clobWithNonAsciiCharacter.10n",
 	"clobs.ion",
+	"clobs.ion",
 	"decimal64BitBoundary.ion",
-	"decimal_values.ion",
 	"decimals.ion",
-	"decimalsWithUnderscores.ion",
-	"float_zeros.ion",
 	"float32.10n",
+	"floatSpecials.ion",
 	"floats.ion",
-	"floatsVsDecimals.ion",
 	"intBigSize1201.10n",
 	"intBigSize13.10n",
 	"intBigSize14.10n",
@@ -109,9 +64,87 @@ var textRoundTripSkipList = []string{
 	"intBigSize256.ion",
 	"intBigSize512.ion",
 	"intLongMaxValuePlusOne.10n",
+	"item1.10n",
+	"leapDay.ion",
+	"leapDayRollover.ion",
+	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"notVersionMarkers.ion",
+	"nonNulls.ion",
+	"nonNulls.ion",
+	"nullBlob.10n",
+	"nullClob.10n",
 	"nullDecimal.10n",
+	"nullTimestamp.10n",
+	"nulls.ion",
+	"structWhitespace.ion",
+	"subfieldInt.ion",
+	"subfieldUInt.ion",
+	"subfieldVarInt.ion",
+	"symbolEmpty.ion",
+	"symbols.ion",
+	"T10.10n",
+	"T2.10n",
+	"T3.10n",
+	"T5.10n",
+	"T6-large.10n",
+	"T6-small.10n",
+	"T7-large.10n",
+	"T9.10n",
+	"testfile22.ion",
+	"testfile25.ion",
+	"testfile33.ion",
+	"testfile35.ion",
+	"timestamp2011-02-20.10n",
+	"timestamp2011-02-20T19_30_59_100-08_00.10n",
+	"timestamp2011-02.10n",
+	"timestamp2011.10n",
+	"timestampFractions.10n",
+	"timestampFractions.ion",
+	"timestampSuperfluousOffset.10n",
+	"timestampWithTerminatingEof.ion",
+	"timestamps.ion",
+	"timestamps.ion",
+	"timestamps.ion",
+	"timestampsLargeFractionalPrecision.ion",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
+
+var textRoundTripSkipList = []string{
+	"allNulls.ion",
+	"annotations.ion",
+	"bigInts.ion",
+	"clobNewlines.ion",
+	"clobs.ion",
+	"clobs.ion",
+	"decimal64BitBoundary.ion",
+	"decimal_values.ion",
+	"decimals.ion",
+	"decimalsWithUnderscores.ion",
+	"float32.10n",
+	"floatSpecials.ion",
+	"floats.ion",
+	"intBigSize1201.10n",
+	"intBigSize13.10n",
+	"intBigSize14.10n",
+	"intBigSize16.10n",
+	"intBigSize256.10n",
+	"intBigSize256.ion",
+	"intBigSize512.ion",
+	"intLongMaxValuePlusOne.10n",
+	"item1.10n",
+	"leapDay.ion",
+	"leapDayRollover.ion",
+	"lists.ion",
+	"localSymbolTableImportZeroMaxId.ion",
+	"nonNulls.ion",
+	"nonNulls.ion",
+	"notVersionMarkers.ion",
+	"nullBlob.10n",
+	"nullClob.10n",
+	"nullDecimal.10n",
+	"nullTimestamp.10n",
 	"nulls.ion",
 	"structWhitespace.ion",
 	"subfieldInt.ion",
@@ -130,18 +163,34 @@ var textRoundTripSkipList = []string{
 	"T2.10n",
 	"T3.10n",
 	"T5.10n",
+	"T6-large.10n",
+	"T6-small.10n",
 	"T7-large.10n",
 	"T9.10n",
+	"T10.10n",
 	"testfile22.ion",
 	"testfile23.ion",
-	"testfile24.ion",
+	"testfile25.ion",
 	"testfile31.ion",
+	"testfile33.ion",
 	"testfile35.ion",
 	"testfile37.ion",
+	"timestamp2011-02-20.10n",
+	"timestamp2011-02-20T19_30_59_100-08_00.10n",
+	"timestamp2011-02.10n",
+	"timestamp2011.10n",
+	"timestampFractions.10n",
+	"timestampFractions.ion",
+	"timestampSuperfluousOffset.10n",
+	"timestampWithTerminatingEof.ion",
+	"timestamps.ion",
+	"timestamps.ion",
+	"timestamps.ion",
+	"timestamps.ion",
+	"timestampsLargeFractionalPrecision.ion",
 	"utf16.ion",
 	"utf32.ion",
 	"whitespace.ion",
-	"zeroFloats.ion",
 }
 
 var malformedIonsSkipList = []string{
@@ -346,10 +395,18 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	// Re-encode binWriter's stream as text into a string builder
 	str := encodeAsTextIon(t, buf.String())
 
-	buf2 := encodeAsBinaryIon(t, []byte(str.String()))
+	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
+	reader2 := NewReader(strings.NewReader(str.String()))
 
-	if !reflect.DeepEqual(buf, buf2) {
-		t.Errorf("Round trip test failed on: " + fp)
+	for reader1.Next() {
+		i1 := readCurrentValue(t, reader1)
+		reader2.Next()
+		i2 := readCurrentValue(t, reader2)
+
+		if !i1.equal(i2) {
+			t.Errorf("Failed on %s round trip. Binary reader has %v "+
+				"where the value in Text reader is %v", fp, i1.value, i2.value)
+		}
 	}
 }
 
@@ -364,10 +421,18 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
 	buf := encodeAsBinaryIon(t, []byte(str.String()))
 
-	str2 := encodeAsTextIon(t, buf.String())
+	reader1 := NewReader(strings.NewReader(str.String()))
+	reader2 := NewReader(bytes.NewReader(buf.Bytes()))
 
-	if !reflect.DeepEqual(str, str2) {
-		t.Errorf("Round trip test failed on: " + fp)
+	for reader1.Next() {
+		i1 := readCurrentValue(t, reader1)
+		reader2.Next()
+		i2 := readCurrentValue(t, reader2)
+
+		if !i1.equal(i2) {
+			t.Errorf("Failed on %s round trip. Text reader has %v "+
+				"where the value in Binary reader is %v", fp, i1.value, i2.value)
+		}
 	}
 }
 
@@ -492,17 +557,13 @@ func equivalencyAssertion(t *testing.T, values []ionItem, eq bool) {
 				continue
 			}
 			if eq {
-				if !reflect.DeepEqual(values[i].value, values[j].value) ||
-					!reflect.DeepEqual(values[i].annotations, values[j].annotations) ||
-					!reflect.DeepEqual(values[i].ionType, values[j].ionType) {
-					t.Errorf("Equivalency test failed. All values should be interpreted as"+
+				if !values[i].equal(values[j]) {
+					t.Errorf("Equivalency test failed. All values should be interpreted as "+
 						"equal for %v and %v", values[i].value, values[j].value)
 				}
 			} else {
-				if reflect.DeepEqual(values[i].value, values[j].value) &&
-					reflect.DeepEqual(values[i].annotations, values[j].annotations) &&
-					reflect.DeepEqual(values[i].ionType, values[j].ionType) {
-					t.Errorf("Non-Equivalency test failed. Values should not be interpreted as"+
+				if values[i].equal(values[j]) {
+					t.Errorf("Non-Equivalency test failed. Values should not be interpreted as "+
 						"equal for %v and %v", values[i].value, values[j].value)
 				}
 			}
@@ -587,11 +648,11 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case IntType:
-			val, err := reader.Int64Value()
+			val, err := reader.BigIntValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Int value. " + err.Error())
 			}
-			err = writer.WriteInt(val)
+			err = writer.WriteBigInt(val)
 			if err != nil {
 				t.Errorf("Something went wrong when writing Int value. " + err.Error())
 			}
@@ -717,7 +778,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = BoolType
 
 	case IntType:
-		val, err := reader.Int64Value()
+		val, err := reader.BigIntValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Int value. " + err.Error())
 		}
