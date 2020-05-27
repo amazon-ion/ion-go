@@ -346,19 +346,10 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	// Re-encode binWriter's stream as text into a string builder
 	str := encodeAsTextIon(t, buf.String())
 
-	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
-	reader2 := NewReader(strings.NewReader(str.String()))
+	buf2 := encodeAsBinaryIon(t, []byte(str.String()))
 
-	for reader1.Next() {
-		i1 := readCurrentValue(t, reader1)
-		reader2.Next()
-		i2 := readCurrentValue(t, reader2)
-
-		if !reflect.DeepEqual(i1.value, i2.value) ||
-			!reflect.DeepEqual(i1.annotations, i2.annotations) ||
-			!reflect.DeepEqual(i1.ionType, i2.ionType) {
-			t.Errorf("failed %s %v vs %v", fp, i1.value, i2.value)
-		}
+	if !reflect.DeepEqual(buf, buf2) {
+		t.Errorf("Round trip test failed on: " + fp)
 	}
 }
 
@@ -373,19 +364,10 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
 	buf := encodeAsBinaryIon(t, []byte(str.String()))
 
-	reader1 := NewReader(strings.NewReader(str.String()))
-	reader2 := NewReader(bytes.NewReader(buf.Bytes()))
+	str2 := encodeAsTextIon(t, buf.String())
 
-	for reader1.Next() {
-		i1 := readCurrentValue(t, reader1)
-		reader2.Next()
-		i2 := readCurrentValue(t, reader2)
-
-		if !reflect.DeepEqual(i1.value, i2.value) ||
-			!reflect.DeepEqual(i1.annotations, i2.annotations) ||
-			!reflect.DeepEqual(i1.ionType, i2.ionType) {
-			t.Errorf("failed %s %v vs %v", fp, i1.value, i2.value)
-		}
+	if !reflect.DeepEqual(str, str2) {
+		t.Errorf("Round trip test failed on: " + fp)
 	}
 }
 
