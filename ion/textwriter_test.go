@@ -350,6 +350,14 @@ func TestWriteTextPretty(t *testing.T) {
 		{
 			w.WriteString("value")
 			w.WriteNullType(StringType)
+			w.BeginStruct()
+			{
+				w.FieldName("1")
+				w.WriteString("one")
+				w.FieldName("2")
+				w.WriteString("two")
+			}
+			w.EndStruct()
 		}
 		w.EndList()
 
@@ -376,12 +384,16 @@ func TestWriteTextPretty(t *testing.T) {
 
 	actual := buf.String()
 	expected := `{
-	struct : {},
-	list : i :: am :: a :: list :: [
+	struct: {},
+	list: i::am::a::list::[
 		"value",
-		null.string
+		null.string,
+		{
+			'1': "one",
+			'2': "two"
+		}
 	],
-	sexp : (
+	sexp: (
 		'+'
 		123
 		(

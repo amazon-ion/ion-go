@@ -365,7 +365,7 @@ func (w *textWriter) writeFieldName(api string) error {
 
 	sep := ":"
 	if w.pretty() {
-		sep = " : "
+		sep = ": "
 	}
 
 	return writeRawString(sep, w.out)
@@ -376,16 +376,11 @@ func (w *textWriter) writeAnnotations() error {
 	as := w.annotations
 	w.annotations = nil
 
-	sep := "::"
-	if w.pretty() {
-		sep = " :: "
-	}
-
 	for _, a := range as {
 		if err := writeSymbol(a, w.out); err != nil {
 			return err
 		}
-		if err := writeRawString(sep, w.out); err != nil {
+		if err := writeRawString("::", w.out); err != nil {
 			return err
 		}
 	}
@@ -411,11 +406,7 @@ func (w *textWriter) begin(api string, t ctx, c byte) error {
 	w.needsSeparator = false
 	w.emptyContainer = true
 
-	if err := writeRawChar(c, w.out); err != nil {
-		return err
-	}
-
-	return nil
+	return writeRawChar(c, w.out)
 }
 
 // end finishes writing a container of the given type
