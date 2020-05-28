@@ -343,8 +343,8 @@ func TestNonEquivalency(t *testing.T) {
 	})
 }
 
-// Execute round trip testing for BinaryWriter. Create a BinaryWriter, using the BinaryWriter create
-// a TextWriter and back to BinaryWriter again. Validate that the first and last Writers are equal.
+// Execute round trip testing for the BinaryWriter by creating a BinaryWriter and re-encoding it to text.
+// From the output of the writers, construct two readers and verify the equivalency of both readers.
 func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
@@ -369,8 +369,8 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	}
 }
 
-// Execute round trip testing for TextWriter. Create a TextWriter, using the TextWriter creat a
-// BinaryWriter and back to TextWriter again. Validate that the first and last Writers are equal.
+// Execute round trip testing for the TextWriter by creating a TextWriter and re-encoding it to binary.
+// From the output of the writers, construct two readers and verify the equivalency of both readers.
 func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
@@ -395,7 +395,7 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	}
 }
 
-// Create a TextWriter from data parameter. Return the writer and string builder containing writer's contents
+// Create a TextWriter from data parameter and return the string builder containing writer's contents.
 func encodeAsTextIon(t *testing.T, data string) strings.Builder {
 	reader := NewReader(strings.NewReader(data))
 	str := strings.Builder{}
@@ -408,17 +408,17 @@ func encodeAsTextIon(t *testing.T, data string) strings.Builder {
 	return str
 }
 
-// Create a BinaryWriter from data parameter. Return the writer and buffer containing writer's contents
+// Create a BinaryWriter from data parameter and return the buffer containing writer's contents.
 func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	reader := NewReader(bytes.NewReader(data))
-	buf2 := bytes.Buffer{}
-	binWriter2 := NewBinaryWriter(&buf2)
-	writeToWriterFromReader(t, reader, binWriter2)
-	err := binWriter2.Finish()
+	buf := bytes.Buffer{}
+	binWriter := NewBinaryWriter(&buf)
+	writeToWriterFromReader(t, reader, binWriter)
+	err := binWriter.Finish()
 	if err != nil {
 		t.Fatal(err)
 	}
-	return buf2
+	return buf
 }
 
 // Execute loading malformed Ion values into a Reader and validate the Reader.
