@@ -343,8 +343,8 @@ func TestNonEquivalency(t *testing.T) {
 	})
 }
 
-// Execute round trip testing for the BinaryWriter by creating a BinaryWriter and re-encoding it to text.
-// From the output of the writers, construct two readers and verify the equivalency of both readers.
+// Re-encodes the provided file as binary Ion, reads that binary Ion and writes it as text Ion, then
+// constructs Readers over the binary and text encodings to verify that the streams are equivalent.
 func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
@@ -352,7 +352,7 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	buf := encodeAsBinaryIon(t, fileBytes)
 
 	// Re-encode binWriter's stream as text into a string builder
-	str := encodeAsTextIon(t, buf.String())
+	str := encodeAsTextIon(t, buf.Bytes())
 
 	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
 	reader2 := NewReader(strings.NewReader(str.String()))
@@ -369,13 +369,13 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 	}
 }
 
-// Execute round trip testing for the TextWriter by creating a TextWriter and re-encoding it to binary.
-// From the output of the writers, construct two readers and verify the equivalency of both readers.
+// Re-encodes the provided file as text Ion, reads that text Ion and writes it as binary Ion, then
+// constructs Readers over the text and binary encodings to verify that the streams are equivalent.
 func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
 
 	// Make a text writer from the file
-	str := encodeAsTextIon(t, string(fileBytes))
+	str := encodeAsTextIon(t, fileBytes)
 
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
 	buf := encodeAsBinaryIon(t, []byte(str.String()))
@@ -395,9 +395,9 @@ func testTextRoundTrip(t *testing.T, fp string) {
 	}
 }
 
-// Create a TextWriter from data parameter and return the string builder containing writer's contents.
-func encodeAsTextIon(t *testing.T, data string) strings.Builder {
-	reader := NewReader(strings.NewReader(data))
+// Re-encode the provided Ion data as a text Ion string.
+func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
+	reader := NewReader(bytes.NewReader(data))
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
 	writeToWriterFromReader(t, reader, txtWriter)
@@ -408,7 +408,7 @@ func encodeAsTextIon(t *testing.T, data string) strings.Builder {
 	return str
 }
 
-// Create a BinaryWriter from data parameter and return the buffer containing writer's contents.
+// Re-encode the provided Ion data as a binary Ion buffer.
 func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	reader := NewReader(bytes.NewReader(data))
 	buf := bytes.Buffer{}
