@@ -90,6 +90,16 @@ func (t Type) String() string {
 	}
 }
 
+// IsScalar determines if the type is a scalar type
+func IsScalar(t Type) bool {
+	return NullType <= t && t <= BlobType
+}
+
+// IsContainer determines if the type is a container type
+func IsContainer(t Type) bool {
+	return ListType <= t && t <= StructType
+}
+
 // IntSize represents the size of an integer.
 type IntSize uint8
 
