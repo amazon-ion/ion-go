@@ -363,56 +363,48 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 	if val[16] == '+' || val[16] == '-' {
 		if isValidOffset(val, 16) {
+			// TODO: we should use time.ParseInLocation()
 			return time.Parse("2006-01-02T15:04Z07:00", val)
 		}
 		return invalidTimestamp(val)
 	}
 	if val[16] == ':' {
+		//yyyy-mm-ddThh:mm:ss
 		if len(val) < 20 {
 			return invalidTimestamp(val)
 		}
 
-		if val[19] == 'z' || val[19] == 'Z' {
-			return time.Parse("2006-01-02T15:04:05Z", val)
+		idx := 19
+		if val[idx] == '.' {
+			idx++
+			for idx < len(val) && isDigit(int(val[idx])) {
+				idx++
+			}
 		}
 
-		nanoSecIdx := 20 // TODO: Alternatively, we can just count how many chars of nanoSeconds added
-		if val[19] == '.' {
-			for nanoSecIdx < len(val) && isDigit(int(val[nanoSecIdx])) {
-				nanoSecIdx++
-			}
-
-			if nanoSecIdx >= 29 {
+		if val[idx] == 'z' || val[idx] == 'Z' {
+			if idx >= 29 {
 				// Too much precision for a go Time.
 				// TODO: We should probably round instead of truncating? Ah well.
-				return time.Parse(time.RFC3339Nano, val[:29]+val[nanoSecIdx+1:])
+				return time.Parse(time.RFC3339Nano, val[:29]+val[idx:])
 			}
-		}
-
-		if val[nanoSecIdx] == 'z' || val[nanoSecIdx] == 'Z' {
 			return time.Parse(time.RFC3339, val)
 		}
 
-		if val[nanoSecIdx] == '+' || val[nanoSecIdx] == '-' {
-			if isValidOffset(val, nanoSecIdx) {
+		if val[idx] == '+' || val[idx] == '-' {
+			if isValidOffset(val, idx) {
+				if idx >= 29 {
+					// Too much precision for a go Time.
+					// TODO: We should probably round instead of truncating? Ah well.
+					// TODO: we should use time.ParseInLocation()
+					return time.Parse(time.RFC3339Nano, val[:29]+val[idx:])
+				}
+				// TODO: we should use time.ParseInLocation()
 				return time.Parse(time.RFC3339, val)
 			}
 			return invalidTimestamp(val)
 		}
 	}
-	//if len(val) > 19 && val[19] == '.' {
-	//	i := 20
-	//	for i < len(val) && isDigit(int(val[i])) {
-	//		i++
-	//	}
-	//
-	//	if i >= 29 {
-	//		// Too much precision for a go Time.
-	//		// TODO: We should probably round instead of truncating? Ah well.
-	//		return time.Parse(time.RFC3339Nano, val[:29]+val[i:])
-	//	}
-	//}
-
 	return invalidTimestamp(val)
 }
 
@@ -426,6 +418,7 @@ func TryCreateTimeDate(val string, year int64, month int64, day int64, loc *time
 }
 
 func isValidOffset(val string, idx int) bool {
+	// +hh:mm
 	if idx+5 > len(val) || val[idx+3] != ':' {
 		return false
 	}
@@ -435,12 +428,11 @@ func isValidOffset(val string, idx int) bool {
 	if errH != nil || errM != nil {
 		return false
 	}
-	var maxOffsetInSeconds int64 = 14 * 60 * 60
-	currentOffsetInSeconds := ((hourOffset * 60) + minuteOffset) * 60
 
-	return hourOffset < 14 &&
-		minuteOffset < 59 &&
-		currentOffsetInSeconds < maxOffsetInSeconds
+	// TODO: check the offset against max offset (14 * 60), adjust and return if larger than max
+
+	return hourOffset < 24 &&
+		minuteOffset < 60
 }
 
 func invalidTimestamp(val string) (time.Time, error) {
