@@ -197,8 +197,6 @@ var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_1234_0.ion",
 	"invalidVersionMarker_ion_1_1.ion",
 	"invalidVersionMarker_ion_2_0.ion",
-	"leapDayNonLeapYear_1.10n",
-	"leapDayNonLeapYear_2.10n",
 	"localSymbolTableImportNegativeMaxId.ion",
 	"localSymbolTableImportNonIntegerMaxId.ion",
 	"localSymbolTableImportNullMaxId.ion",
@@ -233,7 +231,6 @@ var malformedIonsSkipList = []string{
 	"symbolLenTooLarge.10n",
 	"timestampHourWithoutMinute.10n",
 	"timestampLenTooLarge.10n",
-	"timestampSept31.10n",
 	"type_3_length_0.10n",
 }
 

@@ -522,8 +522,18 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	utc := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], int(nsecs), time.UTC)
-	return utc.In(time.FixedZone("fixed", int(offset)*60)), nil
+	// TODO: Timezone should not be hard coded to time.UTC
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, offset, time.UTC)
+}
+
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, offset int64, loc *time.Location) (time.Time, error) {
+	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, loc)
+	// time.Date converts 2000-01-32 input to 2000-02-01
+	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
+		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
+	}
+	// TODO: we should use loc instead of hardcoded fixed
+	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and truncates it to nanoseconds.
