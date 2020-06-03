@@ -512,6 +512,13 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		}
 		len -= vlen
 		ts[i] = int(val)
+
+		// When i is 3, it means we are setting hour component. A timestamp with
+		// hour, must follow by minute. Hence, len cannot be zero at this point.
+		if i == 3 && len == 0 {
+			return time.Time{}, fmt.Errorf("ion: invalid timestamp -" +
+				"Hour cannot be present without minute")
+		}
 	}
 
 	nsecs, err := b.readNsecs(len)

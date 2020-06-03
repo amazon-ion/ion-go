@@ -229,7 +229,6 @@ var malformedIonsSkipList = []string{
 	"symbolIDUnmapped.10n",
 	"symbolIDUnmapped.ion",
 	"symbolLenTooLarge.10n",
-	"timestampHourWithoutMinute.10n",
 	"timestampLenTooLarge.10n",
 	"type_3_length_0.10n",
 }
