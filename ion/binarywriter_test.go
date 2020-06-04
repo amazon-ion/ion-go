@@ -175,7 +175,7 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 
 func TestWriteBinaryDecimal(t *testing.T) {
 	eval := []byte{
-		0x50,       // 0.
+		0x51, 0xC1,     // 0.
 		0x51, 0xC3, // 0.000, aka 0 x 10^-3
 		0x53, 0xC3, 0x03, 0xE8, // 1.000, aka 1000 x 10^-3
 		0x53, 0xC3, 0x83, 0xE8, // -1.000, aka -1000 x 10^-3
@@ -184,7 +184,7 @@ func TestWriteBinaryDecimal(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteDecimal(MustParseDecimal("0."))
+		w.WriteDecimal(MustParseDecimal("0.0"))
 		w.WriteDecimal(MustParseDecimal("0.000"))
 		w.WriteDecimal(MustParseDecimal("1.000"))
 		w.WriteDecimal(MustParseDecimal("-1.000"))

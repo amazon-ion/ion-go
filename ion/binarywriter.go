@@ -172,10 +172,8 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 	coef, exp := val.CoEx()
 
-	vlen := uint64(0)
-	if exp != 0 {
-		vlen += varIntLen(int64(exp))
-	}
+	vlen := varIntLen(int64(exp))
+
 	if coef.Sign() != 0 {
 		vlen += bigIntLen(coef)
 	}
@@ -184,9 +182,7 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 	buf := make([]byte, 0, buflen)
 
 	buf = appendTag(buf, 0x50, vlen)
-	if exp != 0 {
-		buf = appendVarInt(buf, int64(exp))
-	}
+	buf = appendVarInt(buf, int64(exp))
 	buf = appendBigInt(buf, coef)
 
 	return w.writeValue("Writer.WriteDecimal", buf)
