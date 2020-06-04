@@ -290,7 +290,6 @@ var equivsSkipList = []string{
 	"nonIVMNoOps.ion",
 	"sexps.ion",
 	"stringUtf8.ion",
-	"strings.ion",
 	"structsFieldsDiffOrder.ion",
 	"structsFieldsRepeatedNames.ion",
 	"systemSymbols.ion",

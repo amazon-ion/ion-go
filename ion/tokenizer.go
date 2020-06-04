@@ -588,6 +588,7 @@ func (t *tokenizer) readLongString() (string, error) {
 			return "", t.invalidChar(c)
 
 		case '\'':
+			startPosition := t.pos
 			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
 			if err != nil {
 				return "", err
@@ -595,7 +596,10 @@ func (t *tokenizer) readLongString() (string, error) {
 			if ok {
 				return ret.String(), nil
 			}
-
+			if startPosition == t.pos {
+				// No character has been consumed. It is single '.
+				ret.WriteByte(byte(c))
+			}
 		case '\\':
 			c, err = t.peek()
 			if err != nil {
