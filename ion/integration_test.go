@@ -44,7 +44,7 @@ func (i *ionItem) equal(o ionItem) bool {
 		reflect.DeepEqual(i.ionType, o.ionType)
 }
 
-var readFilesSkipList = []string{
+var readGoodFilesSkipList = []string{
 	"T7-large.10n",
 	"utf16.ion",
 	"utf32.ion",
@@ -321,8 +321,8 @@ var nonEquivsSkipList = []string{
 }
 
 func TestLoadGood(t *testing.T) {
-	readFilesAndTest(t, goodPath, readFilesSkipList, func(t *testing.T, path string) {
-		testLoadFile(t, true, path)
+	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
+		testLoadFile(t, false, path)
 	})
 }
 
@@ -340,7 +340,7 @@ func TestTextRoundTrip(t *testing.T) {
 
 func TestLoadBad(t *testing.T) {
 	readFilesAndTest(t, badPath, malformedIonsSkipList, func(t *testing.T, path string) {
-		testLoadFile(t, false, path)
+		testLoadFile(t, true, path)
 	})
 }
 
@@ -434,8 +434,9 @@ func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	return buf
 }
 
-// Loading Ion values into a Reader and verify the if the Reader is valid or invalid.
-func testLoadFile(t *testing.T, success bool, fp string) {
+// Reads Ion values from the provided file, verifying that an
+// error is or is not encountered as indicated by errorExpected.
+func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 	file, er := os.Open(fp)
 	if er != nil {
 		t.Fatal(er)
@@ -444,10 +445,10 @@ func testLoadFile(t *testing.T, success bool, fp string) {
 	r := NewReader(file)
 	err := testInvalidReader(t, r)
 
-	if success && (r.Err() != nil || err != nil) {
-		t.Fatal("Failed loading \"" + fp + "\" : " + r.Err().Error())
-	} else if !success && r.Err() == nil && err == nil {
+	if errorExpected && r.Err() == nil && err == nil {
 		t.Fatal("Should have failed loading \"" + fp + "\".")
+	} else if !errorExpected && (r.Err() != nil || err != nil) {
+		t.Fatal("Failed loading \"" + fp + "\" : " + r.Err().Error())
 	} else {
 		errMsg := "no"
 		if r.Err() != nil {
