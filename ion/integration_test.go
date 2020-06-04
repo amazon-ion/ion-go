@@ -44,6 +44,13 @@ func (i *ionItem) equal(o ionItem) bool {
 		reflect.DeepEqual(i.ionType, o.ionType)
 }
 
+var readGoodFilesSkipList = []string{
+	"T7-large.10n",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
+
 var binaryRoundTripSkipList = []string{
 	"clobNewlines.ion",
 	"clobWithNonAsciiCharacter.10n",
@@ -313,6 +320,12 @@ var nonEquivsSkipList = []string{
 	"timestamps.ion",
 }
 
+func TestLoadGood(t *testing.T) {
+	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
+		testLoadFile(t, false, path)
+	})
+}
+
 func TestBinaryRoundTrip(t *testing.T) {
 	readFilesAndTest(t, goodPath, binaryRoundTripSkipList, func(t *testing.T, path string) {
 		testBinaryRoundTrip(t, path)
@@ -327,7 +340,7 @@ func TestTextRoundTrip(t *testing.T) {
 
 func TestLoadBad(t *testing.T) {
 	readFilesAndTest(t, badPath, malformedIonsSkipList, func(t *testing.T, path string) {
-		testLoadBad(t, path)
+		testLoadFile(t, true, path)
 	})
 }
 
@@ -421,21 +434,27 @@ func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	return buf
 }
 
-// Execute loading malformed Ion values into a Reader and validate the Reader.
-func testLoadBad(t *testing.T, fp string) {
+// Reads Ion values from the provided file, verifying that an
+// error is or is not encountered as indicated by errorExpected.
+func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 	file, er := os.Open(fp)
 	if er != nil {
 		t.Fatal(er)
 	}
 
 	r := NewReader(file)
-
 	err := testInvalidReader(t, r)
 
-	if r.Err() == nil && err == nil {
+	if errorExpected && r.Err() == nil && err == nil {
 		t.Fatal("Should have failed loading \"" + fp + "\".")
+	} else if !errorExpected && (r.Err() != nil || err != nil) {
+		t.Fatal("Failed loading \"" + fp + "\" : " + r.Err().Error())
 	} else {
-		t.Log("expectedly failed loading " + r.Err().Error())
+		errMsg := "no"
+		if r.Err() != nil {
+			errMsg = r.Err().Error()
+		}
+		t.Log("Test passed for " + fp + " with \"" + errMsg + "\" error.")
 	}
 
 	err = file.Close()
@@ -449,6 +468,9 @@ func testInvalidReader(t *testing.T, r Reader) error {
 	for r.Next() {
 		switch r.Type() {
 		case StructType, ListType, SexpType:
+			if r.IsNull() { // null.list, null.struct, null.sexp
+				continue
+			}
 			err := r.StepIn()
 			if err != nil {
 				return err
