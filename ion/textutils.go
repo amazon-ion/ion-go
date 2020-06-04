@@ -363,7 +363,6 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 	if val[16] == '+' || val[16] == '-' {
 		if isValidOffset(val, 16) {
-			// TODO: we should use time.ParseInLocation()
 			return time.Parse("2006-01-02T15:04Z07:00", val)
 		}
 		return invalidTimestamp(val)
@@ -396,10 +395,8 @@ func parseTimestamp(val string) (time.Time, error) {
 				if idx >= 29 {
 					// Too much precision for a go Time.
 					// TODO: We should probably round instead of truncating? Ah well.
-					// TODO: we should use time.ParseInLocation()
 					return time.Parse(time.RFC3339Nano, val[:29]+val[idx:])
 				}
-				// TODO: we should use time.ParseInLocation()
 				return time.Parse(time.RFC3339, val)
 			}
 			return invalidTimestamp(val)
@@ -429,10 +426,7 @@ func isValidOffset(val string, idx int) bool {
 		return false
 	}
 
-	// TODO: check the offset against max offset (14 * 60), adjust and return if larger than max
-
-	return hourOffset < 24 &&
-		minuteOffset < 60
+	return hourOffset < 24 && minuteOffset < 60
 }
 
 func invalidTimestamp(val string) (time.Time, error) {

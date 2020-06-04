@@ -516,8 +516,8 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		// When i is 3, it means we are setting hour component. A timestamp with
 		// hour, must follow by minute. Hence, len cannot be zero at this point.
 		if i == 3 && len == 0 {
-			return time.Time{}, fmt.Errorf("ion: invalid timestamp -" +
-				"Hour cannot be present without minute")
+			return time.Time{},
+				&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
 		}
 	}
 
@@ -529,17 +529,16 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	// TODO: Timezone should not be hard coded to time.UTC
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, offset, time.UTC)
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, offset)
 }
 
-func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, offset int64, loc *time.Location) (time.Time, error) {
-	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, loc)
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, offset int64) (time.Time, error) {
+	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
 		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
 	}
-	// TODO: we should use loc instead of hardcoded fixed
+
 	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
 }
 
