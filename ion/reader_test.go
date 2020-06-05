@@ -1,7 +1,6 @@
 package ion
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -21,45 +20,6 @@ var blacklist = map[string]bool{
 
 type drainfunc func(t *testing.T, r Reader, f string)
 
-func TestReadFiles(t *testing.T) {
-	testReadDir(t, "../ion-tests/iontestdata/good", func(t *testing.T, r Reader, f string) {
-		drain(t, r, 0)
-	})
-}
-
-func drain(t *testing.T, r Reader, level int) {
-	for r.Next() {
-		// print(level, r.Type())
-
-		if !r.IsNull() {
-			switch r.Type() {
-			case StructType, ListType, SexpType:
-				if err := r.StepIn(); err != nil {
-					t.Fatal(err)
-				}
-
-				drain(t, r, level+1)
-
-				if err := r.StepOut(); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-	}
-
-	if r.Err() != nil {
-		t.Fatal(r.Err())
-	}
-}
-
-func print(level int, obj interface{}) {
-	fmt.Print(" > ")
-	for i := 0; i < level; i++ {
-		fmt.Print("  ")
-	}
-	fmt.Println(obj)
-}
-
 func TestDecodeFiles(t *testing.T) {
 	testReadDir(t, "../ion-tests/iontestdata/good", func(t *testing.T, r Reader, f string) {
 		// fmt.Println(f)
@@ -76,20 +36,6 @@ func TestDecodeFiles(t *testing.T) {
 			_ = v
 		}
 	})
-}
-
-var emptyFiles = []string{
-	"ion-tests/iontestdata/good/blank.ion",
-	"ion-tests/iontestdata/good/empty.ion",
-}
-
-func isEmptyFile(f string) bool {
-	for _, s := range emptyFiles {
-		if f == s {
-			return true
-		}
-	}
-	return false
 }
 
 func testReadDir(t *testing.T, path string, d drainfunc) {
