@@ -853,10 +853,10 @@ func (b *bitstream) readN(n uint64) ([]byte, error) {
 	}
 
 	bs := make([]byte, n)
-	actual, err := b.in.Read(bs)
+	actual, err := io.ReadFull(b.in, bs)
 	b.pos += uint64(actual)
 
-	if err == io.EOF {
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
 		return nil, &UnexpectedEOFError{b.pos}
 	}
 	if err != nil {
