@@ -17,6 +17,7 @@ package ion
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -501,10 +502,13 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	}
 
 	r := NewReader(file)
+	topLevelCounter := 0
 	for r.Next() {
 		embDoc := isEmbeddedDoc(r.Annotations())
-		switch r.Type() {
+		ionType := r.Type()
+		switch ionType {
 		case StructType, ListType, SexpType:
+			fmt.Printf("Checking values of top level %s #%d ...\n", ionType.String(), topLevelCounter)
 			var values []ionItem
 			err := r.StepIn()
 			if err != nil {
@@ -519,6 +523,7 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 			}
 			equivalencyAssertion(t, values, eq)
 			err = r.StepOut()
+			topLevelCounter++
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -568,12 +573,12 @@ func equivalencyAssertion(t *testing.T, values []ionItem, eq bool) {
 			if eq {
 				if !values[i].equal(values[j]) {
 					t.Errorf("Equivalency test failed. All values should be interpreted as "+
-						"equal for %v and %v", values[i].value, values[j].value)
+						"equal for:\nrow %d = %v\nrow %d = %v", i, values[i].value, j, values[j].value)
 				}
 			} else {
 				if values[i].equal(values[j]) {
 					t.Errorf("Non-Equivalency test failed. Values should not be interpreted as "+
-						"equal for %v and %v", values[i].value, values[j].value)
+						"equal for:\nrow %d = %v\nrow %d = %v", i, values[i].value, j, values[j].value)
 				}
 			}
 		}
