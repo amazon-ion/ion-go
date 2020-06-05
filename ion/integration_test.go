@@ -110,7 +110,6 @@ var textRoundTripSkipList = []string{
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"nonNulls.ion",
-	"nonNulls.ion",
 	"notVersionMarkers.ion",
 	"structWhitespace.ion",
 	"subfieldInt.ion",
@@ -204,7 +203,6 @@ var malformedIonsSkipList = []string{
 	"localSymbolTableWithMultipleSymbolsAndImportsFields.ion",
 	"localSymbolTableWithMultipleSymbolsFields.10n",
 	"localSymbolTableWithMultipleSymbolsFields.ion",
-	"longStringRawControlCharacter.ion",
 	"minLongWithLenTooLarge.10n",
 	"minLongWithLenTooSmall.10n",
 	"negativeIntZero.10n",
@@ -213,8 +211,6 @@ var malformedIonsSkipList = []string{
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"sexpOperatorAnnotation.ion",
-	"stringLenTooLarge.10n",
-	"stringRawControlCharacter.ion",
 	"stringWithLatinEncoding.10n",
 	"structOrderedEmpty.10n",
 	"surrogate_1.ion",
@@ -235,7 +231,6 @@ var malformedIonsSkipList = []string{
 
 var equivsSkipList = []string{
 	"annotatedIvms.ion",
-	"clobs.ion",
 	"localSymbolTableAppend.ion",
 	"localSymbolTableNullSlots.ion",
 	"localSymbolTableWithAnnotations.ion",
