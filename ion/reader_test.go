@@ -16,7 +16,7 @@ var blacklist = map[string]bool{
 	"../ion-tests/iontestdata/good/utf32.ion":                true,
 	"../ion-tests/iontestdata/good/whitespace.ion":           true,
 	"../ion-tests/iontestdata/good/item1.10n":                true,
-	"../ion-tests/iontestdata/good/typecodes/T7-large.10n" :  true,
+	"../ion-tests/iontestdata/good/typecodes/T7-large.10n":   true,
 }
 
 type drainfunc func(t *testing.T, r Reader, f string)
