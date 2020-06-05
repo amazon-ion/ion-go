@@ -10,21 +10,21 @@ import (
 )
 
 const (
-	// YYYY-MM-DDTHH:MM±HH:MM time.date format. time.Parse() uses
+	// LayoutYYYYMMDDTHHMMZHHMM time.date format. time.Parse() uses
 	// "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
-	Layout_yyyy_mm_ddThh_mmZhh_mm = "2006-01-02T15:04Z07:00"
+	LayoutYYYYMMDDTHHMMZHHMM = "2006-01-02T15:04Z07:00"
 
-	// YYYY-MM-DDTHH:MMZ time.date format. time.Parse() uses
+	// LayoutYYYYMMDDTHHMMZ time.date format. time.Parse() uses
 	// "2006-01-02T15:04Z" explicitly as a string value to identify this format.
-	Layout_yyyy_mm_ddThh_mmZ = "2006-01-02T15:04Z"
+	LayoutYYYYMMDDTHHMMZ = "2006-01-02T15:04Z"
 
-	// RFC3339Nano time.date format. Matches time dates with
-	// YYYY-MM-DDTHH:MM:SS.NSEC±HH:MM format: 2006-01-02T15:04:05.999999999Z07:00
-	Layout_yyyy_mm_ddThh_mm_ss_nsecZhh_mm = time.RFC3339Nano
+	// LayoutYYYYMMDDTHHMMSSNSECZHHMM time.date format. Matches time dates with
+	// YYYY-MM-DDTHH:MM:SS.NSEC±HH:MM format: 2006-01-02T15:04:05.999999999Z07:00.
+	LayoutYYYYMMDDTHHMMSSNSECZHHMM = time.RFC3339Nano
 
-	// RFC3339 time.date format. Matches time dates with
-	// YYYY-MM-DDTHH:MM:SS±HH:MM format: 2006-01-02T15:04:05Z07:00
-	Layout_yyyy_mm_ddThh_mm_ssZhh_mm = time.RFC3339
+	// LayoutYYYYMMDDTHHMMSSZHHMM time.date format. Matches time dates with
+	// YYYY-MM-DDTHH:MM:SS±HH:MM format: 2006-01-02T15:04:05Z07:00.
+	LayoutYYYYMMDDTHHMMSSZHHMM = time.RFC3339
 )
 
 // Does this symbol need to be quoted in text form?
@@ -377,11 +377,11 @@ func parseTimestamp(val string) (time.Time, error) {
 		return invalidTimestamp(val)
 	}
 	if val[16] == 'z' || val[16] == 'Z' {
-		return time.Parse(Layout_yyyy_mm_ddThh_mmZ, val)
+		return time.Parse(LayoutYYYYMMDDTHHMMZ, val)
 	}
 	if val[16] == '+' || val[16] == '-' {
 		if isValidOffset(val, 16) {
-			return time.Parse(Layout_yyyy_mm_ddThh_mmZhh_mm, val)
+			return time.Parse(LayoutYYYYMMDDTHHMMZHHMM, val)
 		}
 		return invalidTimestamp(val)
 	}
@@ -403,9 +403,9 @@ func parseTimestamp(val string) (time.Time, error) {
 			if idx >= 29 {
 				// Too much precision for a go Time.
 				// TODO: We should probably round instead of truncating? Ah well.
-				return time.Parse(Layout_yyyy_mm_ddThh_mm_ss_nsecZhh_mm, val[:29]+val[idx:])
+				return time.Parse(LayoutYYYYMMDDTHHMMSSNSECZHHMM, val[:29]+val[idx:])
 			}
-			return time.Parse(Layout_yyyy_mm_ddThh_mm_ssZhh_mm, val)
+			return time.Parse(LayoutYYYYMMDDTHHMMSSZHHMM, val)
 		}
 
 		if val[idx] == '+' || val[idx] == '-' {
@@ -413,9 +413,9 @@ func parseTimestamp(val string) (time.Time, error) {
 				if idx >= 29 {
 					// Too much precision for a go Time.
 					// TODO: We should probably round instead of truncating? Ah well.
-					return time.Parse(Layout_yyyy_mm_ddThh_mm_ss_nsecZhh_mm, val[:29]+val[idx:])
+					return time.Parse(LayoutYYYYMMDDTHHMMSSNSECZHHMM, val[:29]+val[idx:])
 				}
-				return time.Parse(Layout_yyyy_mm_ddThh_mm_ssZhh_mm, val)
+				return time.Parse(LayoutYYYYMMDDTHHMMSSZHHMM, val)
 			}
 			return invalidTimestamp(val)
 		}
