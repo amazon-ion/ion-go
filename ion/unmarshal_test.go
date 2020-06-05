@@ -537,3 +537,34 @@ func TestDecode(t *testing.T) {
 	test("()", []interface{}{})
 	test("(1 + two)", []interface{}{1, "+", "two"})
 }
+
+func TestDecodeLotsOfInts(t *testing.T) {
+	// Regression test for https://github.com/amzn/ion-go/issues/53
+	buf := bytes.Buffer{}
+	w := NewBinaryWriter(&buf)
+	for i := 0; i < 512; i++ {
+		w.WriteInt(1570737066801085)
+	}
+	w.Finish()
+	bs := buf.Bytes()
+
+	// The binary reader wraps a bufio.Reader with an internal 4096-byte
+	// buffer. 4 bytes of BVM plus 511 x 8-byte integers (1 byte of tag +
+	// 7 bytes of data) leaves 4 bytes left in the buffer and 4 additional
+	// bytes in the stream. This test ensures we read all 8 bytes of the
+	// final integer, not just the 4 in the buffer.
+
+	dec := NewDecoder(NewReaderBytes(bs))
+	for {
+		val, err := dec.Decode()
+		if err == ErrNoInput {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if val.(int64) != 1570737066801085 {
+			t.Fatalf("expected %v, got %v", 1570737066801085, val)
+		}
+	}
+}
