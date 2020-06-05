@@ -537,3 +537,28 @@ func TestDecode(t *testing.T) {
 	test("()", []interface{}{})
 	test("(1 + two)", []interface{}{1, "+", "two"})
 }
+
+func TestDecodeLotsOfInts(t *testing.T) {
+	// Regression test for https://github.com/amzn/ion-go/issues/53
+	buf := bytes.Buffer{}
+	w := NewBinaryWriter(&buf)
+	for i := 0; i < 512; i++ {
+		w.WriteInt(1570737066801085)
+	}
+	w.Finish()
+	bs := buf.Bytes()
+
+	dec := NewDecoder(NewReaderBytes(bs))
+	for {
+		val, err := dec.Decode()
+		if err == ErrNoInput {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if val.(int64) != 1570737066801085 {
+			t.Fatalf("expected %v, got %v", 1570737066801085, val)
+		}
+	}
+}
