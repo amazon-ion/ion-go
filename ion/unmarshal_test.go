@@ -548,6 +548,12 @@ func TestDecodeLotsOfInts(t *testing.T) {
 	w.Finish()
 	bs := buf.Bytes()
 
+	// The binary reader wraps a bufio.Reader with an internal 4096-byte
+	// buffer. 4 bytes of BVM plus 511 x 8-byte integers (1 byte of tag +
+	// 7 bytes of data) leaves 4 bytes left in the buffer and 4 additional
+	// bytes in the stream. This test ensures we read all 8 bytes of the
+	// final integer, not just the 4 in the buffer.
+
 	dec := NewDecoder(NewReaderBytes(bs))
 	for {
 		val, err := dec.Decode()
