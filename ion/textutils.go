@@ -314,7 +314,7 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateTimeDate(val, year, 1, 1, time.UTC)
+		return tryCreateTimeDate(val, year, 1, 1)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -325,13 +325,13 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	month, err := strconv.ParseInt(val[5:7], 10, 32)
-	if err != nil || month < 1 {
+	if err != nil {
 		return invalidTimestamp(val)
 	}
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateTimeDate(val, year, month, 1, time.UTC)
+		return tryCreateTimeDate(val, year, month, 1)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -342,13 +342,13 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	day, err := strconv.ParseInt(val[8:10], 10, 32)
-	if err != nil || day < 1 {
+	if err != nil {
 		return invalidTimestamp(val)
 	}
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateTimeDate(val, year, month, day, time.UTC)
+		return tryCreateTimeDate(val, year, month, day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -359,10 +359,14 @@ func parseTimestamp(val string) (time.Time, error) {
 		return invalidTimestamp(val)
 	}
 	if val[16] == 'z' || val[16] == 'Z' {
+		// At this point, val is in the YYYY-MM-DDTHH:MMZ format. time.Parse() uses
+		// "2006-01-02T15:04Z" explicitly as a string value to identify this format.
 		return time.Parse("2006-01-02T15:04Z", val)
 	}
 	if val[16] == '+' || val[16] == '-' {
 		if isValidOffset(val, 16) {
+			// At this point, val is in the YYYY-MM-DDTHH:MM±HH:MM format. time.Parse() uses
+			// "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
 			return time.Parse("2006-01-02T15:04Z07:00", val)
 		}
 		return invalidTimestamp(val)
@@ -405,8 +409,8 @@ func parseTimestamp(val string) (time.Time, error) {
 	return invalidTimestamp(val)
 }
 
-func tryCreateTimeDate(val string, year int64, month int64, day int64, loc *time.Location) (time.Time, error) {
-	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, loc)
+func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Time, error) {
+	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
 		return invalidTimestamp(val)
