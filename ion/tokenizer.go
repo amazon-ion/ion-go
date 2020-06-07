@@ -542,7 +542,7 @@ func (t *tokenizer) readString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if t.isProhibitedControlChar(c) {
+		if isInvalidChar(c) {
 			return "", &SyntaxError{"Invalid character", t.pos}
 		}
 
@@ -585,7 +585,7 @@ func (t *tokenizer) readLongString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if t.isProhibitedControlChar(c) {
+		if isInvalidChar(c) {
 			return "", &SyntaxError{"Invalid character", t.pos}
 		}
 
@@ -676,27 +676,6 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 	}
 
 	return 0, &SyntaxError{fmt.Sprintf("bad escape sequence '\\%c'", c), t.pos - 2}
-}
-
-func (t *tokenizer) isProhibitedControlChar(c int) bool {
-	if c < 0x00 || c > 0x1F {
-		return false
-	}
-	if isWhiteSpaceChar(c) || isNewLineChar(c) {
-		return false
-	}
-	return true
-}
-
-func isWhiteSpaceChar(c int) bool {
-	return c == 0x09 || //horizontal tab
-		c == 0x0B || //vertical tab
-		c == 0x0C // form feed
-}
-
-func isNewLineChar(c int) bool {
-	return c == 0x0A || //new line
-		c == 0x0D //carriage return
 }
 
 func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
@@ -1293,4 +1272,25 @@ func (t *tokenizer) read() (int, error) {
 func (t *tokenizer) unread(c int) {
 	t.pos--
 	t.buffer = append(t.buffer, c)
+}
+
+func isInvalidChar(c int) bool {
+	if c < 0x00 || c > 0x1F {
+		return false
+	}
+	if isWhiteSpaceChar(c) || isNewLineChar(c) {
+		return false
+	}
+	return true
+}
+
+func isWhiteSpaceChar(c int) bool {
+	return c == 0x09 || //horizontal tab
+		c == 0x0B || //vertical tab
+		c == 0x0C // form feed
+}
+
+func isNewLineChar(c int) bool {
+	return c == 0x0A || //new line
+		c == 0x0D //carriage return
 }
