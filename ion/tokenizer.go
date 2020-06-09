@@ -542,14 +542,11 @@ func (t *tokenizer) readString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if isInvalidChar(c) {
-			return "", &SyntaxError{"Invalid character", t.pos}
+		if isProhibitedControlChar(c) || c == '\n' {
+			return "", t.invalidChar(c)
 		}
 
 		switch c {
-		case -1, '\n':
-			return "", t.invalidChar(c)
-
 		case '"':
 			return ret.String(), nil
 
@@ -585,14 +582,11 @@ func (t *tokenizer) readLongString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if isInvalidChar(c) {
-			return "", &SyntaxError{"Invalid character", t.pos}
+		if isProhibitedControlChar(c) {
+			return "", t.invalidChar(c)
 		}
 
 		switch c {
-		case -1:
-			return "", t.invalidChar(c)
-
 		case '\'':
 			startPosition := t.pos
 			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
@@ -1274,17 +1268,18 @@ func (t *tokenizer) unread(c int) {
 	t.buffer = append(t.buffer, c)
 }
 
-func isInvalidChar(c int) bool {
-	if c < 0x00 || c > 0x1F {
+func isProhibitedControlChar(c int) bool {
+	// Values lower than this are non-displayable ASCII characters; except for new line and white space characters.
+	if c > 0x1F {
 		return false
 	}
-	if isWhiteSpaceChar(c) || isNewLineChar(c) {
+	if isStringWhitespace(c) || isNewLineChar(c) {
 		return false
 	}
 	return true
 }
 
-func isWhiteSpaceChar(c int) bool {
+func isStringWhitespace(c int) bool {
 	return c == 0x09 || //horizontal tab
 		c == 0x0B || //vertical tab
 		c == 0x0C // form feed
