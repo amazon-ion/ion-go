@@ -11,6 +11,13 @@ http://amzn.github.io/ion-docs/docs/spec.html
 It aims to be efficient by only evaluating values when they are accessed, and retaining the original
 text or binary representation where possible for efficient re-serialization of the same form.
 
+## Users
+
+Here are some projects that use the Ion Go library.
+
+- [Restish](https://rest.sh/): "...a CLI for interacting with REST-ish HTTP APIs with some nice features built-in"
+- (Feel free to add your project by [creating an issue](https://github.com/amzn/ion-go/issues/new) or a pull request)
+
 ## Git Setup
 
 
