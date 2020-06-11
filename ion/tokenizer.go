@@ -542,7 +542,8 @@ func (t *tokenizer) readString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if isProhibitedControlChar(c) || c == '\n' {
+		// -1 denotes EOF, and new lines are not allowed in short string
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
 			return "", t.invalidChar(c)
 		}
 
@@ -582,7 +583,8 @@ func (t *tokenizer) readLongString() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if isProhibitedControlChar(c) {
+		// -1 denotes EOF
+		if c == -1 || isProhibitedControlChar(c) {
 			return "", t.invalidChar(c)
 		}
 
@@ -1269,8 +1271,8 @@ func (t *tokenizer) unread(c int) {
 }
 
 func isProhibitedControlChar(c int) bool {
-	// Values lower than this are non-displayable ASCII characters; except for new line and white space characters.
-	if c > 0x1F {
+	// Values between 0 to 31 are non-displayable ASCII characters; except for new line and white space characters.
+	if c < 0x00 || c > 0x1F {
 		return false
 	}
 	if isStringWhitespace(c) || isNewLineChar(c) {
