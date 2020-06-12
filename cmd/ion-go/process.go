@@ -26,12 +26,6 @@ type processor struct {
 
 	format string
 
-	// catalog  []string
-	// imports  []string
-	// perf     string
-	// filter   string
-	// traverse string
-
 	out ion.Writer
 	err *ErrorReport
 	loc string
