@@ -186,7 +186,6 @@ var malformedIonsSkipList = []string{
 	"localSymbolTableWithMultipleSymbolsAndImportsFields.ion",
 	"localSymbolTableWithMultipleSymbolsFields.10n",
 	"localSymbolTableWithMultipleSymbolsFields.ion",
-	"minLongWithLenTooLarge.10n",
 	"minLongWithLenTooSmall.10n",
 	"negativeIntZero.10n",
 	"negativeIntZeroLn.10n",
@@ -208,7 +207,6 @@ var malformedIonsSkipList = []string{
 	"symbolIDUnmapped.10n",
 	"symbolIDUnmapped.ion",
 	"symbolLenTooLarge.10n",
-	"timestampLenTooLarge.10n",
 	"type_3_length_0.10n",
 }
 
