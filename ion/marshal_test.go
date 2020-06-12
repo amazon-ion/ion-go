@@ -164,15 +164,15 @@ func TestMarshalNestedStructs(t *testing.T) {
 
 func TestMarshalHints(t *testing.T) {
 	type hints struct {
-		String  string            `json:"str,omitempty,string"`
-		Symbol  string            `json:"sym,omitempty,symbol"`
-		Strings []string          `json:"strs,string"`
-		Symbols []string          `json:"syms,symbol"`
-		StrMap  map[string]string `json:"strm"`
-		SymMap  map[string]string `json:"symm,symbol"`
-		Blob    []byte            `json:"bl,blob,omitempty"`
-		Clob    []byte            `json:"cl,clob,omitempty"`
-		Sexp    []int             `json:"sx,sexp"`
+		String  string            `ion:"str,omitempty,string"`
+		Symbol  string            `ion:"sym,omitempty,symbol"`
+		Strings []string          `ion:"strs,string"`
+		Symbols []string          `ion:"syms,symbol"`
+		StrMap  map[string]string `ion:"strm"`
+		SymMap  map[string]string `ion:"symm,symbol"`
+		Blob    []byte            `ion:"bl,blob,omitempty"`
+		Clob    []byte            `ion:"cl,clob,omitempty"`
+		Sexp    []int             `ion:"sx,sexp"`
 	}
 
 	v := hints{
@@ -251,7 +251,7 @@ func TestMarshalCustomMarshaler(t *testing.T) {
 	}
 
 	v := struct {
-		Num marshalme `json:"num"`
+		Num marshalme `ion:"num"`
 	}{four}
 	if err := enc.Encode(v); err != nil {
 		t.Fatal(err)
