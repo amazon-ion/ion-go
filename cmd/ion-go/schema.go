@@ -8,20 +8,20 @@ import (
 )
 
 type importlocation struct {
-	ImportName string `json:"import_name"`
-	Location   int    `json:"location"`
+	ImportName string `ion:"import_name"`
+	Location   int    `ion:"location"`
 }
 
 // token describes an Ion symbol token.
 type token struct {
-	Text           string          `json:"text,omitempty"`
-	ImportLocation *importlocation `json:"import_location,omitempty"`
+	Text           string          `ion:"text,omitempty"`
+	ImportLocation *importlocation `ion:"import_location,omitempty"`
 }
 
 type importdescriptor struct {
-	ImportName string `json:"import_name"`
-	Version    int    `json:"version"`
-	MaxID      int    `json:"max_id"`
+	ImportName string `ion:"import_name"`
+	Version    int    `ion:"version"`
+	MaxID      int    `ion:"max_id"`
 }
 
 type eventtype uint8
@@ -63,14 +63,14 @@ func (i iontype) MarshalIon(w ion.Writer) error {
 
 // event describes an Ion processing event.
 type event struct {
-	EventType   eventtype          `json:"event_type"`
-	IonType     iontype            `json:"ion_type,omitempty"`
-	FieldName   *token             `json:"field_name,omitempty"`
-	Annotations []token            `json:"annotations,omitempty"`
-	ValueText   string             `json:"value_text,omitempty"`
-	ValueBinary []int              `json:"value_binary,omitempty"`
-	Imports     []importdescriptor `json:"imports,omitempty"`
-	Depth       int                `json:"depth"`
+	EventType   eventtype          `ion:"event_type"`
+	IonType     iontype            `ion:"ion_type,omitempty"`
+	FieldName   *token             `ion:"field_name,omitempty"`
+	Annotations []token            `ion:"annotations,omitempty"`
+	ValueText   string             `ion:"value_text,omitempty"`
+	ValueBinary []int              `ion:"value_binary,omitempty"`
+	Imports     []importdescriptor `ion:"imports,omitempty"`
+	Depth       int                `ion:"depth"`
 }
 
 type errortype uint8
@@ -100,8 +100,8 @@ func (e errortype) MarshalIon(w ion.Writer) error {
 
 // errordescription describes an error during Ion processing.
 type errordescription struct {
-	ErrorType errortype `json:"error_type"`
-	Message   string    `json:"message"`
-	Location  string    `json:"location"`
-	Index     int       `json:"event_index"`
+	ErrorType errortype `ion:"error_type"`
+	Message   string    `ion:"message"`
+	Location  string    `ion:"location"`
+	Index     int       `ion:"event_index"`
 }
