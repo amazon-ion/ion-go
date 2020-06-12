@@ -62,12 +62,12 @@ func (f *fielder) inspect(t reflect.Type, path []int) {
 			continue
 		}
 
-		tag := sf.Tag.Get("json")
+		tag := sf.Tag.Get("ion")
 		if tag == "-" {
 			// Skip fields that are explicitly hidden by tag.
 			continue
 		}
-		name, opts := parseJSONTag(tag)
+		name, opts := parseIonTag(tag)
 
 		newpath := make([]int, len(path)+1)
 		copy(newpath, path)
@@ -120,10 +120,10 @@ func visible(sf *reflect.StructField) bool {
 	return exported
 }
 
-// ParseJSONTag parses a `json:"..."` field tag, returning the name and opts.
-func parseJSONTag(tag string) (string, string) {
+// ParseIonTag parses a `ion:"..."` field tag, returning the name and opts.
+func parseIonTag(tag string) (string, string) {
 	if idx := strings.Index(tag, ","); idx != -1 {
-		// Ignore additional JSON options, at least for now.
+		// Ignore additional Ion options, at least for now.
 		return tag[:idx], tag[idx+1:]
 	}
 	return tag, ""

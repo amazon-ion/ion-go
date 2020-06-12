@@ -9,6 +9,24 @@ import (
 	"time"
 )
 
+const (
+	// layoutMinutesAndOffset layout for time.date with yyyy-mm-ddThh:mm±hh:mm format. time.Parse()
+	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
+	layoutMinutesAndOffset = "2006-01-02T15:04Z07:00"
+
+	// layoutMinutesZulu layout for time.date with yyyy-mm-ddThh:mmZ format. time.Parse()
+	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
+	layoutMinutesZulu = "2006-01-02T15:04Z"
+
+	// layoutNanosecondsAndOffset layout for time.date of RFC3339Nano format.
+	// Such as 2006-01-02T15:04:05.999999999Z07:00.
+	layoutNanosecondsAndOffset = time.RFC3339Nano
+
+	// layoutSecondsAndOffset layout for time.date of RFC3339 format.
+	// Such as: 2006-01-02T15:04:05Z07:00.
+	layoutSecondsAndOffset = time.RFC3339
+)
+
 // Does this symbol need to be quoted in text form?
 func symbolNeedsQuoting(sym string) bool {
 	switch sym {
@@ -309,12 +327,12 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 
 	year, err := strconv.ParseInt(val[:4], 10, 32)
-	if err != nil {
+	if err != nil || year < 1 {
 		return invalidTimestamp(val)
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return time.Date(int(year), 1, 1, 0, 0, 0, 0, time.UTC), nil
+		return tryCreateTimeDate(val, year, 1, 1)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +349,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return time.Date(int(year), time.Month(month), 1, 0, 0, 0, 0, time.UTC), nil
+		return tryCreateTimeDate(val, year, month, 1)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,33 +366,85 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC), nil
+		return tryCreateTimeDate(val, year, month, day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
 	}
 
+	// At this point timestamp must have hour:minute
 	if len(val) < 17 {
 		return invalidTimestamp(val)
 	}
-	if val[16] != ':' {
-		return time.Parse("2006-01-02T15:04Z07:00", val)
+	if val[16] == 'z' || val[16] == 'Z' {
+		return time.Parse(layoutMinutesZulu, val)
 	}
-
-	if len(val) > 19 && val[19] == '.' {
-		i := 20
-		for i < len(val) && isDigit(int(val[i])) {
-			i++
+	if val[16] == '+' || val[16] == '-' {
+		if isValidOffset(val, 16) {
+			return time.Parse(layoutMinutesAndOffset, val)
+		}
+		return invalidTimestamp(val)
+	}
+	if val[16] == ':' {
+		//yyyy-mm-ddThh:mm:ss
+		if len(val) < 20 {
+			return invalidTimestamp(val)
 		}
 
-		if i >= 29 {
-			// Too much precision for a go Time.
-			// TODO: We should probably round instead of truncating? Ah well.
-			return time.Parse(time.RFC3339Nano, val[:29]+val[i:])
+		idx := 19
+		if val[idx] == '.' {
+			idx++
+			for idx < len(val) && isDigit(int(val[idx])) {
+				idx++
+			}
+		}
+
+		if val[idx] == 'z' || val[idx] == 'Z' {
+			if idx >= 29 {
+				// Too much precision for a go Time.
+				// TODO: We should probably round instead of truncating? Ah well.
+				return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+			}
+			return time.Parse(layoutSecondsAndOffset, val)
+		}
+
+		if val[idx] == '+' || val[idx] == '-' {
+			if isValidOffset(val, idx) {
+				if idx >= 29 {
+					// Too much precision for a go Time.
+					// TODO: We should probably round instead of truncating? Ah well.
+					return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+				}
+				return time.Parse(layoutSecondsAndOffset, val)
+			}
+			return invalidTimestamp(val)
 		}
 	}
+	return invalidTimestamp(val)
+}
 
-	return time.Parse(time.RFC3339Nano, val)
+func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Time, error) {
+	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+	// time.Date converts 2000-01-32 input to 2000-02-01
+	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
+		return invalidTimestamp(val)
+	}
+	return date, nil
+}
+
+func isValidOffset(val string, idx int) bool {
+	// +hh:mm
+	if idx+5 > len(val) || val[idx+3] != ':' {
+		return false
+	}
+
+	hourOffset, errH := strconv.ParseInt(val[idx+1:idx+3], 10, 32)
+	minuteOffset, errM := strconv.ParseInt(val[idx+4:], 10, 32)
+	if errH != nil || errM != nil {
+		return false
+	}
+
+	return hourOffset < 24 && minuteOffset < 60
 }
 
 func invalidTimestamp(val string) (time.Time, error) {

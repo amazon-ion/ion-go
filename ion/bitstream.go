@@ -512,6 +512,13 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		}
 		len -= vlen
 		ts[i] = int(val)
+
+		// When i is 3, it means we are setting hour component. A timestamp with
+		// hour, must follow by minute. Hence, len cannot be zero at this point.
+		if i == 3 && len == 0 {
+			return time.Time{},
+				&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+		}
 	}
 
 	nsecs, err := b.readNsecs(len)
@@ -522,8 +529,17 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	utc := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], int(nsecs), time.UTC)
-	return utc.In(time.FixedZone("fixed", int(offset)*60)), nil
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, offset)
+}
+
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, offset int64) (time.Time, error) {
+	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
+	// time.Date converts 2000-01-32 input to 2000-02-01
+	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
+		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
+	}
+
+	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and truncates it to nanoseconds.
@@ -837,10 +853,10 @@ func (b *bitstream) readN(n uint64) ([]byte, error) {
 	}
 
 	bs := make([]byte, n)
-	actual, err := b.in.Read(bs)
+	actual, err := io.ReadFull(b.in, bs)
 	b.pos += uint64(actual)
 
-	if err == io.EOF {
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
 		return nil, &UnexpectedEOFError{b.pos}
 	}
 	if err != nil {
