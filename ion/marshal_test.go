@@ -41,9 +41,9 @@ func TestMarshalText(t *testing.T) {
 
 	test(struct{ A, B int }{42, 0}, "{A:42,B:0}")
 	test(struct {
-		A int `json:"val,ignoreme"`
-		B int `json:"-"`
-		C int `json:",omitempty"`
+		A int `ion:"val,ignoreme"`
+		B int `ion:"-"`
+		C int `ion:",omitempty"`
 		d int
 	}{42, 0, 0, 0}, "{val:42}")
 
@@ -119,22 +119,22 @@ func TestMarshalBinaryLST(t *testing.T) {
 
 func TestMarshalNestedStructs(t *testing.T) {
 	type gp struct {
-		A int `json:"a"`
+		A int `ion:"a"`
 	}
 
 	type gp2 struct {
-		B int `json:"b"`
+		B int `ion:"b"`
 	}
 
 	type parent struct {
 		gp
 		*gp2
-		C int `json:"c"`
+		C int `ion:"c"`
 	}
 
 	type root struct {
 		parent
-		D int `json:"d"`
+		D int `ion:"d"`
 	}
 
 	v := root{

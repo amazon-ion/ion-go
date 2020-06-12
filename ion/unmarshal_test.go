@@ -429,7 +429,7 @@ func TestDecodeStructTo(t *testing.T) {
 
 	type foo struct {
 		Foo string
-		Baz int `json:"bar"`
+		Baz int `ion:"bar"`
 	}
 
 	test("{}", &struct{}{}, &struct{}{})

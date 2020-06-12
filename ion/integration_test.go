@@ -169,7 +169,6 @@ var malformedIonsSkipList = []string{
 	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
-	"floatLenTooLarge.10n",
 	"hexIntWithMultipleUnderscores.ion",
 	"hexIntWithTrailingUnderscore.ion",
 	"hexIntWithUnderscoreAfterRadixPrefix.ion",
