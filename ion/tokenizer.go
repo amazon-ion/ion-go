@@ -542,11 +542,12 @@ func (t *tokenizer) readString() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// -1 denotes EOF, and new lines are not allowed in short string
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
+			return "", t.invalidChar(c)
+		}
 
 		switch c {
-		case -1, '\n':
-			return "", t.invalidChar(c)
-
 		case '"':
 			return ret.String(), nil
 
@@ -582,12 +583,14 @@ func (t *tokenizer) readLongString() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// -1 denotes EOF
+		if c == -1 || isProhibitedControlChar(c) {
+			return "", t.invalidChar(c)
+		}
 
 		switch c {
-		case -1:
-			return "", t.invalidChar(c)
-
 		case '\'':
+			startPosition := t.pos
 			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
 			if err != nil {
 				return "", err
@@ -595,7 +598,10 @@ func (t *tokenizer) readLongString() (string, error) {
 			if ok {
 				return ret.String(), nil
 			}
-
+			if startPosition == t.pos {
+				// No character has been consumed. It is single '.
+				ret.WriteByte(byte(c))
+			}
 		case '\\':
 			c, err = t.peek()
 			if err != nil {
@@ -1262,4 +1268,26 @@ func (t *tokenizer) read() (int, error) {
 func (t *tokenizer) unread(c int) {
 	t.pos--
 	t.buffer = append(t.buffer, c)
+}
+
+func isProhibitedControlChar(c int) bool {
+	// Values between 0 to 31 are non-displayable ASCII characters; except for new line and white space characters.
+	if c < 0x00 || c > 0x1F {
+		return false
+	}
+	if isStringWhitespace(c) || isNewLineChar(c) {
+		return false
+	}
+	return true
+}
+
+func isStringWhitespace(c int) bool {
+	return c == 0x09 || //horizontal tab
+		c == 0x0B || //vertical tab
+		c == 0x0C // form feed
+}
+
+func isNewLineChar(c int) bool {
+	return c == 0x0A || //new line
+		c == 0x0D //carriage return
 }
