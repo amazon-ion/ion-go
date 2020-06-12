@@ -67,14 +67,14 @@ Import `github.com/amzn/ion-go/ion` and you're off to the races.
 Similar to GoLang's built-in [json](https://golang.org/pkg/encoding/json/) package,
 you can marshal and unmarshal Go types to Ion. Marshaling requires you to specify
 whether you'd like text or binary Ion. Unmarshaling is smart enough to do the right
-thing. Both respect json name tags, and `Marshal` honors `omitempty`.
+thing. Both follow the style of json name tags, and `Marshal` honors `omitempty`.
 
 ```Go
 type T struct {
   A string
   B struct {
-    RenamedC int   `json:"C"`
-    D        []int `json:",omitempty"`
+    RenamedC int   `ion:"C"`
+    D        []int `ion:",omitempty"`
   }
 }
 
@@ -213,9 +213,9 @@ than directly including those symbols in the local symbol table.
 
 ```Go
 type Item struct {
-  ID          string    `json:"id"`
-  Name        string    `json:"name"`
-  Description string    `json:"description"`
+  ID          string    `ion:"id"`
+  Name        string    `ion:"name"`
+  Description string    `ion:"description"`
 }
 
 var ItemSharedSymbols = ion.NewSharedSymbolTable("item", 1, []string{
@@ -227,7 +227,7 @@ var ItemSharedSymbols = ion.NewSharedSymbolTable("item", 1, []string{
 
 type SpicyItem struct {
   Item
-  Spiciness   int       `json:"spiciness"`
+  Spiciness   int       `ion:"spiciness"`
 }
 
 func WriteSpicyItemsTo(out io.Writer, items []SpicyItem) error {
