@@ -755,6 +755,14 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	}
 	w.WriteByte(byte(c))
 
+	// At this point we have either 0x or 0b, and it cannot be followed by _
+	nextChar, err2 := t.peek()
+	if err2 != nil {
+		return "", err
+	}
+	if nextChar == '_' {
+		return "", t.invalidChar(c)
+	}
 	c, err = t.readRadixDigits(dok, &w)
 	if err != nil {
 		return "", err
@@ -782,12 +790,22 @@ func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
 			return 0, err
 		}
 		if c == '_' {
+			nextChar, err := t.peek()
+			if err != nil {
+				return 0, err
+			}
+			if !dok(nextChar) {
+				return 0, t.invalidChar(c)
+			}
 			continue
 		}
 		if !dok(c) {
 			return c, nil
 		}
-		w.WriteByte(byte(c))
+		err := w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 	}
 }
 
