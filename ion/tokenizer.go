@@ -725,7 +725,7 @@ func (t *tokenizer) readHex() (string, error) {
 	return t.readRadix(isX, isHexDigit)
 }
 
-func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
+func (t *tokenizer) readRadix(isRadixMarker, isValidForRadix matcher) (string, error) {
 	w := strings.Builder{}
 
 	c, err := t.read()
@@ -750,7 +750,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !pok(c) {
+	if !isRadixMarker(c) {
 		return "", t.invalidChar(c)
 	}
 	w.WriteByte(byte(c))
@@ -763,7 +763,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	if nextChar == '_' {
 		return "", t.invalidChar(c)
 	}
-	c, err = t.readRadixDigits(dok, &w)
+	c, err = t.readRadixDigits(isValidForRadix, &w)
 	if err != nil {
 		return "", err
 	}
@@ -780,7 +780,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	return w.String(), nil
 }
 
-func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
+func (t *tokenizer) readRadixDigits(isValidForRadix matcher, w io.ByteWriter) (int, error) {
 	var c int
 	var err error
 
@@ -794,12 +794,12 @@ func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			if !dok(nextChar) {
+			if !isValidForRadix(nextChar) {
 				return 0, t.invalidChar(c)
 			}
 			continue
 		}
-		if !dok(c) {
+		if !isValidForRadix(c) {
 			return c, nil
 		}
 		err := w.WriteByte(byte(c))
