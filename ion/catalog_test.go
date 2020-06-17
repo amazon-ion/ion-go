@@ -7,9 +7,9 @@ import (
 )
 
 type Item struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          int    `ion:"id"`
+	Name        string `ion:"name"`
+	Description string `ion:"description"`
 }
 
 func TestCatalog(t *testing.T) {
