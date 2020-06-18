@@ -19,11 +19,15 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 const goodPath = "../ion-tests/iontestdata/good"
@@ -40,9 +44,29 @@ type ionItem struct {
 }
 
 func (i *ionItem) equal(o ionItem) bool {
-	return reflect.DeepEqual(i.value, o.value) &&
-		reflect.DeepEqual(i.annotations, o.annotations) &&
-		reflect.DeepEqual(i.ionType, o.ionType)
+	res := false
+	if i.ionType != o.ionType {
+		return false
+	}
+	if !cmpAnnotations(i.annotations, o.annotations) {
+		return false
+	}
+
+	typ := i.ionType
+	switch typ {
+	case FloatType:
+		res = cmp.Equal(i.value, o.value, cmpopts.EquateNaNs())
+	case IntType:
+		res = cmpInt(i.value[0], o.value[0])
+	case BoolType, StringType, SymbolType, TimestampType, ClobType, BlobType:
+		res = cmp.Equal(i.value, o.value)
+	case ListType, SexpType, StructType:
+		res = cmpValueSlices(i.value, o.value)
+	default: //DecimalType and IntType
+		res = reflect.DeepEqual(i.value, o.value)
+	}
+
+	return res
 }
 
 var readGoodFilesSkipList = []string{
@@ -857,4 +881,83 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		}
 	}
 	return ionItem
+}
+
+func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
+	if len(thisAnnotations) != len(otherAnnotations) {
+		return false
+	}
+
+	for idx, this := range thisAnnotations {
+		other := otherAnnotations[idx]
+		thisText, otherText := this, other
+
+		if !cmp.Equal(thisText, otherText) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func cmpValueSlices(thisValues, otherValues []interface{}) bool {
+	if len(thisValues) == 0 && len(otherValues) == 0 {
+		return true
+	}
+
+	if len(thisValues) != len(otherValues) {
+		return false
+	}
+
+	res := false
+	for idx, this := range thisValues {
+		other := otherValues[idx]
+		thisType, otherType := reflect.TypeOf(this), reflect.TypeOf(other)
+
+		if thisType != otherType {
+			return false
+		}
+
+		switch this.(type) {
+		case string: // null.Sexp, null.List, null.Struct
+			res = strNullTypeCmp(this, other)
+		default:
+			thisItem := this.(ionItem)
+			otherItem := other.(ionItem)
+			res = thisItem.equal(otherItem)
+		}
+		if !res {
+			return false
+		}
+	}
+	return res
+}
+
+func cmpInt(thisValue, otherValue interface{}) bool {
+	opt := cmp.Comparer(func(thisValue, otherValue *big.Int) bool {
+		if (thisValue == nil) != (thisValue == nil) {
+			return false
+		}
+
+		return thisValue.Cmp(otherValue) == 0
+	})
+
+	if reflect.TypeOf(thisValue) != reflect.TypeOf(otherValue) {
+		return false
+	}
+
+	switch thisValue.(type) {
+	case string: // null.Int
+		return strNullTypeCmp(thisValue, otherValue)
+	default:
+		thisItem := thisValue.(*big.Int)
+		otherItem := otherValue.(*big.Int)
+		return cmp.Equal(thisItem, otherItem, opt)
+	}
+}
+
+func strNullTypeCmp(this, other interface{}) bool {
+	thisStr := this.(string)
+	otherStr := other.(string)
+	return cmp.Equal(thisStr, otherStr)
 }
