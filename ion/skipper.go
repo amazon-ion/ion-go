@@ -185,7 +185,7 @@ func (t *tokenizer) skipHex() (int, error) {
 	return t.skipRadix(isX, isHexDigit)
 }
 
-func (t *tokenizer) skipRadix(pok, dok matcher) (int, error) {
+func (t *tokenizer) skipRadix(isRadixMarker, isValidForRadix matcher) (int, error) {
 	c, err := t.read()
 	if err != nil {
 		return 0, err
@@ -201,7 +201,7 @@ func (t *tokenizer) skipRadix(pok, dok matcher) (int, error) {
 	if c != '0' {
 		return 0, t.invalidChar(c)
 	}
-	if err = t.expect(pok); err != nil {
+	if err = t.expect(isRadixMarker); err != nil {
 		return 0, err
 	}
 
@@ -210,7 +210,7 @@ func (t *tokenizer) skipRadix(pok, dok matcher) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if !dok(c) {
+		if !isValidForRadix(c) {
 			break
 		}
 	}
