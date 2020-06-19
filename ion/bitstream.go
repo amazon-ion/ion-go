@@ -633,7 +633,7 @@ func (b *bitstream) ReadString() (string, error) {
 }
 
 func toUtf8String(buf []byte, pos uint64) (string, error) {
-	n := len(bu)
+	n := len(buf)
 	str := strings.Builder{}
 	re := bytes.NewReader(buf)
 	for n > 0 {

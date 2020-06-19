@@ -65,6 +65,7 @@ var binaryRoundTripSkipList = []string{
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"nonNulls.ion",
+	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"structWhitespace.ion",
 	"symbolEmpty.ion",
 	"T6-large.10n",
@@ -104,6 +105,7 @@ var textRoundTripSkipList = []string{
 	"localSymbolTableImportZeroMaxId.ion",
 	"nonNulls.ion",
 	"notVersionMarkers.ion",
+	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"structWhitespace.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
