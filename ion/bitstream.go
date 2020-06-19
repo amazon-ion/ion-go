@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -628,7 +629,27 @@ func (b *bitstream) ReadString() (string, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return string(bs), nil
+	return toUtf8String(bs, b.pos)
+}
+
+func toUtf8String(buf []byte, pos uint64) (string, error) {
+	n := len(bu)
+	str := strings.Builder{}
+	re := bytes.NewReader(buf)
+	for n > 0 {
+		char, size, err := re.ReadRune()
+		// Encoding content as UTF-8, 'FFFD' is returned for unknown, unrecognized or unrepresentable character.
+		if char == 0xFFFD {
+			return "", &UnexpectedTokenError{"Invalid iso-8859 character", pos}
+		}
+		if err != nil {
+			return "", &IOError{err}
+		}
+
+		str.WriteRune(char)
+		n -= size
+	}
+	return str.String(), nil
 }
 
 // ReadBytes reads a blob or clob value.

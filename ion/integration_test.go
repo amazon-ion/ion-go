@@ -182,7 +182,6 @@ var malformedIonsSkipList = []string{
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"sexpOperatorAnnotation.ion",
-	"stringWithLatinEncoding.10n",
 	"structOrderedEmpty.10n",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
