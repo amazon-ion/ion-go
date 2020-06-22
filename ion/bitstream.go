@@ -173,9 +173,10 @@ func (b *bitstream) Next() error {
 	// Parse the tag.
 	code, len := parseTag(c)
 
-	// Binary-encoded structs with len 1 are special cases of sorted field-names.
+	// Structs with a length code of 1 are a special case. Their length is always encoded
+	// as a VarUInt and their field names appear in ascending symbol ID order.
 	if code == bitcodeStruct && len == 1 {
-		len, err = b.handleOrderedStruct()
+		len, _, err = b.readVarUintLen(b.remaining())
 		if err != nil {
 			return err
 		}
@@ -957,18 +958,4 @@ func (b *bitstack) pop() {
 		panic("pop called on empty bitstack")
 	}
 	b.arr = b.arr[:len(b.arr)-1]
-}
-
-// The size of an ordered struct is in the byte after Type byte.
-func (b *bitstream) handleOrderedStruct() (uint64, error) {
-	c, err := b.read()
-	if err != nil {
-		return 0, err
-	}
-	if c == -1 {
-		b.code = bitcodeEOF
-		return 0, nil
-	}
-	length := c & 0x7F
-	return uint64(length), nil
 }
