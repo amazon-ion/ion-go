@@ -430,7 +430,7 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 	default:
 		// Need to go big.Int.
 		i := new(big.Int).SetBytes(bs)
-		isZero = i.Cmp(big.NewInt(0)) == 0
+		isZero = i.BitLen() == 0
 		if b.code == bitcodeNegInt {
 			i = i.Neg(i)
 		}
