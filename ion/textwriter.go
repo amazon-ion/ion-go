@@ -307,7 +307,7 @@ func (w *textWriter) beginValue(api string) error {
 		}
 	}
 
-	if w.inStruct() {
+	if w.InStruct() {
 		if err := w.writeFieldName(api); err != nil {
 			return err
 		}
