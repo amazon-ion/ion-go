@@ -423,6 +423,38 @@ func TestTrsToString(t *testing.T) {
 	}
 }
 
+func TestInStruct(t *testing.T) {
+	r := NewReaderStr("[ { a:() } ]")
+
+	r.Next()
+	r.StepIn() // In the list, before the struct
+	if r.InStruct() {
+		t.FailNow()
+	}
+
+	r.Next()
+	r.StepIn() // In the struct
+	if !r.InStruct() {
+		t.FailNow()
+	}
+
+	r.Next()
+	r.StepIn() // In the Sexp
+	if r.InStruct() {
+		t.FailNow()
+	}
+
+	r.StepOut() // Out of the Sexp, back in the struct again
+	if !r.InStruct() {
+		t.FailNow()
+	}
+
+	r.StepOut() // out of struct, back in the list again
+	if r.InStruct() {
+		t.FailNow()
+	}
+}
+
 type containerhandler func(t *testing.T, r Reader)
 
 func _sexp(t *testing.T, r Reader, f containerhandler) {

@@ -110,6 +110,9 @@ type Writer interface {
 
 	// Finish finishes writing values and flushes any buffered data.
 	Finish() error
+
+	// InStruct indicates if we are currently writing a struct or not.
+	InStruct() bool
 }
 
 // A writer holds shared stuff for all writers.
