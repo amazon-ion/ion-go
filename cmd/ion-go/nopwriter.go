@@ -105,3 +105,7 @@ func (nopwriter) EndStruct() error {
 func (nopwriter) Finish() error {
 	return nil
 }
+
+func (nopwriter) InStruct() bool {
+	return false
+}
