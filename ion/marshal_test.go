@@ -3,6 +3,7 @@ package ion
 import (
 	"bytes"
 	"math"
+	"strings"
 	"testing"
 	"time"
 )
@@ -158,5 +159,112 @@ func TestMarshalNestedStructs(t *testing.T) {
 	eval := "{a:1,b:2,c:3,d:4}"
 	if string(val) != eval {
 		t.Errorf("expected %v, got %v", eval, string(val))
+	}
+}
+
+func TestMarshalHints(t *testing.T) {
+	type hints struct {
+		String  string            `ion:"str,omitempty,string"`
+		Symbol  string            `ion:"sym,omitempty,symbol"`
+		Strings []string          `ion:"strs,string"`
+		Symbols []string          `ion:"syms,symbol"`
+		StrMap  map[string]string `ion:"strm"`
+		SymMap  map[string]string `ion:"symm,symbol"`
+		Blob    []byte            `ion:"bl,blob,omitempty"`
+		Clob    []byte            `ion:"cl,clob,omitempty"`
+		Sexp    []int             `ion:"sx,sexp"`
+	}
+
+	v := hints{
+		String:  "string",
+		Symbol:  "symbol",
+		Strings: []string{"a", "b"},
+		Symbols: []string{"c", "d"},
+		StrMap:  map[string]string{"a": "b"},
+		SymMap:  map[string]string{"c": "d"},
+		Blob:    []byte("blob"),
+		Clob:    []byte("clob"),
+		Sexp:    []int{1, 2, 3},
+	}
+
+	val, err := MarshalText(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eval := `{` +
+		`str:"string",` +
+		`sym:symbol,` +
+		`strs:["a","b"],` +
+		`syms:[c,d],` +
+		`strm:{a:"b"},` +
+		`symm:{c:d},` +
+		`bl:{{YmxvYg==}},` +
+		`cl:{{"clob"}},` +
+		`sx:(1 2 3)` +
+		`}`
+
+	if string(val) != eval {
+		t.Errorf("expected %v, got %v", eval, string(val))
+	}
+}
+
+type marshalme uint8
+
+var _ Marshaler = marshalme(0)
+
+const (
+	one marshalme = iota
+	two
+	three
+	four
+)
+
+func (m marshalme) String() string {
+	switch m {
+	case one:
+		return "ONE"
+	case two:
+		return "TWO"
+	case three:
+		return "THREE"
+	case four:
+		return "FOUR"
+	default:
+		panic("unexpected value")
+	}
+}
+
+func (m marshalme) MarshalIon(w Writer) error {
+	return w.WriteSymbol(m.String())
+}
+
+func TestMarshalCustomMarshaler(t *testing.T) {
+	buf := strings.Builder{}
+	enc := NewTextEncoder(&buf)
+
+	if err := enc.Encode(one); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.EncodeAs([]marshalme{two, three}, SexpType); err != nil {
+		t.Fatal(err)
+	}
+
+	v := struct {
+		Num marshalme `ion:"num"`
+	}{four}
+	if err := enc.Encode(v); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := enc.Finish(); err != nil {
+		t.Fatal(err)
+	}
+
+	val := buf.String()
+	eval := "ONE\n(TWO THREE)\n{num:FOUR}\n"
+
+	if val != eval {
+		t.Errorf("expected %v, got %v", eval, val)
 	}
 }

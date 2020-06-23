@@ -128,7 +128,7 @@ func (w *writer) FieldName(val string) error {
 	if w.err != nil {
 		return w.err
 	}
-	if !w.inStruct() {
+	if !w.InStruct() {
 		w.err = errors.New("ion: Writer.FieldName called when not writing a struct")
 		return w.err
 	}
@@ -154,7 +154,7 @@ func (w *writer) Annotations(val ...string) error {
 }
 
 // InStruct returns true if we're currently writing a struct.
-func (w *writer) inStruct() bool {
+func (w *writer) InStruct() bool {
 	return w.ctx.peek() == ctxInStruct
 }
 
