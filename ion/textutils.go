@@ -402,7 +402,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 		if val[idx] == 'z' || val[idx] == 'Z' {
 			if idx >= 29 {
-				// Too much precision for a go Time.
+				// Greater than 9 fractional seconds.
 				return roundFractionalSeconds(val, idx)
 			}
 			return time.Parse(layoutSecondsAndOffset, val)
@@ -411,7 +411,7 @@ func parseTimestamp(val string) (time.Time, error) {
 		if val[idx] == '+' || val[idx] == '-' {
 			if isValidOffset(val, idx) {
 				if idx >= 29 {
-					// Too much precision for a go Time.
+					// Greater than 9 fractional seconds.
 					return roundFractionalSeconds(val, idx)
 				}
 				return time.Parse(layoutSecondsAndOffset, val)
