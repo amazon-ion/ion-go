@@ -417,18 +417,21 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 	}
 
 	var ret interface{}
+	isZero := false
 	switch {
 	case b.len == 0:
 		// Special case for zero.
 		ret = int64(0)
+		isZero = true
 
-	case b.len < 8, (b.len == 8 && bs[0]&0x80 == 0):
+	case b.len < 8, b.len == 8 && bs[0]&0x80 == 0:
 		// It'll fit in an int64.
 		i := int64(0)
 		for _, b := range bs {
 			i <<= 8
 			i ^= int64(b)
 		}
+		isZero = i == 0
 		if b.code == bitcodeNegInt {
 			i = -i
 		}
@@ -437,10 +440,16 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 	default:
 		// Need to go big.Int.
 		i := new(big.Int).SetBytes(bs)
+		isZero = i.BitLen() == 0
 		if b.code == bitcodeNegInt {
 			i = i.Neg(i)
 		}
 		ret = i
+	}
+
+	// Zero is always stored as positive; negative zero is illegal.
+	if isZero && b.code == bitcodeNegInt {
+		return 0, &SyntaxError{"Integer zero cannot be negative", b.pos - b.len}
 	}
 
 	b.state = b.stateAfterValue()
