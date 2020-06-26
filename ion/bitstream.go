@@ -172,6 +172,16 @@ func (b *bitstream) Next() error {
 
 	// Parse the tag.
 	code, len := parseTag(c)
+
+	// Structs with a length code of 1 are a special case. Their length is always encoded
+	// as a VarUInt and their field names appear in ascending symbol ID order.
+	if code == bitcodeStruct && len == 1 {
+		len, _, err = b.readVarUintLen(b.remaining())
+		if err != nil {
+			return err
+		}
+	}
+
 	if code == bitcodeNone {
 		return &InvalidTagByteError{byte(c), b.pos - 1}
 	}
