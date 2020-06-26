@@ -473,7 +473,10 @@ func roundFractionalSeconds(val string, idx int) (time.Time, error) {
 
 		timeValue = timeValue.Add(time.Second)
 		return timeValue, err
-
+	// Scenario where original string had 0s padded in the beginning.
+	} else if len(stringValue) < 9 {
+		val = val[:20] + strings.Repeat("0",9-len(stringValue)) + stringValue + val[idx:]
+		return time.Parse(layoutNanosecondsAndOffset, val)
 	} else {
 		val = val[:20] + stringValue + val[idx:]
 		return time.Parse(layoutNanosecondsAndOffset, val)
