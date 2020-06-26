@@ -451,14 +451,14 @@ func invalidTimestamp(val string) (time.Time, error) {
 }
 
 func roundFractionalSeconds(val string, idx int) (time.Time, error) {
-	// Convert to float to perform rounding.
-	fractionalUnits, err := strconv.ParseInt(val[20:idx], 10, 64)
+	// Convert to int to perform rounding.
+	intValue, err := strconv.ParseInt(val[20:idx], 10, 64)
 	if err != nil {
 		return invalidTimestamp(val)
 	}
 
 	// Convert back to string.
-	roundedValue := math.Round(float64(fractionalUnits)/math.Pow(10, float64(idx-29)))
+	roundedValue := math.Round(float64(intValue)/math.Pow(10, float64(idx-29)))
 	stringValue := strconv.FormatInt(int64(roundedValue), 10)
 
 	// Scenario where it rounded to 10 precision units (eg: 999999999.9 -> 100000000).
