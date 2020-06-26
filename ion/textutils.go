@@ -3,6 +3,7 @@ package ion
 import (
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -402,8 +403,7 @@ func parseTimestamp(val string) (time.Time, error) {
 		if val[idx] == 'z' || val[idx] == 'Z' {
 			if idx >= 29 {
 				// Too much precision for a go Time.
-				// TODO: We should probably round instead of truncating? Ah well.
-				return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+				return roundFractionalSeconds(val, idx)
 			}
 			return time.Parse(layoutSecondsAndOffset, val)
 		}
@@ -412,8 +412,7 @@ func parseTimestamp(val string) (time.Time, error) {
 			if isValidOffset(val, idx) {
 				if idx >= 29 {
 					// Too much precision for a go Time.
-					// TODO: We should probably round instead of truncating? Ah well.
-					return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+					return roundFractionalSeconds(val, idx)
 				}
 				return time.Parse(layoutSecondsAndOffset, val)
 			}
@@ -449,4 +448,34 @@ func isValidOffset(val string, idx int) bool {
 
 func invalidTimestamp(val string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("ion: invalid timestamp: %v", val)
+}
+
+func roundFractionalSeconds(val string, idx int) (time.Time, error) {
+	// Convert to float to perform rounding.
+	fractionalUnits, err := strconv.ParseInt(val[20:idx], 10, 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	// Convert back to string.
+	roundedValue := math.Round(float64(fractionalUnits)/math.Pow(10, float64(idx-29)))
+	stringValue := strconv.FormatInt(int64(roundedValue), 10)
+
+	// Scenario where it rounded to 10 precision units (eg: 999999999.9 -> 100000000).
+	if len(stringValue) > 9 {
+		// Remove the 1.
+		val = val[:20] + stringValue[1:] + val[idx:]
+
+		timeValue, err := time.Parse(layoutNanosecondsAndOffset, val)
+		if err != nil {
+			return invalidTimestamp(val)
+		}
+
+		timeValue = timeValue.Add(time.Second)
+		return timeValue, err
+
+	} else {
+		val = val[:20] + stringValue + val[idx:]
+		return time.Parse(layoutNanosecondsAndOffset, val)
+	}
 }
