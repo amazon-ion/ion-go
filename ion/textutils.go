@@ -3,7 +3,6 @@ package ion
 import (
 	"fmt"
 	"io"
-	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -451,21 +450,22 @@ func invalidTimestamp(val string) (time.Time, error) {
 }
 
 func roundFractionalSeconds(val string, idx int) (time.Time, error) {
-	// Convert to int to perform rounding.
-	intValue, err := strconv.ParseInt(val[20:idx], 10, 64)
+	// Convert to float to perform rounding
+	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+	roundedStringValue := fmt.Sprintf("%.9f", floatValue)
+
+	roundedFloatValue, err := strconv.ParseFloat(roundedStringValue, 64)
 	if err != nil {
 		return invalidTimestamp(val)
 	}
 
-	// Convert back to string.
-	roundedValue := math.Round(float64(intValue)/math.Pow(10, float64(idx-29)))
-	stringValue := strconv.FormatInt(int64(roundedValue), 10)
-
-	// Scenario where it rounded to 10 precision units (eg: 999999999.9 -> 100000000).
-	if len(stringValue) > 9 {
-		// Remove the 1.
-		val = val[:20] + stringValue[1:] + val[idx:]
-
+	//	microsecond overflow 9.9999999999 -> 10.00000000
+	if roundedFloatValue == 10 {
+		roundedStringValue := "9.000000000"
+		val = val[:18] + roundedStringValue + val[idx:]
 		timeValue, err := time.Parse(layoutNanosecondsAndOffset, val)
 		if err != nil {
 			return invalidTimestamp(val)
@@ -473,12 +473,8 @@ func roundFractionalSeconds(val string, idx int) (time.Time, error) {
 
 		timeValue = timeValue.Add(time.Second)
 		return timeValue, err
-	// Scenario where original string had 0s padded in the beginning.
-	} else if len(stringValue) < 9 {
-		val = val[:20] + strings.Repeat("0",9-len(stringValue)) + stringValue + val[idx:]
-		return time.Parse(layoutNanosecondsAndOffset, val)
-	} else {
-		val = val[:20] + stringValue + val[idx:]
-		return time.Parse(layoutNanosecondsAndOffset, val)
 	}
+
+	val = val[:18] + roundedStringValue + val[idx:]
+	return time.Parse(layoutNanosecondsAndOffset, val)
 }
