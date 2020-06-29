@@ -176,8 +176,6 @@ var malformedIonsSkipList = []string{
 	"localSymbolTableWithMultipleSymbolsFields.10n",
 	"localSymbolTableWithMultipleSymbolsFields.ion",
 	"minLongWithLenTooSmall.10n",
-	"negativeIntZero.10n",
-	"negativeIntZeroLn.10n",
 	"nopPadTooShort.10n",
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
