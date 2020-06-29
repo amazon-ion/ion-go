@@ -8,8 +8,8 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type bss uint8
@@ -639,27 +639,11 @@ func (b *bitstream) ReadString() (string, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return toUtf8String(bs, b.pos)
-}
-
-func toUtf8String(buf []byte, pos uint64) (string, error) {
-	n := len(buf)
-	str := strings.Builder{}
-	re := bytes.NewReader(buf)
-	for n > 0 {
-		char, size, err := re.ReadRune()
-		// Encoding content as UTF-8, 'FFFD' is returned for unknown, unrecognized or unrepresentable character.
-		if char == 0xFFFD {
-			return "", &UnexpectedTokenError{"Invalid iso-8859 character", pos}
-		}
-		if err != nil {
-			return "", &IOError{err}
-		}
-
-		str.WriteRune(char)
-		n -= size
+	if utf8.Valid(bs) {
+		return string(bs), nil
+	} else {
+		return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
 	}
-	return str.String(), nil
 }
 
 // ReadBytes reads a blob or clob value.
