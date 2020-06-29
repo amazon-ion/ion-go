@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"time"
+	"unicode/utf8"
 )
 
 type bss uint8
@@ -647,7 +648,10 @@ func (b *bitstream) ReadString() (string, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return string(bs), nil
+	if utf8.Valid(bs) {
+		return string(bs), nil
+	}
+	return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
 }
 
 // ReadBytes reads a blob or clob value.

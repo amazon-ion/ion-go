@@ -180,7 +180,6 @@ var malformedIonsSkipList = []string{
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"sexpOperatorAnnotation.ion",
-	"stringWithLatinEncoding.10n",
 	"structOrderedEmpty.10n",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
@@ -206,7 +205,7 @@ var equivsSkipList = []string{
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"sexps.ion",
-	"stringUtf8.ion",
+	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"structsFieldsDiffOrder.ion",
 	"structsFieldsRepeatedNames.ion",
 	"systemSymbols.ion",
