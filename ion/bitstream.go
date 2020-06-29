@@ -641,9 +641,8 @@ func (b *bitstream) ReadString() (string, error) {
 
 	if utf8.Valid(bs) {
 		return string(bs), nil
-	} else {
-		return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
 	}
+	return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
 }
 
 // ReadBytes reads a blob or clob value.
