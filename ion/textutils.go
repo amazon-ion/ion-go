@@ -450,7 +450,7 @@ func invalidTimestamp(val string) (time.Time, error) {
 }
 
 func roundFractionalSeconds(val string, idx int) (time.Time, error) {
-	// Convert to float to perform rounding
+	// Convert to float to perform rounding.
 	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
 	if err != nil {
 		return invalidTimestamp(val)
@@ -462,7 +462,7 @@ func roundFractionalSeconds(val string, idx int) (time.Time, error) {
 		return invalidTimestamp(val)
 	}
 
-	// Microsecond overflow 9.9999999999 -> 10.00000000
+	// Microsecond overflow 9.9999999999 -> 10.00000000.
 	if roundedFloatValue == 10 {
 		roundedStringValue := "9.000000000"
 		val = val[:18] + roundedStringValue + val[idx:]
