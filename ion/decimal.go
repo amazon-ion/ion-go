@@ -256,6 +256,26 @@ func (d *Decimal) Trunc() (int64, error) {
 	return strconv.ParseInt(str[:want], 10, 64)
 }
 
+// Round attempts to truncate this decimal to an int64, rounding any fractional bits.
+func (d *Decimal) TruncAndRound() (int64, error) {
+	if d.scale < 0 {
+		// Don't even bother trying this with numbers that *definitely* too big to represent
+		// as an int64, because upscale(0) will consume a bunch of memory.
+		if d.scale < -20 {
+			return 0, &strconv.NumError{
+				Func: "ParseInt",
+				Num:  d.String(),
+				Err:  strconv.ErrRange,
+			}
+		}
+		d = d.upscale(0)
+	}
+
+	floatValue := float64(d.n.Int64()) / math.Pow10(int(d.scale))
+	roundedValue := math.Round(floatValue)
+	return int64(roundedValue), nil
+}
+
 // Truncate returns a new decimal, truncated to the given number of
 // decimal digits of precision. It does not round, so 19.Truncate(1)
 // = 1d1.
