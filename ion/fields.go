@@ -12,6 +12,31 @@ type field struct {
 	typ       reflect.Type
 	path      []int
 	omitEmpty bool
+	hint      Type
+}
+
+func (f *field) setopts(opts string) {
+	for opts != "" {
+		var o string
+
+		i := strings.Index(opts, ",")
+		if i >= 0 {
+			o, opts = opts[:i], opts[i+1:]
+		} else {
+			o, opts = opts, ""
+		}
+
+		switch o {
+		case "omitempty":
+			f.omitEmpty = true
+		case "symbol":
+			f.hint = SymbolType
+		case "clob":
+			f.hint = ClobType
+		case "sexp":
+			f.hint = SexpType
+		}
+	}
 }
 
 // A fielder maps out the fields of a type.
@@ -37,12 +62,12 @@ func (f *fielder) inspect(t reflect.Type, path []int) {
 			continue
 		}
 
-		tag := sf.Tag.Get("json")
+		tag := sf.Tag.Get("ion")
 		if tag == "-" {
 			// Skip fields that are explicitly hidden by tag.
 			continue
 		}
-		name, opts := parseJSONTag(tag)
+		name, opts := parseIonTag(tag)
 
 		newpath := make([]int, len(path)+1)
 		copy(newpath, path)
@@ -67,12 +92,14 @@ func (f *fielder) inspect(t reflect.Type, path []int) {
 			}
 			f.index[name] = true
 
-			f.fields = append(f.fields, field{
-				name:      name,
-				typ:       ft,
-				path:      newpath,
-				omitEmpty: omitEmpty(opts),
-			})
+			field := field{
+				name: name,
+				typ:  ft,
+				path: newpath,
+			}
+			field.setopts(opts)
+
+			f.fields = append(f.fields, field)
 		}
 	}
 }
@@ -93,30 +120,11 @@ func visible(sf *reflect.StructField) bool {
 	return exported
 }
 
-// ParseJSONTag parses a `json:"..."` field tag, returning the name and opts.
-func parseJSONTag(tag string) (string, string) {
+// ParseIonTag parses a `ion:"..."` field tag, returning the name and opts.
+func parseIonTag(tag string) (string, string) {
 	if idx := strings.Index(tag, ","); idx != -1 {
-		// Ignore additional JSON options, at least for now.
+		// Ignore additional Ion options, at least for now.
 		return tag[:idx], tag[idx+1:]
 	}
 	return tag, ""
-}
-
-// OmitEmpty returns true if opts includes "omitempty".
-func omitEmpty(opts string) bool {
-	for opts != "" {
-		var o string
-
-		i := strings.Index(opts, ",")
-		if i >= 0 {
-			o, opts = opts[:i], opts[i+1:]
-		} else {
-			o, opts = opts, ""
-		}
-
-		if o == "omitempty" {
-			return true
-		}
-	}
-	return false
 }

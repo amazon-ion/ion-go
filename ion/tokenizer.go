@@ -542,11 +542,12 @@ func (t *tokenizer) readString() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// -1 denotes EOF, and new lines are not allowed in short string
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
+			return "", t.invalidChar(c)
+		}
 
 		switch c {
-		case -1, '\n':
-			return "", t.invalidChar(c)
-
 		case '"':
 			return ret.String(), nil
 
@@ -582,12 +583,14 @@ func (t *tokenizer) readLongString() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// -1 denotes EOF
+		if c == -1 || isProhibitedControlChar(c) {
+			return "", t.invalidChar(c)
+		}
 
 		switch c {
-		case -1:
-			return "", t.invalidChar(c)
-
 		case '\'':
+			startPosition := t.pos
 			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
 			if err != nil {
 				return "", err
@@ -595,7 +598,10 @@ func (t *tokenizer) readLongString() (string, error) {
 			if ok {
 				return ret.String(), nil
 			}
-
+			if startPosition == t.pos {
+				// No character has been consumed. It is single '.
+				ret.WriteByte(byte(c))
+			}
 		case '\\':
 			c, err = t.peek()
 			if err != nil {
@@ -719,7 +725,7 @@ func (t *tokenizer) readHex() (string, error) {
 	return t.readRadix(isX, isHexDigit)
 }
 
-func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
+func (t *tokenizer) readRadix(isRadixMarker, isValidForRadix matcher) (string, error) {
 	w := strings.Builder{}
 
 	c, err := t.read()
@@ -744,12 +750,20 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !pok(c) {
+	if !isRadixMarker(c) {
 		return "", t.invalidChar(c)
 	}
 	w.WriteByte(byte(c))
 
-	c, err = t.readRadixDigits(dok, &w)
+	// At this point we have either 0x or 0b, and it cannot be followed by _
+	nextChar, err2 := t.peek()
+	if err2 != nil {
+		return "", err
+	}
+	if nextChar == '_' {
+		return "", t.invalidChar(c)
+	}
+	c, err = t.readRadixDigits(isValidForRadix, &w)
 	if err != nil {
 		return "", err
 	}
@@ -766,7 +780,7 @@ func (t *tokenizer) readRadix(pok, dok matcher) (string, error) {
 	return w.String(), nil
 }
 
-func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
+func (t *tokenizer) readRadixDigits(isValidForRadix matcher, w io.ByteWriter) (int, error) {
 	var c int
 	var err error
 
@@ -776,12 +790,22 @@ func (t *tokenizer) readRadixDigits(dok matcher, w io.ByteWriter) (int, error) {
 			return 0, err
 		}
 		if c == '_' {
+			nextChar, err := t.peek()
+			if err != nil {
+				return 0, err
+			}
+			if !isValidForRadix(nextChar) {
+				return 0, t.invalidChar(c)
+			}
 			continue
 		}
-		if !dok(c) {
+		if !isValidForRadix(c) {
 			return c, nil
 		}
-		w.WriteByte(byte(c))
+		err := w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 	}
 }
 
@@ -1262,4 +1286,26 @@ func (t *tokenizer) read() (int, error) {
 func (t *tokenizer) unread(c int) {
 	t.pos--
 	t.buffer = append(t.buffer, c)
+}
+
+func isProhibitedControlChar(c int) bool {
+	// Values between 0 to 31 are non-displayable ASCII characters; except for new line and white space characters.
+	if c < 0x00 || c > 0x1F {
+		return false
+	}
+	if isStringWhitespace(c) || isNewLineChar(c) {
+		return false
+	}
+	return true
+}
+
+func isStringWhitespace(c int) bool {
+	return c == 0x09 || //horizontal tab
+		c == 0x0B || //vertical tab
+		c == 0x0C // form feed
+}
+
+func isNewLineChar(c int) bool {
+	return c == 0x0A || //new line
+		c == 0x0D //carriage return
 }
