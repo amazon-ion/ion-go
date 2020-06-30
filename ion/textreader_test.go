@@ -218,7 +218,9 @@ func TestTimestamps(t *testing.T) {
 	test("2001-01-01T00:00:00.000+00:00", et)
 	test("2001-01-01T00:00:00.000000Z", et)
 	test("2001-01-01T00:00:00.000000000Z", et)
-	test("2001-01-01T00:00:00.000000000999Z", et) // We truncate, at least for now.
+
+	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
+	test("2001-01-01T00:00:00.000000000999Z", et2)
 
 	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
 }
