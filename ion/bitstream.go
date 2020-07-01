@@ -562,11 +562,13 @@ func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
 		return 0, false, err
 	}
 
-	nsec, err := d.ShiftL(9).TruncAndRound()
-	if err != nil || nsec < 0 {
-		msg := fmt.Sprintf("invalid timestamp fraction: %v", d)
+	nsec, err := d.ShiftL(9).Trunc()
+	if err != nil || nsec < 0 || nsec > 999999999 {
+		msg := fmt.Sprintf("invalid Addressedtimestamp fraction: %v", d)
 		return 0, false, &SyntaxError{msg, b.pos}
 	}
+
+	nsec, err = d.ShiftL(9).TruncAndRound()
 
 	// Overflow to second.
 	if nsec == 1000000000 {
