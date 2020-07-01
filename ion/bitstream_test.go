@@ -183,6 +183,31 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x6A,
 		0x80,       // offset 0
 		0x0F, 0xD0, // year: 2000
+		0x81, // month: 1
+		0x81, // day: 1
+		0x80, // hour: 0
+		0x80, // minute: 0
+		0x80, // second: 0
+		0x80, // 0 precision units
+		0x00, // 0
+	}, "2000-01-01T00:00:00Z")
+
+	test([]byte{
+		0x69,
+		0x80,       // offset 0
+		0x0F, 0xD0, // year: 2000
+		0x81, // month: 1
+		0x81, // day: 1
+		0x80, // hour: 0
+		0x80, // minute: 0
+		0x80, // second: 0
+		0xC2, // 2 precision units
+	}, "2000-01-01T00:00:00.00Z")
+
+	test([]byte{
+		0x6A,
+		0x80,       // offset 0
+		0x0F, 0xD0, // year: 2000
 		0x85, // month: 5
 		0x86, // day: 6
 		0x87, // hour: 7
