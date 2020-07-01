@@ -201,7 +201,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x87,             // hour: 7
 		0x88,             // minute: 8
 		0x89,             // second: 9
-		0xC6,             // 3 precision units
+		0xC6,             // 6 precision units
 		0x01, 0x87, 0x04, // 100100
 	}, "2000-05-06T07:08:09.100100Z")
 
@@ -214,7 +214,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x87,             // hour: 7
 		0x88,             // minute: 8
 		0x89,             // second: 9
-		0xC6,             // 3 precision units
+		0xC6,             // 6 precision units
 		0x01, 0x87, 0x04, // 100100
 	}, "2000-05-06T07:08:09.100100Z")
 
