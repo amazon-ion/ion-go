@@ -257,7 +257,7 @@ func (d *Decimal) Trunc() (int64, error) {
 }
 
 // Round attempts to truncate this decimal to an int64, rounding any fractional bits.
-func (d *Decimal) TruncAndRound() (int64, error) {
+func (d *Decimal) Round() (int64, error) {
 	if d.scale < 0 {
 		// Don't even bother trying this with numbers that *definitely* too big to represent
 		// as an int64, because upscale(0) will consume a bunch of memory.

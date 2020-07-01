@@ -568,7 +568,7 @@ func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
 		return 0, false, &SyntaxError{msg, b.pos}
 	}
 
-	nsec, err = d.ShiftL(9).TruncAndRound()
+	nsec, err = d.ShiftL(9).Round()
 
 	// Overflow to second.
 	if nsec == 1000000000 {
