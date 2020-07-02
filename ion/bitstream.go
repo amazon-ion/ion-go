@@ -660,14 +660,16 @@ func (b *bitstream) ReadBytes() ([]byte, error) {
 		panic("not a lob")
 	}
 
-	// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
-	if b.len == 0 {
-		return []byte{}, nil
-	}
-
-	bs, err := b.readN(b.len)
-	if err != nil {
-		return nil, err
+	var bs []byte
+	if b.len > 0 {
+		var err error
+		bs, err = b.readN(b.len)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
+		bs = []byte{}
 	}
 
 	b.state = b.stateAfterValue()
