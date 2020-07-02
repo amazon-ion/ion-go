@@ -53,7 +53,6 @@ var readGoodFilesSkipList = []string{
 }
 
 var binaryRoundTripSkipList = []string{
-	"clobNewlines.ion",
 	"clobWithNonAsciiCharacter.10n",
 	"clobs.ion",
 	"float32.10n",
@@ -64,7 +63,6 @@ var binaryRoundTripSkipList = []string{
 	"leapDayRollover.ion",
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"nonNulls.ion",
 	"structWhitespace.ion",
 	"symbolEmpty.ion",
 	"T6-large.10n",
@@ -91,8 +89,6 @@ var binaryRoundTripSkipList = []string{
 
 var textRoundTripSkipList = []string{
 	"annotations.ion",
-	"clobNewlines.ion",
-	"clobs.ion",
 	"float32.10n",
 	"floatSpecials.ion",
 	"floats.ion",
@@ -101,7 +97,6 @@ var textRoundTripSkipList = []string{
 	"leapDayRollover.ion",
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"nonNulls.ion",
 	"notVersionMarkers.ion",
 	"structWhitespace.ion",
 	"subfieldVarUInt.ion",
@@ -145,7 +140,6 @@ var malformedIonsSkipList = []string{
 	"clobWithLongLiteralCommentsInMiddle.ion",
 	"clobWithNonAsciiCharacter.ion",
 	"clobWithNonAsciiCharacterMultiline.ion",
-	"clobWithNullCharacter.ion",
 	"clobWithValidUtf8ButNonAsciiCharacter.ion",
 	"clob_2.ion",
 	"clob_U0000003F.ion",
@@ -154,7 +148,6 @@ var malformedIonsSkipList = []string{
 	"clob_u0020.ion",
 	"clob_u00FF.ion",
 	"clob_u01FF.ion",
-	"decimalLenTooLarge.10n",
 	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
@@ -187,8 +180,6 @@ var malformedIonsSkipList = []string{
 	"surrogate_9.ion",
 	"symbolIDUnmapped.10n",
 	"symbolIDUnmapped.ion",
-	"symbolLenTooLarge.10n",
-	"type_3_length_0.10n",
 }
 
 var equivsSkipList = []string{
