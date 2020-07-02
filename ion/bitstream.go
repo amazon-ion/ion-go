@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"time"
+	"unicode/utf8"
 )
 
 type bss uint8
@@ -417,18 +418,21 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 	}
 
 	var ret interface{}
+	isZero := false
 	switch {
 	case b.len == 0:
 		// Special case for zero.
 		ret = int64(0)
+		isZero = true
 
-	case b.len < 8, (b.len == 8 && bs[0]&0x80 == 0):
+	case b.len < 8, b.len == 8 && bs[0]&0x80 == 0:
 		// It'll fit in an int64.
 		i := int64(0)
 		for _, b := range bs {
 			i <<= 8
 			i ^= int64(b)
 		}
+		isZero = i == 0
 		if b.code == bitcodeNegInt {
 			i = -i
 		}
@@ -437,10 +441,16 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 	default:
 		// Need to go big.Int.
 		i := new(big.Int).SetBytes(bs)
+		isZero = i.BitLen() == 0
 		if b.code == bitcodeNegInt {
 			i = i.Neg(i)
 		}
 		ret = i
+	}
+
+	// Zero is always stored as positive; negative zero is illegal.
+	if isZero && b.code == bitcodeNegInt {
+		return 0, &SyntaxError{"Integer zero cannot be negative", b.pos - b.len}
 	}
 
 	b.state = b.stateAfterValue()
@@ -652,13 +662,21 @@ func (b *bitstream) ReadString() (string, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return string(bs), nil
+	if utf8.Valid(bs) {
+		return string(bs), nil
+	}
+	return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
 }
 
 // ReadBytes reads a blob or clob value.
 func (b *bitstream) ReadBytes() ([]byte, error) {
 	if b.code != bitcodeClob && b.code != bitcodeBlob {
 		panic("not a lob")
+	}
+
+	// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
+	if b.len == 0 {
+		return []byte{}, nil
 	}
 
 	bs, err := b.readN(b.len)
