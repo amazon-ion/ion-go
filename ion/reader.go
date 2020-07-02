@@ -13,7 +13,7 @@ import (
 // A Reader reads a stream of Ion values.
 //
 // The Reader has a logical position within the stream of values, influencing the
-// values returnedd from its methods. Initially, the Reader is positioned before the
+// values returned from its methods. Initially, the Reader is positioned before the
 // first value in the stream. A call to Next advances the Reader to the first value
 // in the stream, with subsequent calls advancing to subsequent values. When a call to
 // Next moves the Reader to the position after the final value in the stream, it returns
@@ -148,6 +148,9 @@ type Reader interface {
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
 	// an error if the current value is not an Ion clob or an Ion blob.
 	ByteValue() ([]byte, error)
+
+	// IsInStruct indicates if the reader is currently positioned in a struct.
+	IsInStruct() bool
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -385,4 +388,9 @@ func (r *reader) clear() {
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil
+}
+
+// IsInStruct returns true if we are currently in a struct.
+func (r *reader) IsInStruct() bool {
+	return r.ctx.peek() == ctxInStruct
 }

@@ -15,6 +15,7 @@ type eventwriter struct {
 	depth       int
 	fieldname   string
 	annotations []string
+	inStruct    map[int]bool
 }
 
 // NewEventWriter creates an ion.Writer that writes out a sequence
@@ -194,10 +195,12 @@ func (e *eventwriter) BeginStruct() error {
 		return err
 	}
 	e.depth++
+	e.inStruct[e.depth] = true
 	return nil
 }
 
 func (e *eventwriter) EndStruct() error {
+	e.inStruct[e.depth] = false
 	e.depth--
 	return e.write(event{
 		EventType: containerEnd,
@@ -210,6 +213,10 @@ func (e *eventwriter) Finish() error {
 		return err
 	}
 	return e.enc.Finish()
+}
+
+func (e *eventwriter) IsInStruct() bool {
+	return e.inStruct[e.depth] == true
 }
 
 func stringify(val interface{}) string {
