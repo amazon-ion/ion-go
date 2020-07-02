@@ -423,6 +423,38 @@ func TestTrsToString(t *testing.T) {
 	}
 }
 
+func TestInStruct(t *testing.T) {
+	r := NewReaderStr("[ { a:() } ]")
+
+	r.Next()
+	r.StepIn() // In the list, before the struct
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
+	}
+
+	r.Next()
+	r.StepIn() // In the struct
+	if !r.IsInStruct() {
+		t.Fatal("We were in a struct, IsInStruct should have returned true")
+	}
+
+	r.Next()
+	r.StepIn() // In the Sexp
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
+	}
+
+	r.StepOut() // Out of the Sexp, back in the struct again
+	if !r.IsInStruct() {
+		t.Fatal("We were in a struct, IsInStruct should have returned true")
+	}
+
+	r.StepOut() // out of struct, back in the list again
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
+	}
+}
+
 type containerhandler func(t *testing.T, r Reader)
 
 func _sexp(t *testing.T, r Reader, f containerhandler) {
