@@ -215,7 +215,7 @@ func (e *eventwriter) Finish() error {
 	return e.enc.Finish()
 }
 
-func (e *eventwriter) InStruct() bool {
+func (e *eventwriter) IsInStruct() bool {
 	return e.inStruct[e.depth] == true
 }
 

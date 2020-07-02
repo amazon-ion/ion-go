@@ -149,8 +149,8 @@ type Reader interface {
 	// an error if the current value is not an Ion clob or an Ion blob.
 	ByteValue() ([]byte, error)
 
-	// InStruct indicates if the reader is currently positioned in a struct.
-	InStruct() bool
+	// IsInStruct indicates if the reader is currently positioned in a struct.
+	IsInStruct() bool
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -390,7 +390,7 @@ func (r *reader) clear() {
 	r.value = nil
 }
 
-// InStruct returns true if we are currently in a struct.
-func (r *reader) InStruct() bool {
+// IsInStruct returns true if we are currently in a struct.
+func (r *reader) IsInStruct() bool {
 	return r.ctx.peek() == ctxInStruct
 }

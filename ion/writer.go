@@ -111,8 +111,8 @@ type Writer interface {
 	// Finish finishes writing values and flushes any buffered data.
 	Finish() error
 
-	// InStruct indicates if we are currently writing a struct or not.
-	InStruct() bool
+	// IsInStruct indicates if we are currently writing a struct or not.
+	IsInStruct() bool
 }
 
 // A writer holds shared stuff for all writers.
@@ -131,7 +131,7 @@ func (w *writer) FieldName(val string) error {
 	if w.err != nil {
 		return w.err
 	}
-	if !w.InStruct() {
+	if !w.IsInStruct() {
 		w.err = errors.New("ion: Writer.FieldName called when not writing a struct")
 		return w.err
 	}
@@ -156,8 +156,8 @@ func (w *writer) Annotations(val ...string) error {
 	return w.err
 }
 
-// InStruct returns true if we're currently writing a struct.
-func (w *writer) InStruct() bool {
+// IsInStruct returns true if we're currently writing a struct.
+func (w *writer) IsInStruct() bool {
 	return w.ctx.peek() == ctxInStruct
 }
 

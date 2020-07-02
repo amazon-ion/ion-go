@@ -428,30 +428,30 @@ func TestInStruct(t *testing.T) {
 
 	r.Next()
 	r.StepIn() // In the list, before the struct
-	if r.InStruct() {
-		t.Fatal("InStruct returned true before we were in a struct")
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
 	}
 
 	r.Next()
 	r.StepIn() // In the struct
-	if !r.InStruct() {
-		t.Fatal("We were in a struct, InStruct should have returned true")
+	if !r.IsInStruct() {
+		t.Fatal("We were in a struct, IsInStruct should have returned true")
 	}
 
 	r.Next()
 	r.StepIn() // In the Sexp
-	if r.InStruct() {
-		t.Fatal("InStruct returned true before we were in a struct")
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
 	}
 
 	r.StepOut() // Out of the Sexp, back in the struct again
-	if !r.InStruct() {
-		t.Fatal("We were in a struct, InStruct should have returned true")
+	if !r.IsInStruct() {
+		t.Fatal("We were in a struct, IsInStruct should have returned true")
 	}
 
 	r.StepOut() // out of struct, back in the list again
-	if r.InStruct() {
-		t.Fatal("InStruct returned true before we were in a struct")
+	if r.IsInStruct() {
+		t.Fatal("IsInStruct returned true before we were in a struct")
 	}
 }
 

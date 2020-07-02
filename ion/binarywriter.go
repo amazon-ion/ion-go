@@ -448,7 +448,7 @@ func (w *binaryWriter) beginValue(api string) error {
 		}
 	}
 
-	if w.InStruct() {
+	if w.IsInStruct() {
 		if name == "" {
 			return &UsageError{api, "field name not set"}
 		}

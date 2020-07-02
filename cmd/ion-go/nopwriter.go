@@ -106,6 +106,6 @@ func (nopwriter) Finish() error {
 	return nil
 }
 
-func (nopwriter) InStruct() bool {
+func (nopwriter) IsInStruct() bool {
 	return false
 }
