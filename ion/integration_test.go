@@ -40,9 +40,25 @@ type ionItem struct {
 }
 
 func (i *ionItem) equal(o ionItem) bool {
-	return reflect.DeepEqual(i.value, o.value) &&
-		reflect.DeepEqual(i.annotations, o.annotations) &&
-		reflect.DeepEqual(i.ionType, o.ionType)
+	if i.ionType != o.ionType {
+		return false
+	}
+	if !cmpAnnotations(i.annotations, o.annotations) {
+		return false
+	}
+
+	switch i.ionType {
+	case FloatType:
+		return cmpFloats(i.value[0], o.value[0])
+	case DecimalType:
+		return cmpDecimals(i.value[0], o.value[0])
+	case TimestampType:
+		return cmpTimestamps(i.value[0], o.value[0])
+	case ListType, SexpType, StructType:
+		return cmpValueSlices(i.value, o.value)
+	default:
+		return reflect.DeepEqual(i.value, o.value)
+	}
 }
 
 var readGoodFilesSkipList = []string{
