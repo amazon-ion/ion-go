@@ -181,6 +181,10 @@ func (b *bitstream) Next() error {
 		if err != nil {
 			return err
 		}
+		if len == 0 {
+			// Ordered structs must have at least one symbol/value pair.
+			return &SyntaxError{"ordered structs cannot be empty", b.pos - 1}
+		}
 	}
 
 	if code == bitcodeNone {
