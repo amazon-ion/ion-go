@@ -16,6 +16,9 @@ type binaryReader struct {
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r := &binaryReader{
+		reader: reader{
+			fieldName: undefinedFieldName,
+		},
 		cat: cat,
 	}
 	r.bits.Init(in)

@@ -50,3 +50,5 @@ var hexChars = []byte{
 
 var timeType = reflect.TypeOf(time.Time{})
 var decimalType = reflect.TypeOf(Decimal{})
+
+var undefinedFieldName = "UNDEFINED"

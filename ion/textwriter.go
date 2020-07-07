@@ -353,11 +353,11 @@ func (w *textWriter) writeSeparator() error {
 
 // writeFieldName writes a field name inside a struct.
 func (w *textWriter) writeFieldName(api string) error {
-	if w.fieldName == "" {
+	if w.fieldName == undefinedFieldName {
 		return &UsageError{api, "field name not set"}
 	}
 	name := w.fieldName
-	w.fieldName = ""
+	w.fieldName = undefinedFieldName
 
 	if err := writeSymbol(name, w.out); err != nil {
 		return err

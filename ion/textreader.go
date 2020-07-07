@@ -46,6 +46,9 @@ type textReader struct {
 
 func newTextReaderBuf(in *bufio.Reader) Reader {
 	return &textReader{
+		reader: reader{
+			fieldName: undefinedFieldName,
+		},
 		tok: tokenizer{
 			in: in,
 		},

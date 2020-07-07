@@ -163,6 +163,6 @@ func (w *writer) IsInStruct() bool {
 
 // Clear clears field name and annotations after writing a value.
 func (w *writer) clear() {
-	w.fieldName = ""
+	w.fieldName = undefinedFieldName
 	w.annotations = nil
 }
