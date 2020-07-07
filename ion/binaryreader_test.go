@@ -170,7 +170,7 @@ func TestReadBinaryStructs(t *testing.T) {
 	_struct(t, r, func(t *testing.T, r Reader) {
 		_eof(t, r)
 	})
-	_structAF(t, r, "", []string{"foo"}, func(t *testing.T, r Reader) {
+	_structAF(t, r, "UNDEFINED", []string{"foo"}, func(t *testing.T, r Reader) {
 		_structAF(t, r, "name", []string{"bar"}, func(t *testing.T, r Reader) {
 			_eof(t, r)
 		})
@@ -288,7 +288,7 @@ func TestReadBinarySymbols(t *testing.T) {
 	_symbol(t, r, "$ion")
 	_symbol(t, r, "$10")
 	_symbol(t, r, "foo")
-	_symbolAF(t, r, "", []string{"foo"}, "bar")
+	_symbolAF(t, r, "UNDEFINED", []string{"foo"}, "bar")
 	_symbol(t, r, fmt.Sprintf("$%v", uint64(math.MaxUint64)))
 	_eof(t, r)
 }
@@ -423,8 +423,8 @@ func TestReadBinaryNulls(t *testing.T) {
 	})
 
 	_null(t, r, NullType)
-	_nullAF(t, r, NullType, "", []string{"$ion"})
-	_nullAF(t, r, NullType, "", []string{"foo", "bar"})
+	_nullAF(t, r, NullType, "UNDEFINED", []string{"$ion"})
+	_nullAF(t, r, NullType, "UNDEFINED", []string{"foo", "bar"})
 	_eof(t, r)
 }
 
