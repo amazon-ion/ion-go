@@ -2,12 +2,9 @@ package ion
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"math"
 	"math/big"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -15,11 +12,6 @@ import (
 type binaryWriter struct {
 	writer
 	bufs bufstack
-
-	lst  SymbolTable
-	lstb SymbolTableBuilder
-
-	wroteLST bool
 }
 
 // NewBinaryWriter creates a new binary writer that will construct a
@@ -28,8 +20,8 @@ func NewBinaryWriter(out io.Writer, sts ...SharedSymbolTable) Writer {
 	w := &binaryWriter{
 		writer: writer{
 			out: out,
+			lstb: NewSymbolTableBuilder(sts...),
 		},
-		lstb: NewSymbolTableBuilder(sts...),
 	}
 	w.bufs.push(&datagram{})
 	return w
@@ -41,8 +33,8 @@ func NewBinaryWriterLST(out io.Writer, lst SymbolTable) Writer {
 	return &binaryWriter{
 		writer: writer{
 			out: out,
+			lst: lst,
 		},
-		lst: lst,
 	}
 }
 
@@ -541,25 +533,4 @@ func (w *binaryWriter) end(api string, t ctx) error {
 	w.ctx.pop()
 
 	return w.endValue()
-}
-
-// Resolve resolves a symbol to its ID.
-func (w *binaryWriter) resolve(api, sym string) (uint64, error) {
-	if strings.HasPrefix(sym, "$") {
-		id, err := strconv.ParseUint(sym[1:], 10, 64)
-		if err == nil {
-			return id, nil
-		}
-	}
-
-	if w.lst != nil {
-		id, ok := w.lst.FindByName(sym)
-		if !ok {
-			return 0, &UsageError{api, fmt.Sprintf("symbol '%v' not defined", sym)}
-		}
-		return id, nil
-	}
-
-	id, _ := w.lstb.Add(sym)
-	return id, nil
 }

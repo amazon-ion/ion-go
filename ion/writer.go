@@ -2,8 +2,11 @@ package ion
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -123,6 +126,11 @@ type writer struct {
 
 	fieldName   string
 	annotations []string
+
+	lst  SymbolTable
+	lstb SymbolTableBuilder
+
+	wroteLST bool
 }
 
 // FieldName sets the field name for the next value written.
@@ -165,4 +173,25 @@ func (w *writer) IsInStruct() bool {
 func (w *writer) clear() {
 	w.fieldName = ""
 	w.annotations = nil
+}
+
+// Resolve resolves a symbol to its ID.
+func (w *writer) resolve(api, sym string) (uint64, error) {
+	if strings.HasPrefix(sym, "$") {
+		id, err := strconv.ParseUint(sym[1:], 10, 64)
+		if err == nil {
+			return id, nil
+		}
+	}
+
+	if w.lst != nil {
+		id, ok := w.lst.FindByName(sym)
+		if !ok {
+			return 0, &UsageError{api, fmt.Sprintf("symbol '%v' not defined", sym)}
+		}
+		return id, nil
+	}
+
+	id, _ := w.lstb.Add(sym)
+	return id, nil
 }

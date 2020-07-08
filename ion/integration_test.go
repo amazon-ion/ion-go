@@ -88,7 +88,6 @@ var binaryRoundTripSkipList = []string{
 }
 
 var textRoundTripSkipList = []string{
-	"annotations.ion",
 	"float32.10n",
 	"floatSpecials.ion",
 	"floats.ion",
@@ -106,7 +105,6 @@ var textRoundTripSkipList = []string{
 	"symbolEmpty.ion",
 	"symbols.ion",
 	"systemSymbols.ion",
-	"systemSymbolsAsAnnotations.ion",
 	"T6-large.10n",
 	"T6-small.10n",
 	"T7-large.10n",

@@ -39,7 +39,10 @@ func NewTextWriter(out io.Writer) Writer {
 // NewTextWriterOpts returns a new text writer with the given options.
 func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	return &textWriter{
-		writer:      writer{out: out},
+		writer:      writer{
+			out: out,
+			lst: NewSymbolTableBuilder().Build(),
+		},
 		opts:        opts,
 		emptyStream: true,
 	}
@@ -314,7 +317,7 @@ func (w *textWriter) beginValue(api string) error {
 	}
 
 	if len(w.annotations) > 0 {
-		if err := w.writeAnnotations(); err != nil {
+		if err := w.writeAnnotations(api); err != nil {
 			return err
 		}
 	}
@@ -372,14 +375,28 @@ func (w *textWriter) writeFieldName(api string) error {
 }
 
 // writeAnnotations writes out the annotations for a value.
-func (w *textWriter) writeAnnotations() error {
+func (w *textWriter) writeAnnotations(api string) error {
 	as := w.annotations
 	w.annotations = nil
 
-	for _, a := range as {
-		if err := writeSymbol(a, w.out); err != nil {
+	// If possible, resolve symbols as their names, else default to ID.
+	symbols := make([]string, len(as))
+	for i, a := range as {
+		id, _ := w.resolve(api, a)
+		name, hasName := w.lst.FindByID(id)
+
+		if hasName {
+			symbols[i] = name
+		} else {
+			symbols[i] = a
+		}
+	}
+
+	for _, s := range symbols {
+		if err := writeSymbol(s, w.out); err != nil {
 			return err
 		}
+
 		if err := writeRawString("::", w.out); err != nil {
 			return err
 		}
