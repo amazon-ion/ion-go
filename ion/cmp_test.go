@@ -38,19 +38,7 @@ func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 }
 
 func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
-	if len(thisAnnotations) != len(otherAnnotations) {
-		return false
-	}
-
-	for idx, this := range thisAnnotations {
-		other := otherAnnotations[idx]
-
-		if !cmp.Equal(this, other) {
-			return false
-		}
-	}
-
-	return true
+	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
 }
 
 func cmpValueSlices(thisValues, otherValues []interface{}) bool {
@@ -65,14 +53,13 @@ func cmpValueSlices(thisValues, otherValues []interface{}) bool {
 	res := false
 	for idx, this := range thisValues {
 		other := otherValues[idx]
-		thisType, otherType := reflect.TypeOf(this), reflect.TypeOf(other)
 
-		if thisType != otherType {
+		if !haveSameTypes(this, other) {
 			return false
 		}
 
 		switch this.(type) {
-		case string: // null.Sexp, null.List, null.Struct
+		case string: // null.sexp, null.list, null.struct
 			res = strNullTypeCmp(this, other)
 		default:
 			thisItem := this.(ionItem)
@@ -124,7 +111,7 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case string: // null.Timestamp
+	case string: // null.timestamp
 		return strNullTypeCmp(val, otherValue)
 	case time.Time:
 		thisTimestamp := ionTimestamp{val}
