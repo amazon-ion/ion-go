@@ -19,7 +19,7 @@ type binaryWriter struct {
 func NewBinaryWriter(out io.Writer, sts ...SharedSymbolTable) Writer {
 	w := &binaryWriter{
 		writer: writer{
-			out: out,
+			out:  out,
 			lstb: NewSymbolTableBuilder(sts...),
 		},
 	}

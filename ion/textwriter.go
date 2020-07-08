@@ -39,7 +39,7 @@ func NewTextWriter(out io.Writer) Writer {
 // NewTextWriterOpts returns a new text writer with the given options.
 func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
 	return &textWriter{
-		writer:      writer{
+		writer: writer{
 			out: out,
 			lst: NewSymbolTableBuilder().Build(),
 		},
