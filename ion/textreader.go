@@ -46,17 +46,14 @@ type textReader struct {
 
 func newTextReaderBuf(in *bufio.Reader) Reader {
 	return &textReader{
+		reader: reader{
+			lst: NewSymbolTableBuilder().Build(),
+		},
 		tok: tokenizer{
 			in: in,
 		},
 		state: trsBeforeTypeAnnotations,
 	}
-}
-
-// SymbolTable returns the current symbol table.
-func (t *textReader) SymbolTable() SymbolTable {
-	// TODO: Include me if present in the input stream?
-	return nil
 }
 
 // Next moves the reader to the next value.

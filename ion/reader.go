@@ -191,6 +191,13 @@ type reader struct {
 	annotations []string
 	valueType   Type
 	value       interface{}
+
+	lst SymbolTable
+}
+
+// SymbolTable returns the current symbol table.
+func (r *reader) SymbolTable() SymbolTable {
+	return r.lst
 }
 
 // Err returns the current error.
