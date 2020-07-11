@@ -37,6 +37,7 @@ type ionItem struct {
 	ionType     Type
 	annotations []string
 	value       []interface{}
+	fieldName   string
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -44,6 +45,9 @@ func (i *ionItem) equal(o ionItem) bool {
 		return false
 	}
 	if !cmpAnnotations(i.annotations, o.annotations) {
+		return false
+	}
+	if !cmpFieldNames(i.fieldName, o.fieldName) {
 		return false
 	}
 
@@ -54,8 +58,10 @@ func (i *ionItem) equal(o ionItem) bool {
 		return cmpDecimals(i.value[0], o.value[0])
 	case TimestampType:
 		return cmpTimestamps(i.value[0], o.value[0])
-	case ListType, SexpType, StructType:
+	case ListType, SexpType:
 		return cmpValueSlices(i.value, o.value)
+	case StructType:
+		return cmpStruct(i.value, o.value)
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
@@ -208,8 +214,6 @@ var equivsSkipList = []string{
 	"nonIVMNoOps.ion",
 	"sexps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
-	"structsFieldsDiffOrder.ion",
-	"structsFieldsRepeatedNames.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
 	"timestampSuperfluousOffset.10n",
@@ -223,7 +227,6 @@ var nonEquivsSkipList = []string{
 	"floats.ion",
 	"floatsVsDecimals.ion",
 	"localSymbolTableWithAnnotations.ion",
-	"structs.ion",
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",
@@ -730,6 +733,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	an := reader.Annotations()
 	if len(an) > 0 {
 		ionItem.annotations = an
+	}
+
+	fn := reader.FieldName()
+	if fn != "" {
+		ionItem.fieldName = fn
 	}
 
 	currentType := reader.Type()

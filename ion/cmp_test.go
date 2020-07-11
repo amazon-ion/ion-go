@@ -41,36 +41,8 @@ func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
 	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
 }
 
-func cmpValueSlices(thisValues, otherValues []interface{}) bool {
-	if len(thisValues) == 0 && len(otherValues) == 0 {
-		return true
-	}
-
-	if len(thisValues) != len(otherValues) {
-		return false
-	}
-
-	res := false
-	for idx, this := range thisValues {
-		other := otherValues[idx]
-
-		if !haveSameTypes(this, other) {
-			return false
-		}
-
-		switch this.(type) {
-		case string: // null.sexp, null.list, null.struct
-			res = strNullTypeCmp(this, other)
-		default:
-			thisItem := this.(ionItem)
-			otherItem := other.(ionItem)
-			res = thisItem.equal(otherItem)
-		}
-		if !res {
-			return false
-		}
-	}
-	return res
+func cmpFieldNames(thisFieldName, otherFieldName string) bool {
+	return reflect.DeepEqual(thisFieldName, otherFieldName)
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {
@@ -121,12 +93,115 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	}
 }
 
+func cmpValueSlices(thisValues, otherValues []interface{}) bool {
+	if len(thisValues) == 0 && len(otherValues) == 0 {
+		return true
+	}
+
+	if len(thisValues) != len(otherValues) {
+		return false
+	}
+
+	res := false
+	for idx, this := range thisValues {
+		other := otherValues[idx]
+
+		if !haveSameTypes(this, other) {
+			return false
+		}
+
+		thisItem := getContainersType(this)
+		otherItem := getContainersType(other)
+		res = containersEquality(thisItem, otherItem)
+
+		if !res {
+			return false
+		}
+	}
+	return res
+}
+
+func cmpStruct(thisValues, otherValues []interface{}) bool {
+	if len(thisValues) == 0 && len(otherValues) == 0 {
+		return true
+	}
+
+	if len(thisValues) != len(otherValues) {
+		return false
+	}
+
+	var res bool
+	var checked []int
+	for _, this := range thisValues {
+		res = false
+		var thisItem = getContainersType(this)
+		for i := 0; i < len(otherValues); i++ {
+			if contains(checked, i) {
+				continue
+			}
+			if !haveSameTypes(this, otherValues[i]) {
+				continue
+			} else {
+				otherItem := getContainersType(otherValues[i])
+				res = containersEquality(thisItem, otherItem)
+				if res {
+					if !contains(checked, i) {
+						checked = append(checked, i)
+					}
+					break
+				}
+			}
+		}
+	}
+	if len(otherValues) != len(checked) {
+		return false
+	}
+
+	return res
+}
+
 func strNullTypeCmp(this, other interface{}) bool {
-	thisStr := this.(string)
-	otherStr := other.(string)
-	return cmp.Equal(thisStr, otherStr)
+	thisStr, thisOk := this.(string)
+	otherStr, otherOk := other.(string)
+	if thisOk && otherOk {
+		return cmp.Equal(thisStr, otherStr)
+	}
+	return false
 }
 
 func haveSameTypes(this, other interface{}) bool {
 	return reflect.TypeOf(this) == reflect.TypeOf(other)
+}
+
+func getContainersType(in interface{}) interface{} {
+	switch in.(type) {
+	case string:
+		return in.(string)
+	default:
+		return in.(ionItem)
+	}
+}
+
+func contains(list []int, idx int) bool {
+	for _, num := range list {
+		if num == idx {
+			return true
+		}
+	}
+	return false
+}
+
+func containersEquality(this, other interface{}) bool {
+	switch this.(type) {
+	case string:
+		if strNullTypeCmp(this, other) {
+			return true
+		}
+	default:
+		otherItem := other.(ionItem)
+		if otherItem.equal(this.(ionItem)) {
+			return true
+		}
+	}
+	return false
 }
