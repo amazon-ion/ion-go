@@ -176,7 +176,7 @@ func (p *processor) process(in ion.Reader) error {
 	for in.Next() {
 		p.idx++
 		name := in.FieldName()
-		if name != "UNDEFINED" {
+		if name != "" {
 			if err = p.out.FieldName(name); err != nil {
 				return p.error(write, err)
 			}

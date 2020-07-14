@@ -37,14 +37,12 @@ type ionItem struct {
 	ionType     Type
 	annotations []string
 	value       []interface{}
-	fieldName   string
 }
 
 func (i *ionItem) equal(o ionItem) bool {
 	return reflect.DeepEqual(i.value, o.value) &&
 		reflect.DeepEqual(i.annotations, o.annotations) &&
-		reflect.DeepEqual(i.ionType, o.ionType) &&
-		reflect.DeepEqual(i.fieldName, o.fieldName)
+		reflect.DeepEqual(i.ionType, o.ionType)
 }
 
 var readGoodFilesSkipList = []string{
@@ -65,6 +63,7 @@ var binaryRoundTripSkipList = []string{
 	"leapDayRollover.ion",
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
+	"structWhitespace.ion",
 	"symbolEmpty.ion",
 	"T6-large.10n",
 	"T6-small.10n",
@@ -99,6 +98,7 @@ var textRoundTripSkipList = []string{
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"notVersionMarkers.ion",
+	"structWhitespace.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
@@ -527,7 +527,7 @@ func isInSkipList(skipList []string, fn string) bool {
 func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		name := reader.FieldName()
-		if name != undefinedFieldName {
+		if name != "" {
 			err := writer.FieldName(name)
 			if err != nil {
 				t.Fatal(err)
@@ -713,11 +713,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	an := reader.Annotations()
 	if len(an) > 0 {
 		ionItem.annotations = an
-	}
-
-	fn := reader.FieldName()
-	if fn != undefinedFieldName {
-		ionItem.fieldName = fn
 	}
 
 	currentType := reader.Type()

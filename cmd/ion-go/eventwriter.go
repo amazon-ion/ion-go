@@ -253,11 +253,11 @@ func clobify(val []byte) string {
 
 func (e *eventwriter) write(ev event) error {
 	name := e.fieldname
-	e.fieldname = "UNDEFINED"
+	e.fieldname = ""
 	annos := e.annotations
 	e.annotations = nil
 
-	if name != "UNDEFINED" {
+	if name != "" {
 		ev.FieldName = &token{Text: name}
 	}
 
