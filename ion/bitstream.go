@@ -566,6 +566,8 @@ func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset i
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
+// This function returns the nanoseconds as an int, overflow as a bool, and an error
+// if there was a problem executing this function.
 func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
 	d, err := b.readDecimal(len)
 	if err != nil {

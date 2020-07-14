@@ -114,8 +114,8 @@ func TestBitcodeString(t *testing.T) {
 }
 
 func TestBinaryReadTimestamp(t *testing.T) {
-	test := func(ion []byte, eval string) {
-		t.Run(eval, func(t *testing.T) {
+	test := func(ion []byte, expectedValue string) {
+		t.Run(expectedValue, func(t *testing.T) {
 
 			b := bitstream{}
 			b.InitBytes(ion)
@@ -126,13 +126,13 @@ func TestBinaryReadTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			et, err := time.Parse(time.RFC3339Nano, eval)
+			expectedTime, err := time.Parse(time.RFC3339Nano, expectedValue)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !val.Equal(et) {
-				t.Errorf("expected %v, got %v", eval, val)
+			if !val.Equal(expectedTime) {
+				t.Errorf("expected %v, got %v", expectedValue, val)
 			}
 		})
 	}

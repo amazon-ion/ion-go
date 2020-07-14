@@ -231,6 +231,8 @@ func (d *Decimal) upscale(scale int32) *Decimal {
 	}
 }
 
+// Check to upscale a decimal which means to make 'n' bigger by making 'scale' smaller.
+// Makes comparisons and math easier, at the expense of more storage space.
 func (d *Decimal) checkToUpscale() (*Decimal, error) {
 	if d.scale < 0 {
 		// Don't even bother trying this with numbers that *definitely* too big to represent
@@ -256,12 +258,12 @@ func (d *Decimal) Trunc() (int64, error) {
 	d = ud
 	str := d.n.String()
 
-	want := len(str) - int(d.scale)
-	if want <= 0 {
+	truncateTo := len(str) - int(d.scale)
+	if truncateTo <= 0 {
 		return 0, nil
 	}
 
-	return strconv.ParseInt(str[:want], 10, 64)
+	return strconv.ParseInt(str[:truncateTo], 10, 64)
 }
 
 // Round attempts to truncate this decimal to an int64, rounding any fractional bits.
