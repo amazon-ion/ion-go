@@ -133,7 +133,7 @@ func TestTrunc(t *testing.T) {
 	test := func(a string, eval int64) {
 		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
 			aa := MustParseDecimal(a)
-			val, err := aa.Trunc()
+			val, err := aa.trunc()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -157,7 +157,7 @@ func TestRound(t *testing.T) {
 	test := func(a string, eval int64) {
 		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
 			aa := MustParseDecimal(a)
-			val, err := aa.Round()
+			val, err := aa.round()
 			if err != nil {
 				t.Fatal(err)
 			}

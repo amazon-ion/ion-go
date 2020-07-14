@@ -250,7 +250,7 @@ func (d *Decimal) checkToUpscale() (*Decimal, error) {
 }
 
 // Trunc attempts to truncate this decimal to an int64, dropping any fractional bits.
-func (d *Decimal) Trunc() (int64, error) {
+func (d *Decimal) trunc() (int64, error) {
 	ud, err := d.checkToUpscale()
 	if err != nil {
 		return 0, err
@@ -267,7 +267,7 @@ func (d *Decimal) Trunc() (int64, error) {
 }
 
 // Round attempts to truncate this decimal to an int64, rounding any fractional bits.
-func (d *Decimal) Round() (int64, error) {
+func (d *Decimal) round() (int64, error) {
 	ud, err := d.checkToUpscale()
 	if err != nil {
 		return 0, err
