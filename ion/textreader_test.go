@@ -44,7 +44,7 @@ func TestReadSexps(t *testing.T) {
 	test("(foo bar baz :: boop)", func(t *testing.T, r Reader) {
 		_symbol(t, r, "foo")
 		_symbol(t, r, "bar")
-		_symbolAF(t, r, "UNDEFINED", []string{"baz"}, "boop")
+		_symbolAF(t, r, nil, []string{"baz"}, "boop")
 	})
 }
 
@@ -62,13 +62,20 @@ func TestStructs(t *testing.T) {
 	})
 
 	test("{foo : bar :: baz}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, "foo", []string{"bar"}, "baz")
+		foo := "foo"
+		_symbolAF(t, r, &foo, []string{"bar"}, "baz")
 	})
 
 	test("{foo: a, bar: b, baz: c}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, "foo", nil, "a")
-		_symbolAF(t, r, "bar", nil, "b")
-		_symbolAF(t, r, "baz", nil, "c")
+		foo, bar, baz := "foo", "bar", "baz"
+		_symbolAF(t, r, &foo, nil, "a")
+		_symbolAF(t, r, &bar, nil, "b")
+		_symbolAF(t, r, &baz, nil, "c")
+	})
+
+	test("{\"\": a}", func(t *testing.T, r Reader) {
+		emptyString := ""
+		_symbolAF(t, r, &emptyString, nil, "a")
 	})
 }
 
@@ -88,7 +95,7 @@ func TestNullStructs(t *testing.T) {
 	r := NewReaderStr("null.struct 'null'::{foo:bar}")
 
 	_null(t, r, StructType)
-	_nextAF(t, r, StructType, "UNDEFINED", []string{"null"})
+	_nextAF(t, r, StructType, nil, []string{"null"})
 	_eof(t, r)
 }
 
@@ -113,7 +120,7 @@ func TestLists(t *testing.T) {
 	test("[foo, bar, baz::boop]", func(t *testing.T, r Reader) {
 		_symbol(t, r, "foo")
 		_symbol(t, r, "bar")
-		_symbolAF(t, r, "UNDEFINED", []string{"baz"}, "boop")
+		_symbolAF(t, r, nil, []string{"baz"}, "boop")
 		_eof(t, r)
 	})
 }
@@ -189,7 +196,7 @@ func TestTimestamps(t *testing.T) {
 	testA := func(str string, etas []string, eval time.Time) {
 		t.Run(str, func(t *testing.T) {
 			r := NewReaderStr(str)
-			_nextAF(t, r, TimestampType, "UNDEFINED", etas)
+			_nextAF(t, r, TimestampType, nil, etas)
 
 			val, err := r.TimeValue()
 			if err != nil {
@@ -229,7 +236,7 @@ func TestDecimals(t *testing.T) {
 			ee := MustParseDecimal(eval)
 
 			r := NewReaderStr(str)
-			_nextAF(t, r, DecimalType, "UNDEFINED", etas)
+			_nextAF(t, r, DecimalType, nil, etas)
 
 			val, err := r.DecimalValue()
 			if err != nil {
@@ -261,7 +268,7 @@ func TestFloats(t *testing.T) {
 	testA := func(str string, etas []string, eval float64) {
 		t.Run(str, func(t *testing.T) {
 			r := NewReaderStr(str)
-			_floatAF(t, r, "UNDEFINED", etas, eval)
+			_floatAF(t, r, nil, etas, eval)
 			_eof(t, r)
 		})
 	}
@@ -354,9 +361,9 @@ func TestInts(t *testing.T) {
 func TestStrings(t *testing.T) {
 	r := NewReaderStr(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
 
-	_stringAF(t, r, "UNDEFINED", []string{"foo"}, "bar")
+	_stringAF(t, r, nil, []string{"foo"}, "bar")
 	_string(t, r, "baz")
-	_stringAF(t, r, "UNDEFINED", []string{"a", "b"}, "beepboop")
+	_stringAF(t, r, nil, []string{"a", "b"}, "beepboop")
 	_null(t, r, StringType)
 
 	_eof(t, r)
@@ -365,9 +372,9 @@ func TestStrings(t *testing.T) {
 func TestSymbols(t *testing.T) {
 	r := NewReaderStr("'null'::foo bar a::b::'baz' null.symbol")
 
-	_symbolAF(t, r, "UNDEFINED", []string{"null"}, "foo")
+	_symbolAF(t, r, nil, []string{"null"}, "foo")
 	_symbol(t, r, "bar")
-	_symbolAF(t, r, "UNDEFINED", []string{"a", "b"}, "baz")
+	_symbolAF(t, r, nil, []string{"a", "b"}, "baz")
 	_null(t, r, SymbolType)
 
 	_eof(t, r)
@@ -458,30 +465,30 @@ func TestInStruct(t *testing.T) {
 type containerhandler func(t *testing.T, r Reader)
 
 func _sexp(t *testing.T, r Reader, f containerhandler) {
-	_sexpAF(t, r, "UNDEFINED", nil, f)
+	_sexpAF(t, r, nil, nil, f)
 }
 
-func _sexpAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+func _sexpAF(t *testing.T, r Reader, efn *string, etas []string, f containerhandler) {
 	_containerAF(t, r, SexpType, efn, etas, f)
 }
 
 func _struct(t *testing.T, r Reader, f containerhandler) {
-	_structAF(t, r, "UNDEFINED", nil, f)
+	_structAF(t, r, nil, nil, f)
 }
 
-func _structAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+func _structAF(t *testing.T, r Reader, efn *string, etas []string, f containerhandler) {
 	_containerAF(t, r, StructType, efn, etas, f)
 }
 
 func _list(t *testing.T, r Reader, f containerhandler) {
-	_listAF(t, r, "UNDEFINED", nil, f)
+	_listAF(t, r, nil, nil, f)
 }
 
-func _listAF(t *testing.T, r Reader, efn string, etas []string, f containerhandler) {
+func _listAF(t *testing.T, r Reader, efn *string, etas []string, f containerhandler) {
 	_containerAF(t, r, ListType, efn, etas, f)
 }
 
-func _containerAF(t *testing.T, r Reader, et Type, efn string, etas []string, f containerhandler) {
+func _containerAF(t *testing.T, r Reader, et Type, efn *string, etas []string, f containerhandler) {
 	_nextAF(t, r, et, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.%v", et, et)
@@ -499,10 +506,10 @@ func _containerAF(t *testing.T, r Reader, et Type, efn string, etas []string, f 
 }
 
 func _int(t *testing.T, r Reader, eval int) {
-	_intAF(t, r, "UNDEFINED", nil, eval)
+	_intAF(t, r, nil, nil, eval)
 }
 
-func _intAF(t *testing.T, r Reader, efn string, etas []string, eval int) {
+func _intAF(t *testing.T, r Reader, efn *string, etas []string, eval int) {
 	_nextAF(t, r, IntType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.int", eval)
@@ -526,10 +533,10 @@ func _intAF(t *testing.T, r Reader, efn string, etas []string, eval int) {
 }
 
 func _int64(t *testing.T, r Reader, eval int64) {
-	_int64AF(t, r, "UNDEFINED", nil, eval)
+	_int64AF(t, r, nil, nil, eval)
 }
 
-func _int64AF(t *testing.T, r Reader, efn string, etas []string, eval int64) {
+func _int64AF(t *testing.T, r Reader, efn *string, etas []string, eval int64) {
 	_nextAF(t, r, IntType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.int", eval)
@@ -553,10 +560,10 @@ func _int64AF(t *testing.T, r Reader, efn string, etas []string, eval int64) {
 }
 
 func _uint(t *testing.T, r Reader, eval uint64) {
-	_uintAF(t, r, "UNDEFINED", nil, eval)
+	_uintAF(t, r, nil, nil, eval)
 }
 
-func _uintAF(t *testing.T, r Reader, efn string, etas []string, eval uint64) {
+func _uintAF(t *testing.T, r Reader, efn *string, etas []string, eval uint64) {
 	_nextAF(t, r, IntType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.int", eval)
@@ -580,10 +587,10 @@ func _uintAF(t *testing.T, r Reader, efn string, etas []string, eval uint64) {
 }
 
 func _bigInt(t *testing.T, r Reader, eval *big.Int) {
-	_bigIntAF(t, r, "UNDEFINED", nil, eval)
+	_bigIntAF(t, r, nil, nil, eval)
 }
 
-func _bigIntAF(t *testing.T, r Reader, efn string, etas []string, eval *big.Int) {
+func _bigIntAF(t *testing.T, r Reader, efn *string, etas []string, eval *big.Int) {
 	_nextAF(t, r, IntType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.int", eval)
@@ -607,10 +614,10 @@ func _bigIntAF(t *testing.T, r Reader, efn string, etas []string, eval *big.Int)
 }
 
 func _float(t *testing.T, r Reader, eval float64) {
-	_floatAF(t, r, "UNDEFINED", nil, eval)
+	_floatAF(t, r, nil, nil, eval)
 }
 
-func _floatAF(t *testing.T, r Reader, efn string, etas []string, eval float64) {
+func _floatAF(t *testing.T, r Reader, efn *string, etas []string, eval float64) {
 	_nextAF(t, r, FloatType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.float", eval)
@@ -631,10 +638,10 @@ func _floatAF(t *testing.T, r Reader, efn string, etas []string, eval float64) {
 }
 
 func _decimal(t *testing.T, r Reader, eval *Decimal) {
-	_decimalAF(t, r, "UNDEFINED", nil, eval)
+	_decimalAF(t, r, nil, nil, eval)
 }
 
-func _decimalAF(t *testing.T, r Reader, efn string, etas []string, eval *Decimal) {
+func _decimalAF(t *testing.T, r Reader, efn *string, etas []string, eval *Decimal) {
 	_nextAF(t, r, DecimalType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.decimal", eval)
@@ -651,10 +658,10 @@ func _decimalAF(t *testing.T, r Reader, efn string, etas []string, eval *Decimal
 }
 
 func _timestamp(t *testing.T, r Reader, eval time.Time) {
-	_timestampAF(t, r, "UNDEFINED", nil, eval)
+	_timestampAF(t, r, nil, nil, eval)
 }
 
-func _timestampAF(t *testing.T, r Reader, efn string, etas []string, eval time.Time) {
+func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval time.Time) {
 	_nextAF(t, r, TimestampType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.timestamp", eval)
@@ -671,10 +678,10 @@ func _timestampAF(t *testing.T, r Reader, efn string, etas []string, eval time.T
 }
 
 func _string(t *testing.T, r Reader, eval string) {
-	_stringAF(t, r, "UNDEFINED", nil, eval)
+	_stringAF(t, r, nil, nil, eval)
 }
 
-func _stringAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
+func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval string) {
 	_nextAF(t, r, StringType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.string", eval)
@@ -690,10 +697,10 @@ func _stringAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
 }
 
 func _symbol(t *testing.T, r Reader, eval string) {
-	_symbolAF(t, r, "UNDEFINED", nil, eval)
+	_symbolAF(t, r, nil, nil, eval)
 }
 
-func _symbolAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
+func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string) {
 	_nextAF(t, r, SymbolType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.symbol", eval)
@@ -709,10 +716,10 @@ func _symbolAF(t *testing.T, r Reader, efn string, etas []string, eval string) {
 }
 
 func _bool(t *testing.T, r Reader, eval bool) {
-	_boolAF(t, r, "UNDEFINED", nil, eval)
+	_boolAF(t, r, nil, nil, eval)
 }
 
-func _boolAF(t *testing.T, r Reader, efn string, etas []string, eval bool) {
+func _boolAF(t *testing.T, r Reader, efn *string, etas []string, eval bool) {
 	_nextAF(t, r, BoolType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.bool", eval)
@@ -728,10 +735,10 @@ func _boolAF(t *testing.T, r Reader, efn string, etas []string, eval bool) {
 }
 
 func _clob(t *testing.T, r Reader, eval []byte) {
-	_clobAF(t, r, "UNDEFINED", nil, eval)
+	_clobAF(t, r, nil, nil, eval)
 }
 
-func _clobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
+func _clobAF(t *testing.T, r Reader, efn *string, etas []string, eval []byte) {
 	_nextAF(t, r, ClobType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.clob", eval)
@@ -747,10 +754,10 @@ func _clobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
 }
 
 func _blob(t *testing.T, r Reader, eval []byte) {
-	_blobAF(t, r, "UNDEFINED", nil, eval)
+	_blobAF(t, r, nil, nil, eval)
 }
 
-func _blobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
+func _blobAF(t *testing.T, r Reader, efn *string, etas []string, eval []byte) {
 	_nextAF(t, r, BlobType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.blob", eval)
@@ -766,10 +773,10 @@ func _blobAF(t *testing.T, r Reader, efn string, etas []string, eval []byte) {
 }
 
 func _null(t *testing.T, r Reader, et Type) {
-	_nullAF(t, r, et, "UNDEFINED", nil)
+	_nullAF(t, r, et, nil, nil)
 }
 
-func _nullAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
+func _nullAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
 	_nextAF(t, r, et, efn, etas)
 	if !r.IsNull() {
 		t.Error("isnull returned false")
@@ -777,10 +784,10 @@ func _nullAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
 }
 
 func _next(t *testing.T, r Reader, et Type) {
-	_nextAF(t, r, et, "UNDEFINED", nil)
+	_nextAF(t, r, et, nil, nil)
 }
 
-func _nextAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
+func _nextAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
 	if !r.Next() {
 		t.Fatal(r.Err())
 	}
@@ -788,8 +795,9 @@ func _nextAF(t *testing.T, r Reader, et Type, efn string, etas []string) {
 		t.Fatalf("expected %v, got %v", et, r.Type())
 	}
 
-	if efn != r.FieldName() {
-		t.Errorf("expected fieldname=%v, got %v", efn, r.FieldName())
+	fn := r.FieldName()
+	if efn != nil && fn != nil && *efn != *fn {
+		t.Errorf("expected fieldname=%v, got %v", *efn, *fn)
 	}
 	if !_strequals(etas, r.Annotations()) {
 		t.Errorf("expected type annotations=%v, got %v", etas, r.Annotations())

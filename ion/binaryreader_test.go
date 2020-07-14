@@ -123,8 +123,8 @@ func TestReadBinaryLST(t *testing.T) {
 		t.Fatal("symboltable is nil")
 	}
 
-	if lst.MaxID() != 111 {
-		t.Errorf("expected maxid=111, got %v", lst.MaxID())
+	if lst.MaxID() != 112 {
+		t.Errorf("expected maxid=112, got %v", lst.MaxID())
 	}
 
 	if _, ok := lst.FindByID(109); ok {
@@ -139,6 +139,14 @@ func TestReadBinaryLST(t *testing.T) {
 		t.Errorf("expected $111=bar, got %v", sym)
 	}
 
+	sym, ok = lst.FindByID(112)
+	if !ok {
+		t.Fatal("no symbol defined for $112")
+	}
+	if sym != "" {
+		t.Errorf("expected $112='', got %v", sym)
+	}
+
 	id, ok := lst.FindByName("foo")
 	if !ok {
 		t.Fatal("no id defined for foo")
@@ -147,8 +155,8 @@ func TestReadBinaryLST(t *testing.T) {
 		t.Errorf("expected foo=$110, got $%v", id)
 	}
 
-	if _, ok := lst.FindByID(112); ok {
-		t.Error("found a symbol for $112")
+	if _, ok := lst.FindByID(113); ok {
+		t.Error("found a symbol for $113")
 	}
 
 	if _, ok := lst.FindByName("bogus"); ok {
@@ -162,19 +170,25 @@ func TestReadBinaryStructs(t *testing.T) {
 		0xD0,                   // {}
 		0xEA, 0x81, 0xEE, 0xD7, // foo::{
 		0x84, 0xE3, 0x81, 0xEF, 0xD0, // name:bar::{},
-		0x88, 0x20, // max_id:0
-		// }
+		0x88, 0x20, // max_id:0},
+		0xD3, 0xF0, 0x21, 0x0F, // {"":15},
 	})
 
 	_null(t, r, StructType)
 	_struct(t, r, func(t *testing.T, r Reader) {
 		_eof(t, r)
 	})
-	_structAF(t, r, "UNDEFINED", []string{"foo"}, func(t *testing.T, r Reader) {
-		_structAF(t, r, "name", []string{"bar"}, func(t *testing.T, r Reader) {
+	_structAF(t, r, nil, []string{"foo"}, func(t *testing.T, r Reader) {
+		name := "name"
+		_structAF(t, r, &name, []string{"bar"}, func(t *testing.T, r Reader) {
 			_eof(t, r)
 		})
-		_intAF(t, r, "max_id", nil, 0)
+		maxId := "max_id"
+		_intAF(t, r, &maxId, nil, 0)
+	})
+	emptyString := ""
+	_structAF(t, r, &emptyString, nil, func(t *testing.T, r Reader) {
+		_intAF(t, r, &emptyString, nil, 15)
 	})
 	_eof(t, r)
 }
@@ -288,7 +302,7 @@ func TestReadBinarySymbols(t *testing.T) {
 	_symbol(t, r, "$ion")
 	_symbol(t, r, "$10")
 	_symbol(t, r, "foo")
-	_symbolAF(t, r, "UNDEFINED", []string{"foo"}, "bar")
+	_symbolAF(t, r, nil, []string{"foo"}, "bar")
 	_symbol(t, r, fmt.Sprintf("$%v", uint64(math.MaxUint64)))
 	_eof(t, r)
 }
@@ -423,8 +437,8 @@ func TestReadBinaryNulls(t *testing.T) {
 	})
 
 	_null(t, r, NullType)
-	_nullAF(t, r, NullType, "UNDEFINED", []string{"$ion"})
-	_nullAF(t, r, NullType, "UNDEFINED", []string{"foo", "bar"})
+	_nullAF(t, r, NullType, nil, []string{"$ion"})
+	_nullAF(t, r, NullType, nil, []string{"foo", "bar"})
 	_eof(t, r)
 }
 
@@ -437,16 +451,17 @@ func TestReadEmptyBinary(t *testing.T) {
 func readBinary(ion []byte) Reader {
 	prefix := []byte{
 		0xE0, 0x01, 0x00, 0xEA, // $ion_1_0
-		0xEE, 0x9F, 0x81, 0x83, 0xDE, 0x9B, // $ion_symbol_table::{
+		0xEE, 0xA0, 0x81, 0x83, 0xDE, 0x9C, // $ion_symbol_table::{
 		0x86, 0xBE, 0x8E, // imports:[
 		0xDD,                                // {
 		0x84, 0x85, 'b', 'o', 'g', 'u', 's', // name: "bogus"
 		0x85, 0x21, 0x2A, // version: 42
 		0x88, 0x21, 0x64, // max_id: 100
 		// }]
-		0x87, 0xB8, // symbols: [
+		0x87, 0xB9, // symbols: [
 		0x83, 'f', 'o', 'o', // "foo"
 		0x83, 'b', 'a', 'r', // "bar"
+		0x80, // ""
 		// ]
 		// }
 	}
