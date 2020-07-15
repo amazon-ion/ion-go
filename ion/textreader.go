@@ -176,7 +176,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
-		t.fieldName = val
+		t.fieldName = &val
 		t.state = trsBeforeTypeAnnotations
 
 		return false, nil

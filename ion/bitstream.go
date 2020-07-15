@@ -181,6 +181,10 @@ func (b *bitstream) Next() error {
 		if err != nil {
 			return err
 		}
+		if len == 0 {
+			// Ordered structs must have at least one symbol/value pair.
+			return &SyntaxError{"ordered structs cannot be empty", b.pos - 1}
+		}
 	}
 
 	if code == bitcodeNone {
@@ -676,14 +680,16 @@ func (b *bitstream) ReadBytes() ([]byte, error) {
 		panic("not a lob")
 	}
 
-	// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
-	if b.len == 0 {
-		return []byte{}, nil
-	}
-
-	bs, err := b.readN(b.len)
-	if err != nil {
-		return nil, err
+	var bs []byte
+	if b.len > 0 {
+		var err error
+		bs, err = b.readN(b.len)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
+		bs = []byte{}
 	}
 
 	b.state = b.stateAfterValue()
