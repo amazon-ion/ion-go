@@ -183,8 +183,8 @@ func TestReadBinaryStructs(t *testing.T) {
 		_structAF(t, r, &name, []string{"bar"}, func(t *testing.T, r Reader) {
 			_eof(t, r)
 		})
-		maxId := "max_id"
-		_intAF(t, r, &maxId, nil, 0)
+		maxID := "max_id"
+		_intAF(t, r, &maxID, nil, 0)
 	})
 	emptyString := ""
 	_structAF(t, r, &emptyString, nil, func(t *testing.T, r Reader) {
