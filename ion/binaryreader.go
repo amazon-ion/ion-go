@@ -250,7 +250,7 @@ func (r *binaryReader) readLocalSymbolTable() error {
 
 	for r.Next() {
 		var err error
-		switch r.FieldName() {
+		switch *r.FieldName() {
 		case "imports":
 			imps, err = r.readImports()
 		case "symbols":
@@ -319,7 +319,7 @@ func (r *binaryReader) readImport() (SharedSymbolTable, error) {
 
 	for r.Next() {
 		var err error
-		switch r.FieldName() {
+		switch *r.FieldName() {
 		case "name":
 			if r.Type() == StringType {
 				name, err = r.StringValue()
@@ -416,7 +416,8 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	r.fieldName = r.resolve(id)
+	fn := r.resolve(id)
+	r.fieldName = &fn
 	return nil
 }
 

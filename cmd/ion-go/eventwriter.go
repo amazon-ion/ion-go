@@ -13,7 +13,7 @@ type eventwriter struct {
 	enc *ion.Encoder
 
 	depth       int
-	fieldname   string
+	fieldname   *string
 	annotations []string
 	inStruct    map[int]bool
 }
@@ -28,7 +28,7 @@ func NewEventWriter(out io.Writer) ion.Writer {
 }
 
 func (e *eventwriter) FieldName(val string) error {
-	e.fieldname = val
+	e.fieldname = &val
 	return nil
 }
 
@@ -253,12 +253,12 @@ func clobify(val []byte) string {
 
 func (e *eventwriter) write(ev event) error {
 	name := e.fieldname
-	e.fieldname = ""
+	e.fieldname = nil
 	annos := e.annotations
 	e.annotations = nil
 
-	if name != "" {
-		ev.FieldName = &token{Text: name}
+	if name != nil {
+		ev.FieldName = &token{Text: *name}
 	}
 
 	if len(annos) > 0 {

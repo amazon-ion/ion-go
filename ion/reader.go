@@ -85,7 +85,7 @@ type Reader interface {
 	// FieldName returns the field name associated with the current value. It returns
 	// the empty string if there is no current value or the current value has no field
 	// name.
-	FieldName() string
+	FieldName() *string
 
 	// Annotations returns the set of annotations associated with the current value.
 	// It returns nil if there is no current value or the current value has no annotations.
@@ -187,7 +187,7 @@ type reader struct {
 	eof bool
 	err error
 
-	fieldName   string
+	fieldName   *string
 	annotations []string
 	valueType   Type
 	value       interface{}
@@ -209,7 +209,7 @@ func (r *reader) IsNull() bool {
 }
 
 // FieldName returns the current value's field name.
-func (r *reader) FieldName() string {
+func (r *reader) FieldName() *string {
 	return r.fieldName
 }
 
@@ -384,7 +384,7 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	r.fieldName = ""
+	r.fieldName = nil
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil

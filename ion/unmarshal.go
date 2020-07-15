@@ -138,7 +138,7 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		result[name] = value
+		result[*name] = value
 	}
 
 	if err := d.r.StepOut(); err != nil {
@@ -482,7 +482,7 @@ func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 
 	for d.r.Next() {
 		name := d.r.FieldName()
-		field := findField(fields, name)
+		field := findField(fields, *name)
 		if field != nil {
 			subv, err := findSubvalue(v, field)
 			if err != nil {
@@ -555,7 +555,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		var kv reflect.Value
 		switch t.Key().Kind() {
 		case reflect.String:
-			kv = reflect.ValueOf(name)
+			kv = reflect.ValueOf(*name)
 		default:
 			panic("wat?")
 		}
