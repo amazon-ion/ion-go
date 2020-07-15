@@ -231,13 +231,14 @@ func (d *Decimal) upscale(scale int32) *Decimal {
 	}
 }
 
-// Trunc attempts to truncate this decimal to an int64, dropping any fractional bits.
-func (d *Decimal) Trunc() (int64, error) {
+// Check to upscale a decimal which means to make 'n' bigger by making 'scale' smaller.
+// Makes comparisons and math easier, at the expense of more storage space.
+func (d *Decimal) checkToUpscale() (*Decimal, error) {
 	if d.scale < 0 {
 		// Don't even bother trying this with numbers that *definitely* too big to represent
 		// as an int64, because upscale(0) will consume a bunch of memory.
 		if d.scale < -20 {
-			return 0, &strconv.NumError{
+			return d, &strconv.NumError{
 				Func: "ParseInt",
 				Num:  d.String(),
 				Err:  strconv.ErrRange,
@@ -245,15 +246,37 @@ func (d *Decimal) Trunc() (int64, error) {
 		}
 		d = d.upscale(0)
 	}
+	return d, nil
+}
 
+// Trunc attempts to truncate this decimal to an int64, dropping any fractional bits.
+func (d *Decimal) trunc() (int64, error) {
+	ud, err := d.checkToUpscale()
+	if err != nil {
+		return 0, err
+	}
+	d = ud
 	str := d.n.String()
 
-	want := len(str) - int(d.scale)
-	if want <= 0 {
+	truncateTo := len(str) - int(d.scale)
+	if truncateTo <= 0 {
 		return 0, nil
 	}
 
-	return strconv.ParseInt(str[:want], 10, 64)
+	return strconv.ParseInt(str[:truncateTo], 10, 64)
+}
+
+// Round attempts to truncate this decimal to an int64, rounding any fractional bits.
+func (d *Decimal) round() (int64, error) {
+	ud, err := d.checkToUpscale()
+	if err != nil {
+		return 0, err
+	}
+	d = ud
+
+	floatValue := float64(d.n.Int64()) / math.Pow10(int(d.scale))
+	roundedValue := math.Round(floatValue)
+	return int64(roundedValue), nil
 }
 
 // Truncate returns a new decimal, truncated to the given number of
