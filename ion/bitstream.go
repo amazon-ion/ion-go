@@ -181,6 +181,10 @@ func (b *bitstream) Next() error {
 		if err != nil {
 			return err
 		}
+		if len == 0 {
+			// Ordered structs must have at least one symbol/value pair.
+			return &SyntaxError{"ordered structs cannot be empty", b.pos - 1}
+		}
 	}
 
 	if code == bitcodeNone {
@@ -541,7 +545,7 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		}
 	}
 
-	nsecs, err := b.readNsecs(len)
+	nsecs, overflow, err := b.readNsecs(len)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -549,33 +553,49 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, offset)
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset)
 }
 
-func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, offset int64) (time.Time, error) {
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64) (time.Time, error) {
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
 		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
 	}
 
+	if overflow {
+		date = date.Add(time.Second)
+	}
 	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
 }
 
-// ReadNsecs reads the fraction part of a timestamp and truncates it to nanoseconds.
-func (b *bitstream) readNsecs(len uint64) (int, error) {
+// ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
+// This function returns the nanoseconds as an int, overflow as a bool, and an error
+// if there was a problem executing this function.
+func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
 	d, err := b.readDecimal(len)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
-	nsec, err := d.ShiftL(9).Trunc()
+	nsec, err := d.ShiftL(9).trunc()
 	if err != nil || nsec < 0 || nsec > 999999999 {
 		msg := fmt.Sprintf("invalid timestamp fraction: %v", d)
-		return 0, &SyntaxError{msg, b.pos}
+		return 0, false, &SyntaxError{msg, b.pos}
 	}
 
-	return int(nsec), nil
+	nsec, err = d.ShiftL(9).round()
+	if err != nil {
+		msg := fmt.Sprintf("invalid timestamp fraction: %v", d)
+		return 0, false, &SyntaxError{msg, b.pos}
+	}
+
+	// Overflow to second.
+	if nsec == 1000000000 {
+		return 0, true, nil
+	}
+
+	return int(nsec), false, nil
 }
 
 // ReadDecimal reads a decimal value of the given length: an exponent encoded as a

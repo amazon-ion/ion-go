@@ -401,9 +401,8 @@ func parseTimestamp(val string) (time.Time, error) {
 
 		if val[idx] == 'z' || val[idx] == 'Z' {
 			if idx >= 29 {
-				// Too much precision for a go Time.
-				// TODO: We should probably round instead of truncating? Ah well.
-				return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+				// Greater than 9 fractional seconds.
+				return roundFractionalSeconds(val, idx)
 			}
 			return time.Parse(layoutSecondsAndOffset, val)
 		}
@@ -411,9 +410,8 @@ func parseTimestamp(val string) (time.Time, error) {
 		if val[idx] == '+' || val[idx] == '-' {
 			if isValidOffset(val, idx) {
 				if idx >= 29 {
-					// Too much precision for a go Time.
-					// TODO: We should probably round instead of truncating? Ah well.
-					return time.Parse(layoutNanosecondsAndOffset, val[:29]+val[idx:])
+					// Greater than 9 fractional seconds.
+					return roundFractionalSeconds(val, idx)
 				}
 				return time.Parse(layoutSecondsAndOffset, val)
 			}
@@ -449,4 +447,34 @@ func isValidOffset(val string, idx int) bool {
 
 func invalidTimestamp(val string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("ion: invalid timestamp: %v", val)
+}
+
+func roundFractionalSeconds(val string, idx int) (time.Time, error) {
+	// Convert to float to perform rounding.
+	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+	roundedStringValue := fmt.Sprintf("%.9f", floatValue)
+
+	roundedFloatValue, err := strconv.ParseFloat(roundedStringValue, 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	// Microsecond overflow 9.9999999999 -> 10.00000000.
+	if roundedFloatValue == 10 {
+		roundedStringValue := "9.000000000"
+		val = val[:18] + roundedStringValue + val[idx:]
+		timeValue, err := time.Parse(layoutNanosecondsAndOffset, val)
+		if err != nil {
+			return invalidTimestamp(val)
+		}
+
+		timeValue = timeValue.Add(time.Second)
+		return timeValue, err
+	}
+
+	val = val[:18] + roundedStringValue + val[idx:]
+	return time.Parse(layoutNanosecondsAndOffset, val)
 }

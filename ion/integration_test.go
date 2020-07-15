@@ -85,7 +85,6 @@ var binaryRoundTripSkipList = []string{
 	"leapDayRollover.ion",
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"structWhitespace.ion",
 	"symbolEmpty.ion",
 	"T6-large.10n",
 	"T6-small.10n",
@@ -120,7 +119,6 @@ var textRoundTripSkipList = []string{
 	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"notVersionMarkers.ion",
-	"structWhitespace.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
@@ -190,7 +188,6 @@ var malformedIonsSkipList = []string{
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"sexpOperatorAnnotation.ion",
-	"structOrderedEmpty.10n",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
 	"surrogate_2.ion",
@@ -547,8 +544,8 @@ func isInSkipList(skipList []string, fn string) bool {
 func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		name := reader.FieldName()
-		if name != "" {
-			err := writer.FieldName(name)
+		if name != nil {
+			err := writer.FieldName(*name)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -736,8 +733,8 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	}
 
 	fn := reader.FieldName()
-	if fn != "" {
-		ionItem.fieldName = fn
+	if fn != nil {
+		ionItem.fieldName = *fn
 	}
 
 	currentType := reader.Type()

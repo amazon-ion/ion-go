@@ -121,7 +121,7 @@ type writer struct {
 	ctx ctxstack
 	err error
 
-	fieldName   string
+	fieldName   *string
 	annotations []string
 }
 
@@ -136,7 +136,7 @@ func (w *writer) FieldName(val string) error {
 		return w.err
 	}
 
-	w.fieldName = val
+	w.fieldName = &val
 	return nil
 }
 
@@ -163,6 +163,6 @@ func (w *writer) IsInStruct() bool {
 
 // Clear clears field name and annotations after writing a value.
 func (w *writer) clear() {
-	w.fieldName = ""
+	w.fieldName = nil
 	w.annotations = nil
 }
