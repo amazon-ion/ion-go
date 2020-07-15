@@ -41,10 +41,6 @@ func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
 	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
 }
 
-func cmpFieldNames(thisFieldName, otherFieldName string) bool {
-	return reflect.DeepEqual(thisFieldName, otherFieldName)
-}
-
 func cmpFloats(thisValue, otherValue interface{}) bool {
 	if !haveSameTypes(thisValue, otherValue) {
 		return false
@@ -191,15 +187,17 @@ func contains(list []int, idx int) bool {
 	return false
 }
 
+// non-null containers have ionItems inside them
 func containersEquality(this, other interface{}) bool {
 	switch this.(type) {
-	case string:
+	case string: // null.list, null.sexp, null.struct
 		if strNullTypeCmp(this, other) {
 			return true
 		}
 	default:
 		otherItem := other.(ionItem)
-		if otherItem.equal(this.(ionItem)) {
+		thisItem := this.(ionItem)
+		if thisItem.fieldName == otherItem.fieldName && thisItem.equal(otherItem) {
 			return true
 		}
 	}

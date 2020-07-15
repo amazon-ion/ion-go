@@ -47,9 +47,6 @@ func (i *ionItem) equal(o ionItem) bool {
 	if !cmpAnnotations(i.annotations, o.annotations) {
 		return false
 	}
-	if !cmpFieldNames(i.fieldName, o.fieldName) {
-		return false
-	}
 
 	switch i.ionType {
 	case FloatType:
