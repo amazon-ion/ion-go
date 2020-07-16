@@ -41,10 +41,27 @@ type ionItem struct {
 }
 
 func (i *ionItem) equal(o ionItem) bool {
-	return reflect.DeepEqual(i.value, o.value) &&
-		reflect.DeepEqual(i.annotations, o.annotations) &&
-		reflect.DeepEqual(i.ionType, o.ionType) &&
-		reflect.DeepEqual(i.fieldName, o.fieldName)
+	if i.ionType != o.ionType {
+		return false
+	}
+	if !cmpAnnotations(i.annotations, o.annotations) {
+		return false
+	}
+
+	switch i.ionType {
+	case FloatType:
+		return cmpFloats(i.value[0], o.value[0])
+	case DecimalType:
+		return cmpDecimals(i.value[0], o.value[0])
+	case TimestampType:
+		return cmpTimestamps(i.value[0], o.value[0])
+	case ListType, SexpType:
+		return cmpValueSlices(i.value, o.value)
+	case StructType:
+		return cmpStruct(i.value, o.value)
+	default:
+		return reflect.DeepEqual(i.value, o.value)
+	}
 }
 
 var readGoodFilesSkipList = []string{
@@ -191,8 +208,6 @@ var equivsSkipList = []string{
 	"nonIVMNoOps.ion",
 	"sexps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
-	"structsFieldsDiffOrder.ion",
-	"structsFieldsRepeatedNames.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
 	"timestampSuperfluousOffset.10n",
@@ -206,7 +221,6 @@ var nonEquivsSkipList = []string{
 	"floats.ion",
 	"floatsVsDecimals.ion",
 	"localSymbolTableWithAnnotations.ion",
-	"structs.ion",
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",
