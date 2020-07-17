@@ -202,7 +202,7 @@ func TestTimestamps(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !val.dateTime.Equal(eval) {
+			if !val.DateTime.Equal(eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
@@ -674,7 +674,7 @@ func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval time.
 		t.Fatal(err)
 	}
 
-	if !val.dateTime.Equal(eval) {
+	if !val.DateTime.Equal(eval) {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
 }

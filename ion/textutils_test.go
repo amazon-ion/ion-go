@@ -19,12 +19,12 @@ func TestParseTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !val.dateTime.Equal(et) {
+			if !val.DateTime.Equal(et) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
-			if val.precision != expectedPrecision {
-				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.precision.String())
+			if val.Precision != expectedPrecision {
+				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.Precision.String())
 			}
 		})
 	}

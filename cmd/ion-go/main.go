@@ -68,7 +68,7 @@ func printVersion() {
 		buildtime, err := time.Parse(time.RFC3339, internal.BuildTime)
 		if err == nil {
 			w.FieldName("build_time")
-			w.WriteTimestamp(buildtime)
+			w.WriteTimestamp(ion.Timestamp{buildtime, ion.Second})
 		} else {
 			w.FieldName("build_time")
 			w.WriteString("unknown-buildtime")

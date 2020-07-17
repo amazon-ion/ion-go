@@ -36,8 +36,8 @@ func (tp TimestampPrecision) String() string {
 }
 
 type Timestamp struct {
-	dateTime  time.Time
-	precision TimestampPrecision
+	DateTime  time.Time
+	Precision TimestampPrecision
 }
 
 func emptyTimestamp() Timestamp {

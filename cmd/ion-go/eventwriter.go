@@ -4,7 +4,6 @@ import (
 	"io"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/amzn/ion-go/ion"
 )
@@ -106,7 +105,7 @@ func (e *eventwriter) WriteDecimal(val *ion.Decimal) error {
 	})
 }
 
-func (e *eventwriter) WriteTimestamp(val time.Time) error {
+func (e *eventwriter) WriteTimestamp(val ion.Timestamp) error {
 	return e.write(event{
 		EventType: scalar,
 		IonType:   iontype(ion.TimestampType),
