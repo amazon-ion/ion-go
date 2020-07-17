@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"math/big"
-	"time"
 )
 
 // A Writer writes a stream of Ion values.
@@ -81,7 +80,7 @@ type Writer interface {
 	WriteDecimal(val *Decimal) error
 
 	// WriteTimestamp writes a timestamp value.
-	WriteTimestamp(val time.Time) error
+	WriteTimestamp(val Timestamp) error
 
 	// WriteSymbol writes a symbol value.
 	WriteSymbol(val string) error

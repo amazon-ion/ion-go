@@ -264,21 +264,32 @@ func timeLen(offset int, utc time.Time) uint64 {
 }
 
 // appendTime appends a timestamp value
-func appendTime(b []byte, offset int, utc time.Time) []byte {
+func appendTime(b []byte, offset int, utc time.Time, precision TimestampPrecision) []byte {
 	b = appendVarInt(b, int64(offset))
 
-	b = appendVarUint(b, uint64(utc.Year()))
-	b = appendVarUint(b, uint64(utc.Month()))
-	b = appendVarUint(b, uint64(utc.Day()))
+	if precision >= Year {
+		b = appendVarUint(b, uint64(utc.Year()))
+	}
+	if precision >= Month {
+		b = appendVarUint(b, uint64(utc.Month()))
+	}
+	if precision >= Day {
+		b = appendVarUint(b, uint64(utc.Day()))
+	}
 
-	b = appendVarUint(b, uint64(utc.Hour()))
-	b = appendVarUint(b, uint64(utc.Minute()))
-	b = appendVarUint(b, uint64(utc.Second()))
+	if precision >= Minute {
+		// The hour and minute is considered as a single component.
+		b = appendVarUint(b, uint64(utc.Hour()))
+		b = appendVarUint(b, uint64(utc.Minute()))
+	}
+	if precision >= Second {
+		b = appendVarUint(b, uint64(utc.Second()))
 
-	ns := utc.Nanosecond()
-	if ns > 0 {
-		b = appendVarInt(b, -9)
-		b = appendInt(b, int64(ns))
+		ns := utc.Nanosecond()
+		if ns > 0 {
+			b = appendVarInt(b, -9)
+			b = appendInt(b, int64(ns))
+		}
 	}
 
 	return b

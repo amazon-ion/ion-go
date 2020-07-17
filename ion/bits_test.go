@@ -181,7 +181,7 @@ func TestAppendTime(t *testing.T) {
 				t.Errorf("expected len=%v, got len=%v", elen, len)
 			}
 
-			bits := appendTime(nil, offset, utc)
+			bits := appendTime(nil, offset, utc, Second)
 			if !bytes.Equal(bits, ebits) {
 				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 			}

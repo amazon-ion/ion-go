@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // EncoderOpts holds bit-flag options for an Encoder.
@@ -340,9 +339,9 @@ FieldLoop:
 	return m.w.EndStruct()
 }
 
-// EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
+// EncodeTime encodes a timestamp to the output writer as an Ion timestamp.
 func (m *Encoder) encodeTime(v reflect.Value) error {
-	t := v.Interface().(time.Time)
+	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
 }
 

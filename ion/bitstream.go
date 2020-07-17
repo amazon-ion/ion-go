@@ -515,7 +515,7 @@ func (b *bitstream) ReadDecimal() (*Decimal, error) {
 }
 
 // ReadTimestamp reads a timestamp value.
-func (b *bitstream) ReadTimestamp() (time.Time, error) {
+func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	if b.code != bitcodeTimestamp {
 		panic("not a timestamp")
 	}
@@ -524,7 +524,7 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 
 	offset, olen, err := b.readVarIntLen(len)
 	if err != nil {
-		return time.Time{}, err
+		return emptyTimestamp(), err
 	}
 	len -= olen
 
@@ -532,7 +532,7 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 	for i := 0; len > 0 && i < 6; i++ {
 		val, vlen, err := b.readVarUintLen(len)
 		if err != nil {
-			return time.Time{}, err
+			return emptyTimestamp(), err
 		}
 		len -= vlen
 		ts[i] = int(val)
@@ -540,33 +540,36 @@ func (b *bitstream) ReadTimestamp() (time.Time, error) {
 		// When i is 3, it means we are setting hour component. A timestamp with
 		// hour, must follow by minute. Hence, len cannot be zero at this point.
 		if i == 3 && len == 0 {
-			return time.Time{},
+			return emptyTimestamp(),
 				&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
 		}
 	}
 
 	nsecs, overflow, err := b.readNsecs(len)
 	if err != nil {
-		return time.Time{}, err
+		return emptyTimestamp(), err
 	}
 
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset)
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, NoPrecision)
 }
 
-func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64) (time.Time, error) {
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, precision TimestampPrecision) (Timestamp, error) {
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
-		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
+		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
 	}
 
 	if overflow {
 		date = date.Add(time.Second)
 	}
-	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
+
+	dateTime := date.In(time.FixedZone("fixed", int(offset)*60))
+
+	return Timestamp{dateTime, precision}, nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.

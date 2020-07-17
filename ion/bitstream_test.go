@@ -131,7 +131,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !val.Equal(expectedTime) {
+			if !val.dateTime.Equal(expectedTime) {
 				t.Errorf("expected %v, got %v", expectedValue, val)
 			}
 		})

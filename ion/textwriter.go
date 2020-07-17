@@ -90,8 +90,8 @@ func (w *textWriter) WriteDecimal(val *Decimal) error {
 }
 
 // WriteTimestamp writes a timestamp.
-func (w *textWriter) WriteTimestamp(val time.Time) error {
-	return w.writeValue("Writer.WriteTimestamp", val.Format(time.RFC3339Nano))
+func (w *textWriter) WriteTimestamp(val Timestamp) error {
+	return w.writeValue("Writer.WriteTimestamp", val.dateTime.Format(time.RFC3339Nano))
 }
 
 // WriteSymbol writes a symbol.

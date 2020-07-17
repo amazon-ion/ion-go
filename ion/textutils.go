@@ -321,7 +321,7 @@ func parseInt(str string, radix int) (interface{}, error) {
 	return bi, nil
 }
 
-func parseTimestamp(val string) (time.Time, error) {
+func parseTimestamp(val string) (Timestamp, error) {
 	if len(val) < 5 {
 		return invalidTimestamp(val)
 	}
@@ -332,7 +332,7 @@ func parseTimestamp(val string) (time.Time, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateTimeDate(val, year, 1, 1)
+		return tryCreateTimestamp(val, year, 1, 1, Year)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -349,7 +349,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateTimeDate(val, year, month, 1)
+		return tryCreateTimestamp(val, year, month, 1, Month)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -366,7 +366,7 @@ func parseTimestamp(val string) (time.Time, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateTimeDate(val, year, month, day)
+		return tryCreateTimestamp(val, year, month, day, Day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -377,11 +377,11 @@ func parseTimestamp(val string) (time.Time, error) {
 		return invalidTimestamp(val)
 	}
 	if val[16] == 'z' || val[16] == 'Z' {
-		return time.Parse(layoutMinutesZulu, val)
+		return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute)
 	}
 	if val[16] == '+' || val[16] == '-' {
 		if isValidOffset(val, 16) {
-			return time.Parse(layoutMinutesAndOffset, val)
+			return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute)
 		}
 		return invalidTimestamp(val)
 	}
@@ -404,7 +404,8 @@ func parseTimestamp(val string) (time.Time, error) {
 				// Greater than 9 fractional seconds.
 				return roundFractionalSeconds(val, idx)
 			}
-			return time.Parse(layoutSecondsAndOffset, val)
+
+			return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second)
 		}
 
 		if val[idx] == '+' || val[idx] == '-' {
@@ -413,7 +414,8 @@ func parseTimestamp(val string) (time.Time, error) {
 					// Greater than 9 fractional seconds.
 					return roundFractionalSeconds(val, idx)
 				}
-				return time.Parse(layoutSecondsAndOffset, val)
+
+				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second)
 			}
 			return invalidTimestamp(val)
 		}
@@ -425,9 +427,27 @@ func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Tim
 	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
-		return invalidTimestamp(val)
+		return invalidTimeDate(val)
 	}
 	return date, nil
+}
+
+func tryCreateTimestamp(val string, year int64, month int64, day int64, precision TimestampPrecision) (Timestamp, error) {
+	date, err := tryCreateTimeDate(val, year, month, day)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	return Timestamp{date, precision}, nil
+}
+
+func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision) (Timestamp, error) {
+	date, err := time.Parse(layout, val)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	return Timestamp{date, precision}, nil
 }
 
 func isValidOffset(val string, idx int) bool {
@@ -445,11 +465,15 @@ func isValidOffset(val string, idx int) bool {
 	return hourOffset < 24 && minuteOffset < 60
 }
 
-func invalidTimestamp(val string) (time.Time, error) {
-	return time.Time{}, fmt.Errorf("ion: invalid timestamp: %v", val)
+func invalidTimeDate(val string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("ion: invalid timedate: %v", val)
 }
 
-func roundFractionalSeconds(val string, idx int) (time.Time, error) {
+func invalidTimestamp(val string) (Timestamp, error) {
+	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
+}
+
+func roundFractionalSeconds(val string, idx int) (Timestamp, error) {
 	// Convert to float to perform rounding.
 	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
 	if err != nil {
@@ -472,9 +496,10 @@ func roundFractionalSeconds(val string, idx int) (time.Time, error) {
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return timeValue, err
+		return Timestamp{timeValue, Second}, err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]
-	return time.Parse(layoutNanosecondsAndOffset, val)
+
+	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Second)
 }
