@@ -83,8 +83,7 @@ type Reader interface {
 	IsNull() bool
 
 	// FieldName returns the field name associated with the current value. It returns
-	// the empty string if there is no current value or the current value has no field
-	// name.
+	// nil if there is no current value or the current value has no field name.
 	FieldName() *string
 
 	// Annotations returns the set of annotations associated with the current value.
