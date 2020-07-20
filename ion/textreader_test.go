@@ -193,7 +193,7 @@ func TestBlobs(t *testing.T) {
 }
 
 func TestTimestamps(t *testing.T) {
-	testA := func(str string, etas []string, eval time.Time) {
+	testA := func(str string, etas []string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
 			r := NewReaderStr(str)
 			_nextAF(t, r, TimestampType, nil, etas)
@@ -202,34 +202,39 @@ func TestTimestamps(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !val.DateTime.Equal(eval) {
-				t.Errorf("expected %v, got %v", eval, val)
+
+			if !val.DateTime.Equal(eval.DateTime) {
+				t.Errorf("expected %v, got %v", eval.DateTime, val.DateTime)
+			}
+
+			if val.Precision != eval.Precision {
+				t.Errorf("expected %v, got %v", eval.Precision, val.Precision)
 			}
 
 			_eof(t, r)
 		})
 	}
 
-	test := func(str string, eval time.Time) {
+	test := func(str string, eval Timestamp) {
 		testA(str, nil, eval)
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
-	test("2001T", et)
-	test("2001-01T", et)
-	test("2001-01-01", et)
-	test("2001-01-01T", et)
-	test("2001-01-01T00:00Z", et)
-	test("2001-01-01T00:00:00Z", et)
-	test("2001-01-01T00:00:00.000Z", et)
-	test("2001-01-01T00:00:00.000+00:00", et)
-	test("2001-01-01T00:00:00.000000Z", et)
-	test("2001-01-01T00:00:00.000000000Z", et)
+	test("2001T", Timestamp{et, Year})
+	test("2001-01T", Timestamp{et, Month})
+	test("2001-01-01", Timestamp{et, Day})
+	test("2001-01-01T", Timestamp{et, Day})
+	test("2001-01-01T00:00Z", Timestamp{et, Minute})
+	test("2001-01-01T00:00:00Z", Timestamp{et, Second})
+	test("2001-01-01T00:00:00.000Z", Timestamp{et, Second})
+	test("2001-01-01T00:00:00.000+00:00", Timestamp{et, Second})
+	test("2001-01-01T00:00:00.000000Z", Timestamp{et, Second})
+	test("2001-01-01T00:00:00.000000000Z", Timestamp{et, Second})
 
 	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
-	test("2001-01-01T00:00:00.000000000999Z", et2)
+	test("2001-01-01T00:00:00.000000000999Z", Timestamp{et2, Second})
 
-	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, Timestamp{et, Second})
 }
 
 func TestDecimals(t *testing.T) {

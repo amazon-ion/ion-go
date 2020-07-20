@@ -348,10 +348,10 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 	return r.value.(*Decimal), nil
 }
 
-// TimeValue returns the current value as a time.
+// TimeValue returns the current value as a Timestamp.
 func (r *reader) TimeValue() (Timestamp, error) {
 	if r.valueType != TimestampType {
-		return emptyTimestamp(), &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return emptyTimestamp(), &UsageError{"Reader.TimeValue", "value is not a timestamp"}
 	}
 	if r.value == nil {
 		return emptyTimestamp(), nil

@@ -300,7 +300,7 @@ func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 // EncodeStruct encodes a struct to the output writer as an Ion struct.
 func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
 	t := v.Type()
-	if t == timeType {
+	if t == timestampType {
 		return m.encodeTime(v)
 	}
 	if t == decimalType {

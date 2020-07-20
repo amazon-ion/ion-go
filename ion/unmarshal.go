@@ -387,7 +387,7 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		if v.Type() == timeType {
+		if v.Type() == timestampType {
 			v.Set(reflect.ValueOf(val))
 			return nil
 		}
