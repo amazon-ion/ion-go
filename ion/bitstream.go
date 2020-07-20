@@ -553,7 +553,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, NoPrecision)
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, Second)
 }
 
 func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, precision TimestampPrecision) (Timestamp, error) {
