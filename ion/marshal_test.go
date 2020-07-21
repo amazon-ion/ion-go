@@ -36,7 +36,7 @@ func TestMarshalText(t *testing.T) {
 	test(math.NaN(), "nan")
 
 	test(MustParseDecimal("1.20"), "1.20")
-	test(Timestamp{time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), Second}, "2010-01-01T00:00:00Z")
+	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), Second), "2010-01-01T00:00:00Z")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 

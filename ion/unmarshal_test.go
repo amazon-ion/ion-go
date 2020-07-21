@@ -348,7 +348,7 @@ func TestDecodeTimeTo(t *testing.T) {
 		})
 	}
 	test("null", emptyTimestamp())
-	test("2020T", Timestamp{time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), Year})
+	test("2020T", NewTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), Year))
 }
 
 func TestDecodeStringTo(t *testing.T) {
@@ -509,7 +509,7 @@ func TestDecode(t *testing.T) {
 
 	test("0.", MustParseDecimal("0."))
 
-	test("2020T", Timestamp{time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), Year})
+	test("2020T", NewTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), Year))
 
 	test("hello", "hello")
 	test("\"hello\"", "hello")

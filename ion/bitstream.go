@@ -530,7 +530,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	ts := []int{1, 1, 1, 0, 0, 0}
 	precision := NoPrecision
-	for i := 0; len > 0 && i < 6 && precision <= Second; i++ {
+	for i := 0; len > 0 && i < 6 && precision < Second; i++ {
 		val, vlen, err := b.readVarUintLen(len)
 		if err != nil {
 			return emptyTimestamp(), err
@@ -557,29 +557,30 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		return emptyTimestamp(), err
 	}
 
+	if nsecs != 0 {
+		precision = Nanosecond
+	}
+
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	dateTime, err := tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset)
-	if err != nil {
-		return emptyTimestamp(), err
-	}
-
-	return Timestamp{dateTime, precision}, nil
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, precision)
 }
 
-func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64) (time.Time, error) {
+func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, precision TimestampPrecision) (Timestamp, error) {
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
-		return invalidTimeDate("")
+		return invalidTimestamp("")
 	}
 
 	if overflow {
 		date = date.Add(time.Second)
 	}
 
-	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
+	dateTime := date.In(time.FixedZone("fixed", int(offset)*60))
+
+	return NewTimestampWithOffset(dateTime, precision, offset != 0), nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.

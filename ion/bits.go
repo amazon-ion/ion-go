@@ -266,10 +266,12 @@ func timeLen(offset int, utc time.Time, precision TimestampPrecision) uint64 {
 					if precision >= Second {
 						ret++
 
-						ns := utc.Nanosecond()
-						if ns > 0 {
-							ret++ // varIntLen(-9)
-							ret += intLen(int64(ns))
+						if precision >= Nanosecond {
+							ns := utc.Nanosecond()
+							if ns > 0 {
+								ret++ // varIntLen(-9)
+								ret += intLen(int64(ns))
+							}
 						}
 					}
 				}
@@ -301,10 +303,12 @@ func appendTime(b []byte, offset int, utc time.Time, precision TimestampPrecisio
 					if precision >= Second {
 						b = appendVarUint(b, uint64(utc.Second()))
 
-						ns := utc.Nanosecond()
-						if ns > 0 {
-							b = appendVarInt(b, -9)
-							b = appendInt(b, int64(ns))
+						if precision >= Nanosecond {
+							ns := utc.Nanosecond()
+							if ns > 0 {
+								b = appendVarInt(b, -9)
+								b = appendInt(b, int64(ns))
+							}
 						}
 					}
 				}

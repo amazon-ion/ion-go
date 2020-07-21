@@ -176,12 +176,12 @@ func TestAppendTime(t *testing.T) {
 			offset /= 60
 			utc := val.In(time.UTC)
 
-			len := timeLen(offset, utc, Second)
+			len := timeLen(offset, utc, Nanosecond)
 			if len != elen {
 				t.Errorf("expected len=%v, got len=%v", elen, len)
 			}
 
-			bits := appendTime(nil, offset, utc, Second)
+			bits := appendTime(nil, offset, utc, Nanosecond)
 			if !bytes.Equal(bits, ebits) {
 				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 			}
