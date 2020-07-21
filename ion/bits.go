@@ -251,26 +251,29 @@ func timeLen(offset int, utc time.Time, precision TimestampPrecision) uint64 {
 	if precision >= Year {
 		// Almost certainly two but let's be safe.
 		ret += varUintLen(uint64(utc.Year()))
-	}
 
-	// Month, day, hour, minute, and second are all guaranteed to be one byte.
-	if precision >= Month {
-		ret++
-	}
-	if precision >= Day {
-		ret++
-	}
-	if precision >= Minute {
-		// Two bytes for Hour and Minute combined
-		ret += 2
-	}
-	if precision >= Second {
-		ret++
+		// Month, day, hour, minute, and second are all guaranteed to be one byte.
+		if precision >= Month {
+			ret++
 
-		ns := utc.Nanosecond()
-		if ns > 0 {
-			ret++ // varIntLen(-9)
-			ret += intLen(int64(ns))
+			if precision >= Day {
+				ret++
+
+				if precision >= Minute {
+					// Two bytes for Hour and Minute combined
+					ret += 2
+
+					if precision >= Second {
+						ret++
+
+						ns := utc.Nanosecond()
+						if ns > 0 {
+							ret++ // varIntLen(-9)
+							ret += intLen(int64(ns))
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -283,26 +286,29 @@ func appendTime(b []byte, offset int, utc time.Time, precision TimestampPrecisio
 
 	if precision >= Year {
 		b = appendVarUint(b, uint64(utc.Year()))
-	}
-	if precision >= Month {
-		b = appendVarUint(b, uint64(utc.Month()))
-	}
-	if precision >= Day {
-		b = appendVarUint(b, uint64(utc.Day()))
-	}
 
-	if precision >= Minute {
-		// The hour and minute is considered as a single component.
-		b = appendVarUint(b, uint64(utc.Hour()))
-		b = appendVarUint(b, uint64(utc.Minute()))
-	}
-	if precision >= Second {
-		b = appendVarUint(b, uint64(utc.Second()))
+		if precision >= Month {
+			b = appendVarUint(b, uint64(utc.Month()))
 
-		ns := utc.Nanosecond()
-		if ns > 0 {
-			b = appendVarInt(b, -9)
-			b = appendInt(b, int64(ns))
+			if precision >= Day {
+				b = appendVarUint(b, uint64(utc.Day()))
+
+				if precision >= Minute {
+					// The hour and minute is considered as a single component.
+					b = appendVarUint(b, uint64(utc.Hour()))
+					b = appendVarUint(b, uint64(utc.Minute()))
+
+					if precision >= Second {
+						b = appendVarUint(b, uint64(utc.Second()))
+
+						ns := utc.Nanosecond()
+						if ns > 0 {
+							b = appendVarInt(b, -9)
+							b = appendInt(b, int64(ns))
+						}
+					}
+				}
+			}
 		}
 	}
 
