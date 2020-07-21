@@ -245,19 +245,33 @@ func appendTag(b []byte, code byte, len uint64) []byte {
 }
 
 // timeLen pre-calculates the length, in bytes, of the given time value.
-func timeLen(offset int, utc time.Time) uint64 {
+func timeLen(offset int, utc time.Time, precision TimestampPrecision) uint64 {
 	ret := varIntLen(int64(offset))
 
-	// Almost certainly two but let's be safe.
-	ret += varUintLen(uint64(utc.Year()))
+	if precision >= Year {
+		// Almost certainly two but let's be safe.
+		ret += varUintLen(uint64(utc.Year()))
+	}
 
 	// Month, day, hour, minute, and second are all guaranteed to be one byte.
-	ret += 5
+	if precision >= Month {
+		ret++
+	}
+	if precision >= Day {
+		ret++
+	}
+	if precision >= Minute {
+		// Two bytes for Hour and Minute combined
+		ret += 2
+	}
+	if precision >= Second {
+		ret++
 
-	ns := utc.Nanosecond()
-	if ns > 0 {
-		ret++ // varIntLen(-9)
-		ret += intLen(int64(ns))
+		ns := utc.Nanosecond()
+		if ns > 0 {
+			ret++ // varIntLen(-9)
+			ret += intLen(int64(ns))
+		}
 	}
 
 	return ret

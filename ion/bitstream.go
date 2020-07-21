@@ -529,7 +529,8 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	len -= olen
 
 	ts := []int{1, 1, 1, 0, 0, 0}
-	for i := 0; len > 0 && i < 6; i++ {
+	precision := NoPrecision
+	for i := 0; len > 0 && i < 6 && precision <= Second; i++ {
 		val, vlen, err := b.readVarUintLen(len)
 		if err != nil {
 			return emptyTimestamp(), err
@@ -539,9 +540,15 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 		// When i is 3, it means we are setting hour component. A timestamp with
 		// hour, must follow by minute. Hence, len cannot be zero at this point.
-		if i == 3 && len == 0 {
-			return emptyTimestamp(),
-				&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+		if i == 3 {
+			if len == 0 {
+				return emptyTimestamp(),
+					&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+			}
+		} else {
+			// Update precision as we read the timestamp.
+			// We don't update precision when i is 3 because there is no Hour precision.
+			precision++
 		}
 	}
 
@@ -553,7 +560,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, Second)
+	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset, precision)
 }
 
 func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, precision TimestampPrecision) (Timestamp, error) {

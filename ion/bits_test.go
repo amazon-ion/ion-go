@@ -176,7 +176,7 @@ func TestAppendTime(t *testing.T) {
 			offset /= 60
 			utc := val.In(time.UTC)
 
-			len := timeLen(offset, utc)
+			len := timeLen(offset, utc, Second)
 			if len != elen {
 				t.Errorf("expected len=%v, got len=%v", elen, len)
 			}
