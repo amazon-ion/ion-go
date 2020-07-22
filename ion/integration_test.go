@@ -514,7 +514,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			return
+			continue
 		}
 
 		switch currentType {
@@ -529,13 +529,43 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case IntType:
-			val, err := reader.BigIntValue()
+			intSize, err := reader.IntSize()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Int value. " + err.Error())
+				t.Errorf("Something went wrong when retrieving the Int size. " + err.Error())
 			}
-			err = writer.WriteBigInt(val)
-			if err != nil {
-				t.Errorf("Something went wrong when writing Int value. " + err.Error())
+
+			switch intSize {
+			case Int32, Int64:
+				val, err := reader.Int64Value()
+				if err != nil {
+					t.Errorf("Something went wrong when reading Int value. " + err.Error())
+				}
+
+				err = writer.WriteInt(val)
+				if err != nil {
+					t.Errorf("Something went wrong when writing Int value. " + err.Error())
+				}
+			case Uint64:
+				val, err := reader.Uint64Value()
+				if err != nil {
+					t.Errorf("Something went wrong when reading UInt value. " + err.Error())
+				}
+
+				err = writer.WriteUint(val)
+				if err != nil {
+					t.Errorf("Something went wrong when writing UInt value. " + err.Error())
+				}
+			case BigInt:
+				val, err := reader.BigIntValue()
+				if err != nil {
+					t.Errorf("Something went wrong when reading Big Int value. " + err.Error())
+				}
+				err = writer.WriteBigInt(val)
+				if err != nil {
+					t.Errorf("Something went wrong when writing Big Int value. " + err.Error())
+				}
+			default:
+				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
 
 		case FloatType:
