@@ -198,7 +198,7 @@ func TestTimestamps(t *testing.T) {
 			r := NewReaderStr(str)
 			_nextAF(t, r, TimestampType, nil, etas)
 
-			val, err := r.TimeValue()
+			val, err := r.TimestampValue()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -670,7 +670,7 @@ func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Times
 		t.Fatalf("expected %v, got null.timestamp", eval)
 	}
 
-	val, err := r.TimeValue()
+	val, err := r.TimestampValue()
 	if err != nil {
 		t.Fatal(err)
 	}

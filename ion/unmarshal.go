@@ -87,7 +87,7 @@ func (d *Decoder) decode() (interface{}, error) {
 		return d.r.DecimalValue()
 
 	case TimestampType:
-		return d.r.TimeValue()
+		return d.r.TimestampValue()
 
 	case StringType, SymbolType:
 		return d.r.StringValue()
@@ -380,7 +380,7 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
-	val, err := d.r.TimeValue()
+	val, err := d.r.TimestampValue()
 	if err != nil {
 		return err
 	}

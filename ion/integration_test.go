@@ -559,7 +559,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case TimestampType:
-			val, err := reader.TimeValue()
+			val, err := reader.TimestampValue()
 			if err != nil {
 				t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 			}
@@ -728,7 +728,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = DecimalType
 
 	case TimestampType:
-		val, err := reader.TimeValue()
+		val, err := reader.TimestampValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 		}

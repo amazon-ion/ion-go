@@ -135,9 +135,9 @@ type Reader interface {
 	// makes sense). It returns an error if the current value is not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
-	// TimeValue returns the current value as a timestamp (if that makes sense). It returns
+	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
 	// an error if the current value is not an Ion timestamp.
-	TimeValue() (Timestamp, error)
+	TimestampValue() (Timestamp, error)
 
 	// StringValue returns the current value as a string (if that makes sense). It returns
 	// an error if the current value is not an Ion symbol or an Ion string.
@@ -347,10 +347,10 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 	return r.value.(*Decimal), nil
 }
 
-// TimeValue returns the current value as a Timestamp.
-func (r *reader) TimeValue() (Timestamp, error) {
+// TimestampValue returns the current value as a Timestamp.
+func (r *reader) TimestampValue() (Timestamp, error) {
 	if r.valueType != TimestampType {
-		return emptyTimestamp(), &UsageError{"Reader.TimeValue", "value is not a timestamp"}
+		return emptyTimestamp(), &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
 	}
 	if r.value == nil {
 		return emptyTimestamp(), nil
