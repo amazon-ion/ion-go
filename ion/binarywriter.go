@@ -168,15 +168,15 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 		binary.BigEndian.PutUint32(bs[1:], bits)
 
 		return w.writeValue("Writer.WriteFloat", bs)
-	} else {
-		bs := make([]byte, 9)
-		bs[0] = 0x48
-
-		bits := math.Float64bits(val)
-		binary.BigEndian.PutUint64(bs[1:], bits)
-
-		return w.writeValue("Writer.WriteFloat", bs)
 	}
+
+	bs := make([]byte, 9)
+	bs[0] = 0x48
+
+	bits := math.Float64bits(val)
+	binary.BigEndian.PutUint64(bs[1:], bits)
+
+	return w.writeValue("Writer.WriteFloat", bs)
 }
 
 // WriteDecimal writes a decimal value.
