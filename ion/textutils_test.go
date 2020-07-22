@@ -19,16 +19,10 @@ func TestParseTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !val.DateTime.Equal(et) {
-				t.Errorf("expected %v, got %v", eval, val.DateTime)
-			}
+			expectedTimestamp := NewTimestampWithOffset(et, expectedPrecision, expectedOffset)
 
-			if val.precision != expectedPrecision {
-				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.precision.String())
-			}
-
-			if val.offset != expectedOffset {
-				t.Errorf("expected %v, got %v", expectedOffset, val.offset)
+			if !val.Equal(expectedTimestamp) {
+				t.Errorf("expected %v, got %v", expectedTimestamp, val)
 			}
 		})
 	}

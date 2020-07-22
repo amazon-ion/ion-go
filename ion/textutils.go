@@ -433,13 +433,13 @@ func tryCreateTimestamp(val string, year int64, month int64, day int64, precisio
 	return NewTimestamp(date, precision), nil
 }
 
-func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision, offset bool) (Timestamp, error) {
+func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision, hasOffset bool) (Timestamp, error) {
 	date, err := time.Parse(layout, val)
 	if err != nil {
 		return invalidTimestamp(val)
 	}
 
-	return NewTimestampWithOffset(date, precision, offset), nil
+	return NewTimestampWithOffset(date, precision, hasOffset), nil
 }
 
 func isValidOffset(val string, idx int) bool {
@@ -465,7 +465,7 @@ func invalidTimestamp(val string) (Timestamp, error) {
 	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
 }
 
-func roundFractionalSeconds(val string, idx int, offset bool) (Timestamp, error) {
+func roundFractionalSeconds(val string, idx int, hasOffset bool) (Timestamp, error) {
 	// Convert to float to perform rounding.
 	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
 	if err != nil {
@@ -488,10 +488,10 @@ func roundFractionalSeconds(val string, idx int, offset bool) (Timestamp, error)
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestampWithOffset(timeValue, Nanosecond, offset), err
+		return NewTimestampWithOffset(timeValue, Nanosecond, hasOffset), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]
 
-	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, offset)
+	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, hasOffset)
 }
