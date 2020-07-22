@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/amzn/ion-go/internal"
 	"github.com/amzn/ion-go/ion"
@@ -65,10 +64,10 @@ func printVersion() {
 		w.FieldName("version")
 		w.WriteString(internal.GitCommit)
 
-		buildtime, err := time.Parse(time.RFC3339, internal.BuildTime)
+		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.Second, true)
 		if err == nil {
 			w.FieldName("build_time")
-			w.WriteTimestamp(ion.NewTimestamp(buildtime, ion.Second))
+			w.WriteTimestamp(buildtime)
 		} else {
 			w.FieldName("build_time")
 			w.WriteString("unknown-buildtime")

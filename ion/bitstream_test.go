@@ -139,14 +139,14 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x63,
 		0x80,       // offset 0
 		0x0F, 0xD0, // year: 2000
-	}, "2000-01-01T00:00:00Z", Year, false)
+	}, "2000T", Year, false)
 
 	test([]byte{
 		0x64,
 		0x80,       // offset 0
 		0x0F, 0xD0, // year: 2000
 		0x85, // month: 5
-	}, "2000-05-01T00:00:00Z", Month, false)
+	}, "2000-05T", Month, false)
 
 	test([]byte{
 		0x65,
@@ -154,7 +154,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x0F, 0xD0, // year: 2000
 		0x85, // month: 5
 		0x86, // day: 6
-	}, "2000-05-06T00:00:00Z", Day, false)
+	}, "2000-05-06T", Day, false)
 
 	test([]byte{
 		0x67,
@@ -164,7 +164,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x86, // day: 6
 		0x87, // hour: 7
 		0x88, // minute: 8
-	}, "2000-05-06T07:08:00Z", Minute, false)
+	}, "2000-05-06T07:08Z", Minute, false)
 
 	test([]byte{
 		0x68,

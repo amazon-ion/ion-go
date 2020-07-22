@@ -165,11 +165,11 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 		0x33, 0x77, 0xDF, 0x70, // nsec:   863494000
 	}
 
-	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, true)
 
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteTimestamp(NewTimestamp(time.Time{}, Nanosecond))
-		w.WriteTimestamp(NewTimestampWithOffset(nowish, Nanosecond, true))
+		w.WriteTimestamp(nowish)
 	})
 }
 

@@ -40,11 +40,41 @@ func (tp TimestampPrecision) String() string {
 	}
 }
 
+func (tp TimestampPrecision) formatString(hasOffset bool) string {
+	switch tp {
+	case NoPrecision:
+		return ""
+	case Year:
+		return "2006T"
+	case Month:
+		return "2006-01T"
+	case Day:
+		return "2006-01-02T"
+	case Minute:
+		if hasOffset {
+			return "2006-01-02T15:04Z07:00"
+		}
+		return "2006-01-02T15:04Z"
+	case Second:
+		if hasOffset {
+			return "2006-01-02T15:04:05Z07:00"
+		}
+		return "2006-01-02T15:04:05Z"
+	case Nanosecond:
+		if hasOffset {
+			return "2006-01-02T15:04:05.999999999Z07:00"
+		}
+		return "2006-01-02T15:04:05.999999999Z"
+	}
+
+	return time.RFC3339Nano
+}
+
 // Timestamp struct
 type Timestamp struct {
 	DateTime  time.Time
 	precision TimestampPrecision
-	hasOffset    bool
+	hasOffset bool
 }
 
 // NewTimestamp constructor
@@ -63,7 +93,7 @@ func NewTimestampWithOffset(dateTime time.Time, precision TimestampPrecision, ha
 
 // NewTimestampFromStr constructor
 func NewTimestampFromStr(dateStr string, precision TimestampPrecision, hasOffset bool) (Timestamp, error) {
-	dateTime, err := time.Parse(time.RFC3339Nano, dateStr)
+	dateTime, err := time.Parse(precision.formatString(hasOffset), dateStr)
 	if err != nil {
 		return Timestamp{time.Time{}, NoPrecision, false}, err
 	}
@@ -77,40 +107,7 @@ func emptyTimestamp() Timestamp {
 
 // Format returns a formatted Timestamp string.
 func (ts Timestamp) Format() string {
-	var dateFormat string
-
-	switch ts.precision {
-	case NoPrecision:
-		dateFormat = ""
-	case Year:
-		dateFormat = "2006T"
-	case Month:
-		dateFormat = "2006-01T"
-	case Day:
-		dateFormat = "2006-01-02T"
-	case Minute:
-		if ts.hasOffset {
-			dateFormat = "2006-01-02T15:04Z07:00"
-		} else {
-			dateFormat = "2006-01-02T15:04Z"
-		}
-	case Second:
-		if ts.hasOffset {
-			dateFormat = "2006-01-02T15:04:05Z07:00"
-		} else {
-			dateFormat = "2006-01-02T15:04:05Z"
-		}
-	case Nanosecond:
-		if ts.hasOffset {
-			dateFormat = "2006-01-02T15:04:05.999999999Z07:00"
-		} else {
-			dateFormat = "2006-01-02T15:04:05.999999999Z"
-		}
-	default:
-		dateFormat = time.RFC3339Nano
-	}
-
-	return ts.DateTime.Format(dateFormat)
+	return ts.DateTime.Format(ts.precision.formatString(ts.hasOffset))
 }
 
 // Equal figures out if two timestamps are equal for each component.
