@@ -401,7 +401,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 		hasOffset := (val[idx] == '+' || val[idx] == '-') && isValidOffset(val, idx)
 
-		if val[idx] == 'z' || val[idx] == 'Z' || hasOffset {
+		if hasOffset || val[idx] == 'z' || val[idx] == 'Z' {
 			if idx >= 29 {
 				// Greater than 9 fractional seconds.
 				return roundFractionalSeconds(val, idx, hasOffset)

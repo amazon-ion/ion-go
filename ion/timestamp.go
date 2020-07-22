@@ -44,7 +44,7 @@ func (tp TimestampPrecision) String() string {
 type Timestamp struct {
 	DateTime  time.Time
 	precision TimestampPrecision
-	offset    bool
+	hasOffset    bool
 }
 
 // NewTimestamp constructor
@@ -53,12 +53,22 @@ func NewTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
 }
 
 // NewTimestampWithOffset constructor
-func NewTimestampWithOffset(dateTime time.Time, precision TimestampPrecision, offset bool) Timestamp {
+func NewTimestampWithOffset(dateTime time.Time, precision TimestampPrecision, hasOffset bool) Timestamp {
 	if precision <= Day {
 		// offset does not apply to Timestamps with Year, Month, or Day precision
 		return Timestamp{dateTime, precision, false}
 	}
-	return Timestamp{dateTime, precision, offset}
+	return Timestamp{dateTime, precision, hasOffset}
+}
+
+// NewTimestampFromStr constructor
+func NewTimestampFromStr(dateStr string, precision TimestampPrecision, hasOffset bool) (Timestamp, error) {
+	dateTime, err := time.Parse(time.RFC3339Nano, dateStr)
+	if err != nil {
+		return Timestamp{time.Time{}, NoPrecision, false}, err
+	}
+
+	return NewTimestampWithOffset(dateTime, precision, hasOffset), nil
 }
 
 func emptyTimestamp() Timestamp {
@@ -79,19 +89,19 @@ func (ts Timestamp) Format() string {
 	case Day:
 		dateFormat = "2006-01-02T"
 	case Minute:
-		if ts.offset {
+		if ts.hasOffset {
 			dateFormat = "2006-01-02T15:04Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04Z"
 		}
 	case Second:
-		if ts.offset {
+		if ts.hasOffset {
 			dateFormat = "2006-01-02T15:04:05Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04:05Z"
 		}
 	case Nanosecond:
-		if ts.offset {
+		if ts.hasOffset {
 			dateFormat = "2006-01-02T15:04:05.999999999Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04:05.999999999Z"
@@ -105,7 +115,7 @@ func (ts Timestamp) Format() string {
 
 // Equal figures out if two timestamps are equal for each component.
 func (ts Timestamp) Equal(ts1 Timestamp) bool {
-	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision && ts.offset == ts1.offset
+	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision && ts.hasOffset == ts1.hasOffset
 }
 
 // Equivalent figures out if two timestamps have equal DateTime and precision.

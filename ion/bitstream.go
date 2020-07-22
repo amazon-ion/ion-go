@@ -571,16 +571,16 @@ func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset i
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
-		return invalidTimestamp("")
+		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
 	}
 
 	if overflow {
 		date = date.Add(time.Second)
 	}
 
-	dateTime := date.In(time.FixedZone("fixed", int(offset)*60))
+	date = date.In(time.FixedZone("fixed", int(offset)*60))
 
-	return NewTimestampWithOffset(dateTime, precision, offset != 0), nil
+	return NewTimestampWithOffset(date, precision, offset != 0), nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.

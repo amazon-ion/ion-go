@@ -3,7 +3,6 @@ package ion
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestParseTimestamp(t *testing.T) {
@@ -14,12 +13,10 @@ func TestParseTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			et, err := time.Parse(time.RFC3339Nano, eval)
+			expectedTimestamp, err := NewTimestampFromStr(eval, expectedPrecision, expectedOffset)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			expectedTimestamp := NewTimestampWithOffset(et, expectedPrecision, expectedOffset)
 
 			if !val.Equal(expectedTimestamp) {
 				t.Errorf("expected %v, got %v", expectedTimestamp, val)
