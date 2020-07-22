@@ -199,15 +199,15 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	_, offset := val.DateTime.Zone()
 	offset /= 60
-	utc := val.DateTime.In(time.UTC)
+	val.SetLocation(time.UTC)
 
-	vlen := timeLen(offset, utc, val.precision)
+	vlen := timestampLen(offset, val)
 	buflen := vlen + tagLen(vlen)
 
 	buf := make([]byte, 0, buflen)
 
 	buf = appendTag(buf, 0x60, vlen)
-	buf = appendTime(buf, offset, utc, val.precision)
+	buf = appendTimestamp(buf, offset, val)
 
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }

@@ -106,18 +106,23 @@ func emptyTimestamp() Timestamp {
 }
 
 // Format returns a formatted Timestamp string.
-func (ts Timestamp) Format() string {
+func (ts *Timestamp) Format() string {
 	return ts.DateTime.Format(ts.precision.formatString(ts.hasOffset))
 }
 
 // Equal figures out if two timestamps are equal for each component.
-func (ts Timestamp) Equal(ts1 Timestamp) bool {
+func (ts *Timestamp) Equal(ts1 Timestamp) bool {
 	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision && ts.hasOffset == ts1.hasOffset
 }
 
 // Equivalent figures out if two timestamps have equal DateTime and precision.
 // eg. "2004-12-11T12:10" and "2004-12-11T12:10+00:00" are considered equivalent to each other
 // even though one has an offset and the other does not.
-func (ts Timestamp) Equivalent(ts1 Timestamp) bool {
+func (ts *Timestamp) Equivalent(ts1 Timestamp) bool {
 	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision
+}
+
+// SetLocation sets the location for the internal time object.
+func (ts *Timestamp) SetLocation(loc *time.Location) {
+	ts.DateTime = ts.DateTime.In(loc)
 }

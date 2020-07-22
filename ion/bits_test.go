@@ -169,28 +169,28 @@ func TestAppendTag(t *testing.T) {
 	test(0x50, math.MaxInt64, 10, []byte{0x5E, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF})
 }
 
-func TestAppendTime(t *testing.T) {
-	test := func(val time.Time, elen uint64, ebits []byte) {
-		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			_, offset := val.Zone()
+func TestAppendTimestamp(t *testing.T) {
+	test := func(val Timestamp, elen uint64, ebits []byte) {
+		t.Run(fmt.Sprintf("%x", val.DateTime), func(t *testing.T) {
+			_, offset := val.DateTime.Zone()
 			offset /= 60
-			utc := val.In(time.UTC)
+			val.SetLocation(time.UTC)
 
-			len := timeLen(offset, utc, Nanosecond)
+			len := timestampLen(offset, val)
 			if len != elen {
 				t.Errorf("expected len=%v, got len=%v", elen, len)
 			}
 
-			bits := appendTime(nil, offset, utc, Nanosecond)
+			bits := appendTimestamp(nil, offset, val)
 			if !bytes.Equal(bits, ebits) {
 				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 			}
 		})
 	}
 
-	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, true)
 
-	test(time.Time{}, 7, []byte{0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
+	test(NewTimestamp(time.Time{}, Second), 7, []byte{0xC0, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
 	test(nowish, 14, []byte{
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019

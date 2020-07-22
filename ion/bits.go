@@ -2,7 +2,6 @@ package ion
 
 import (
 	"math/big"
-	"time"
 )
 
 // uintLen pre-calculates the length, in bytes, of the given uint value.
@@ -244,30 +243,36 @@ func appendTag(b []byte, code byte, len uint64) []byte {
 	return appendVarUint(b, len)
 }
 
-// timeLen pre-calculates the length, in bytes, of the given time value.
-func timeLen(offset int, utc time.Time, precision TimestampPrecision) uint64 {
-	ret := varIntLen(int64(offset))
+// timestampLen pre-calculates the length, in bytes, of the given timestamp value.
+func timestampLen(offset int, utc Timestamp) uint64 {
+	var ret uint64
 
-	if precision >= Year {
+	if utc.hasOffset {
+		ret = varIntLen(int64(offset))
+	} else {
+		ret = 1
+	}
+
+	if utc.precision >= Year {
 		// Almost certainly two but let's be safe.
-		ret += varUintLen(uint64(utc.Year()))
+		ret += varUintLen(uint64(utc.DateTime.Year()))
 
 		// Month, day, hour, minute, and second are all guaranteed to be one byte.
-		if precision >= Month {
+		if utc.precision >= Month {
 			ret++
 
-			if precision >= Day {
+			if utc.precision >= Day {
 				ret++
 
-				if precision >= Minute {
+				if utc.precision >= Minute {
 					// Two bytes for Hour and Minute combined
 					ret += 2
 
-					if precision >= Second {
+					if utc.precision >= Second {
 						ret++
 
-						if precision >= Nanosecond {
-							ns := utc.Nanosecond()
+						if utc.precision >= Nanosecond {
+							ns := utc.DateTime.Nanosecond()
 							if ns > 0 {
 								ret++ // varIntLen(-9)
 								ret += intLen(int64(ns))
@@ -282,29 +287,34 @@ func timeLen(offset int, utc time.Time, precision TimestampPrecision) uint64 {
 	return ret
 }
 
-// appendTime appends a timestamp value
-func appendTime(b []byte, offset int, utc time.Time, precision TimestampPrecision) []byte {
-	b = appendVarInt(b, int64(offset))
+// appendTimestamp appends a timestamp value
+func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
+	if utc.hasOffset {
+		b = appendVarInt(b, int64(offset))
+	} else {
+		// Unknown offset
+		b = append(b, 0xC0)
+	}
 
-	if precision >= Year {
-		b = appendVarUint(b, uint64(utc.Year()))
+	if utc.precision >= Year {
+		b = appendVarUint(b, uint64(utc.DateTime.Year()))
 
-		if precision >= Month {
-			b = appendVarUint(b, uint64(utc.Month()))
+		if utc.precision >= Month {
+			b = appendVarUint(b, uint64(utc.DateTime.Month()))
 
-			if precision >= Day {
-				b = appendVarUint(b, uint64(utc.Day()))
+			if utc.precision >= Day {
+				b = appendVarUint(b, uint64(utc.DateTime.Day()))
 
-				if precision >= Minute {
+				if utc.precision >= Minute {
 					// The hour and minute is considered as a single component.
-					b = appendVarUint(b, uint64(utc.Hour()))
-					b = appendVarUint(b, uint64(utc.Minute()))
+					b = appendVarUint(b, uint64(utc.DateTime.Hour()))
+					b = appendVarUint(b, uint64(utc.DateTime.Minute()))
 
-					if precision >= Second {
-						b = appendVarUint(b, uint64(utc.Second()))
+					if utc.precision >= Second {
+						b = appendVarUint(b, uint64(utc.DateTime.Second()))
 
-						if precision >= Nanosecond {
-							ns := utc.Nanosecond()
+						if utc.precision >= Nanosecond {
+							ns := utc.DateTime.Nanosecond()
 							if ns > 0 {
 								b = appendVarInt(b, -9)
 								b = appendInt(b, int64(ns))
