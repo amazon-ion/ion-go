@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+const (
+	AnnotationsTag = "annotations"
+)
+
 var (
 	// ErrNoInput is returned when there is no input to decode
 	ErrNoInput = errors.New("ion: no input to decode")
@@ -202,6 +206,9 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 	v = indirect(v, isNull)
 	if isNull {
 		v.Set(reflect.Zero(v.Type()))
+		if v.Type().Kind() == reflect.Struct {
+			return d.attachAnnotations(v)
+		}
 		return nil
 	}
 
@@ -249,6 +256,9 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 		// Too easy.
 		v.SetBool(val)
 		return nil
+
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -307,7 +317,9 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 				return err
 			}
 			v.Set(reflect.ValueOf(*val))
-			return nil
+			return d.attachAnnotations(v)
+		} else {
+			return d.decodeToStructWithAnnotation(v)
 		}
 
 	case reflect.Interface:
@@ -345,7 +357,9 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 				return err
 			}
 			v.Set(reflect.ValueOf(*dec))
-			return nil
+			return d.attachAnnotations(v)
+		} else {
+			return d.decodeToStructWithAnnotation(v)
 		}
 
 	case reflect.Interface:
@@ -367,7 +381,9 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 	case reflect.Struct:
 		if v.Type() == decimalType {
 			v.Set(reflect.ValueOf(*val))
-			return nil
+			return d.attachAnnotations(v)
+		} else {
+			return d.decodeToStructWithAnnotation(v)
 		}
 
 	case reflect.Interface:
@@ -389,7 +405,9 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 	case reflect.Struct:
 		if v.Type() == timeType {
 			v.Set(reflect.ValueOf(val))
-			return nil
+			return d.attachAnnotations(v)
+		} else {
+			return d.decodeToStructWithAnnotation(v)
 		}
 
 	case reflect.Interface:
@@ -411,6 +429,9 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 	case reflect.String:
 		v.SetString(val)
 		return nil
+
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -442,6 +463,9 @@ func (d *Decoder) decodeLobTo(v reflect.Value) error {
 			}
 			return nil
 		}
+
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -477,6 +501,11 @@ func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 	fields := fieldsFor(v.Type())
 
 	if err := d.r.StepIn(); err != nil {
+		return err
+	}
+
+	err := d.attachAnnotations(v)
+	if err != nil {
 		return err
 	}
 
@@ -582,6 +611,10 @@ func (d *Decoder) decodeSliceTo(v reflect.Value) error {
 		return nil
 	}
 
+	if k == reflect.Struct {
+		return d.decodeToStructWithAnnotation(v)
+	}
+
 	// Only other valid targets are arrays and slices.
 	if k != reflect.Array && k != reflect.Slice {
 		return fmt.Errorf("ion: cannot unmarshal slice to %v", v.Type().String())
@@ -670,4 +703,49 @@ func indirect(v reflect.Value, wantPtr bool) reflect.Value {
 	}
 
 	return v
+}
+
+func (d *Decoder) decodeToStructWithAnnotation(v reflect.Value) error {
+	if err := d.attachAnnotations(v); err != nil {
+		return err
+	}
+
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if field.name != AnnotationsTag {
+			field := findField(fields, field.name)
+			if field != nil {
+				subValue, err := findSubvalue(v, field)
+				if err != nil {
+					return err
+				}
+
+				if err := d.decodeTo(subValue); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (d *Decoder) attachAnnotations(v reflect.Value) error {
+	fields := fieldsFor(v.Type())
+	field := findField(fields, AnnotationsTag)
+	if field != nil {
+		subValue, err := findSubvalue(v, field)
+		if err != nil {
+			return err
+		}
+		annotations := d.r.Annotations()
+		annotationsType := indirect(reflect.ValueOf(annotations), false).Type()
+		valueSlice := reflect.MakeSlice(annotationsType, 0, len(annotations))
+
+		for _, an := range annotations {
+			valueSlice = reflect.Append(valueSlice, reflect.ValueOf(an))
+		}
+		subValue.Set(valueSlice)
+	}
+	return nil
 }

@@ -568,3 +568,87 @@ func TestDecodeLotsOfInts(t *testing.T) {
 		}
 	}
 }
+
+func TestUnmarshalWithAnnotation(t *testing.T) {
+	type foo struct {
+		Value   interface{}
+		AnyName []string `ion:"annotations"`
+	}
+
+	test := func(str, testName string, eval foo) {
+		t.Run(testName, func(t *testing.T) {
+			var val foo
+			err := UnmarshalStr(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("with::multiple::annotations::null", "null", foo{nil, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::true", "bool", foo{true, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2", "int", foo{2, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", []string{"with", "multiple", "annotations"}})
+	timestamp := time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)
+	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::{{/w==}}", "blob", foo{[]byte{255}, []string{"with", "multiple", "annotations"}})
+}
+
+func TestUnmarshalContainersWithAnnotation(t *testing.T) {
+	type foo struct {
+		Value   []int
+		AnyName []string `ion:"annotations"`
+	}
+
+	test := func(str, testName string, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			var val foo
+			err := UnmarshalStr(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("with::multiple::annotations::[1, 2, 3]", "list", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::(1 2 3)", "sexp", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
+}
+
+func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
+	type nestedStruct struct {
+		Value int
+	}
+
+	type topLevelStruct struct {
+		InnerStruct nestedStruct
+		AnyName     []string `ion:"annotations"`
+	}
+
+	test := func(str, testName string, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			var val topLevelStruct
+			err := UnmarshalStr(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	innerStruct := nestedStruct{2}
+	test("with::multiple::annotations::2", "nested structs", topLevelStruct{InnerStruct: innerStruct, AnyName: []string{"with", "multiple", "annotations"}})
+}
