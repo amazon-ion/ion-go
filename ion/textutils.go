@@ -399,16 +399,16 @@ func parseTimestamp(val string) (Timestamp, error) {
 			}
 		}
 
-		offset := (val[idx] == '+' || val[idx] == '-') && isValidOffset(val, idx)
+		hasOffset := (val[idx] == '+' || val[idx] == '-') && isValidOffset(val, idx)
 
-		if val[idx] == 'z' || val[idx] == 'Z' || offset {
+		if val[idx] == 'z' || val[idx] == 'Z' || hasOffset {
 			if idx >= 29 {
 				// Greater than 9 fractional seconds.
-				return roundFractionalSeconds(val, idx, offset)
+				return roundFractionalSeconds(val, idx, hasOffset)
 			} else if idx <= 20 {
-				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, offset)
+				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, hasOffset)
 			}
-			return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, offset)
+			return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, hasOffset)
 		}
 	}
 

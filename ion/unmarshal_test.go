@@ -331,7 +331,7 @@ func TestDecodeDecimal(t *testing.T) {
 	test("1.20", MustParseDecimal("1.20"))
 }
 
-func TestDecodeTimeTo(t *testing.T) {
+func TestDecodeTimestampTo(t *testing.T) {
 	test := func(str string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
 			d := NewDecoder(NewReaderStr(str))
@@ -342,7 +342,7 @@ func TestDecodeTimeTo(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if val != eval {
+			if !val.Equal(eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 		})

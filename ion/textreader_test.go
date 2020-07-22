@@ -203,16 +203,8 @@ func TestTimestamps(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !val.DateTime.Equal(eval.DateTime) {
-				t.Errorf("expected %v, got %v", eval.DateTime, val.DateTime)
-			}
-
-			if val.precision != eval.precision {
-				t.Errorf("expected %v, got %v", eval.precision, val.precision)
-			}
-
-			if val.offset != eval.offset {
-				t.Errorf("expected %v, got %v", eval.precision, val.precision)
+			if !val.Equal(eval) {
+				t.Errorf("expected %v, got %v", eval, val)
 			}
 
 			_eof(t, r)

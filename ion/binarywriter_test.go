@@ -169,7 +169,7 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteTimestamp(NewTimestamp(time.Time{}, Nanosecond))
-		w.WriteTimestamp(NewTimestamp(nowish, Nanosecond))
+		w.WriteTimestamp(NewTimestampWithOffset(nowish, Nanosecond, true))
 	})
 }
 

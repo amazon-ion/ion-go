@@ -102,3 +102,15 @@ func (ts Timestamp) Format() string {
 
 	return ts.DateTime.Format(dateFormat)
 }
+
+// Equal figures out if two timestamps are equal for each component.
+func (ts Timestamp) Equal(ts1 Timestamp) bool {
+	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision && ts.offset == ts1.offset
+}
+
+// Equivalent figures out if two timestamps have equal DateTime and precision.
+// eg. "2004-12-11T12:10" and "2004-12-11T12:10+00:00" are considered equivalent to each other
+// even though one has an offset and the other does not.
+func (ts Timestamp) Equivalent(ts1 Timestamp) bool {
+	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision
+}

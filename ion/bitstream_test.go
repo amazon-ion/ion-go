@@ -136,7 +136,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 			}
 
 			if val.precision != expectedPrecision {
-				t.Errorf("expected %v, got %v", expectedPrecision, val.precision)
+				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.precision.String())
 			}
 		})
 	}
