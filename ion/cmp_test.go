@@ -31,7 +31,7 @@ func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 
 func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	if val, ok := other.(ionTimestamp); ok {
-		return thisTimestamp.DateTime.Equal(val.DateTime) && thisTimestamp.Precision == val.Precision
+		return thisTimestamp.DateTime.Equal(val.DateTime) && thisTimestamp.precision == val.precision
 	}
 	return false
 }

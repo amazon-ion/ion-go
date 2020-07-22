@@ -201,13 +201,13 @@ func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	offset /= 60
 	utc := val.DateTime.In(time.UTC)
 
-	vlen := timeLen(offset, utc, val.Precision)
+	vlen := timeLen(offset, utc, val.precision)
 	buflen := vlen + tagLen(vlen)
 
 	buf := make([]byte, 0, buflen)
 
 	buf = appendTag(buf, 0x60, vlen)
-	buf = appendTime(buf, offset, utc, val.Precision)
+	buf = appendTime(buf, offset, utc, val.precision)
 
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }

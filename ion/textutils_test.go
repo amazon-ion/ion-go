@@ -23,8 +23,8 @@ func TestParseTimestamp(t *testing.T) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 
-			if val.Precision != expectedPrecision {
-				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.Precision.String())
+			if val.precision != expectedPrecision {
+				t.Errorf("expected %v, got %v", expectedPrecision.String(), val.precision.String())
 			}
 		})
 	}

@@ -207,8 +207,12 @@ func TestTimestamps(t *testing.T) {
 				t.Errorf("expected %v, got %v", eval.DateTime, val.DateTime)
 			}
 
-			if val.Precision != eval.Precision {
-				t.Errorf("expected %v, got %v", eval.Precision, val.Precision)
+			if val.precision != eval.precision {
+				t.Errorf("expected %v, got %v", eval.precision, val.precision)
+			}
+
+			if val.offset != eval.offset {
+				t.Errorf("expected %v, got %v", eval.precision, val.precision)
 			}
 
 			_eof(t, r)
@@ -227,7 +231,7 @@ func TestTimestamps(t *testing.T) {
 	test("2001-01-01T00:00Z", NewTimestamp(et, Minute))
 	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second))
 	test("2001-01-01T00:00:00.000Z", NewTimestamp(et, Nanosecond))
-	test("2001-01-01T00:00:00.000+00:00", NewTimestamp(et, Nanosecond))
+	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithOffset(et, Nanosecond, true))
 	test("2001-01-01T00:00:00.000000Z", NewTimestamp(et, Nanosecond))
 	test("2001-01-01T00:00:00.000000000Z", NewTimestamp(et, Nanosecond))
 

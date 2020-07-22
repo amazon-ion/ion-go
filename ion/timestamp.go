@@ -43,8 +43,8 @@ func (tp TimestampPrecision) String() string {
 // Timestamp struct
 type Timestamp struct {
 	DateTime  time.Time
-	Precision TimestampPrecision
-	Offset    bool
+	precision TimestampPrecision
+	offset    bool
 }
 
 // NewTimestamp constructor
@@ -55,7 +55,7 @@ func NewTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
 // NewTimestampWithOffset constructor
 func NewTimestampWithOffset(dateTime time.Time, precision TimestampPrecision, offset bool) Timestamp {
 	if precision <= Day {
-		// Offset does not apply to Timestamps with Year, Month, or Day precision
+		// offset does not apply to Timestamps with Year, Month, or Day precision
 		return Timestamp{dateTime, precision, false}
 	}
 	return Timestamp{dateTime, precision, offset}
@@ -69,7 +69,7 @@ func emptyTimestamp() Timestamp {
 func (ts Timestamp) Format() string {
 	var dateFormat string
 
-	switch ts.Precision {
+	switch ts.precision {
 	case NoPrecision:
 		dateFormat = ""
 	case Year:
@@ -79,19 +79,19 @@ func (ts Timestamp) Format() string {
 	case Day:
 		dateFormat = "2006-01-02T"
 	case Minute:
-		if ts.Offset {
+		if ts.offset {
 			dateFormat = "2006-01-02T15:04Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04Z"
 		}
 	case Second:
-		if ts.Offset {
+		if ts.offset {
 			dateFormat = "2006-01-02T15:04:05Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04:05Z"
 		}
 	case Nanosecond:
-		if ts.Offset {
+		if ts.offset {
 			dateFormat = "2006-01-02T15:04:05.999999999Z07:00"
 		} else {
 			dateFormat = "2006-01-02T15:04:05.999999999Z"
