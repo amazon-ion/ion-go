@@ -5,8 +5,10 @@ import (
 	"time"
 )
 
+// TimestampPrecision is for tracking the precision of a timestamp
 type TimestampPrecision uint8
 
+// Possible TimestampPrecision values
 const (
 	NoPrecision TimestampPrecision = iota
 	Year
@@ -38,16 +40,19 @@ func (tp TimestampPrecision) String() string {
 	}
 }
 
+// Timestamp struct
 type Timestamp struct {
 	DateTime  time.Time
 	Precision TimestampPrecision
 	Offset    bool
 }
 
+// NewTimestamp constructor
 func NewTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
 	return Timestamp{dateTime, precision, false}
 }
 
+// NewTimestampWithOffset constructor
 func NewTimestampWithOffset(dateTime time.Time, precision TimestampPrecision, offset bool) Timestamp {
 	if precision <= Day {
 		// Offset does not apply to Timestamps with Year, Month, or Day precision
@@ -60,6 +65,7 @@ func emptyTimestamp() Timestamp {
 	return Timestamp{time.Time{}, NoPrecision, false}
 }
 
+// Format returns a formatted Timestamp string.
 func (ts Timestamp) Format() string {
 	var dateFormat string
 
