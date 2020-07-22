@@ -159,13 +159,24 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 		return w.writeValue("Writer.WriteFloat", []byte{0x40})
 	}
 
-	bs := make([]byte, 9)
-	bs[0] = 0x48
+	// Can this be losslessly represented as a float32?
+	if val == float64(float32(val)) {
+		bs := make([]byte, 5)
+		bs[0] = 0x44
 
-	bits := math.Float64bits(val)
-	binary.BigEndian.PutUint64(bs[1:], bits)
+		bits := math.Float32bits(float32(val))
+		binary.BigEndian.PutUint32(bs[1:], bits)
 
-	return w.writeValue("Writer.WriteFloat", bs)
+		return w.writeValue("Writer.WriteFloat", bs)
+	} else {
+		bs := make([]byte, 9)
+		bs[0] = 0x48
+
+		bits := math.Float64bits(val)
+		binary.BigEndian.PutUint64(bs[1:], bits)
+
+		return w.writeValue("Writer.WriteFloat", bs)
+	}
 }
 
 // WriteDecimal writes a decimal value.
