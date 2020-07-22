@@ -80,6 +80,8 @@ func TestMarshalBinary(t *testing.T) {
 		})
 	}
 
+	test(nil, "null", []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
+
 	// Float32 valid type. Go treats floats as float64 by default, unless specified.
 	// Explicitly cast number to be of float32 and ensure type is handled. This should not be an unknown type.
 	test(float32(math.MaxFloat32), "float32 valid type", prefixIVM([]byte{0x44, 0x7f, 0x7f, 0xff, 0xff})) // 3.40282346638528859811704183484516925440e+38
