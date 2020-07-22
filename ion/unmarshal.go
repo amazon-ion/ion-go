@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	// AnnotationsTag is used to put annotations of Ion values in expected field
 	AnnotationsTag = "annotations"
 )
 
@@ -318,9 +319,8 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 			}
 			v.Set(reflect.ValueOf(*val))
 			return d.attachAnnotations(v)
-		} else {
-			return d.decodeToStructWithAnnotation(v)
 		}
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -358,9 +358,8 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 			}
 			v.Set(reflect.ValueOf(*dec))
 			return d.attachAnnotations(v)
-		} else {
-			return d.decodeToStructWithAnnotation(v)
 		}
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -382,9 +381,8 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 		if v.Type() == decimalType {
 			v.Set(reflect.ValueOf(*val))
 			return d.attachAnnotations(v)
-		} else {
-			return d.decodeToStructWithAnnotation(v)
 		}
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -406,9 +404,8 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 		if v.Type() == timeType {
 			v.Set(reflect.ValueOf(val))
 			return d.attachAnnotations(v)
-		} else {
-			return d.decodeToStructWithAnnotation(v)
 		}
+		return d.decodeToStructWithAnnotation(v)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
