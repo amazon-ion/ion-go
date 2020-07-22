@@ -668,11 +668,11 @@ func _decimalAF(t *testing.T, r Reader, efn *string, etas []string, eval *Decima
 	}
 }
 
-func _timestamp(t *testing.T, r Reader, eval time.Time) {
+func _timestamp(t *testing.T, r Reader, eval Timestamp) {
 	_timestampAF(t, r, nil, nil, eval)
 }
 
-func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval time.Time) {
+func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Timestamp) {
 	_nextAF(t, r, TimestampType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.timestamp", eval)
@@ -683,8 +683,16 @@ func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval time.
 		t.Fatal(err)
 	}
 
-	if !val.DateTime.Equal(eval) {
-		t.Errorf("expected %v, got %v", eval, val)
+	if !val.DateTime.Equal(eval.DateTime) {
+		t.Errorf("expected %v, got %v", eval.DateTime, val.DateTime)
+	}
+
+	if val.precision != eval.precision {
+		t.Errorf("expected %v, got %v", eval.precision, val.precision)
+	}
+
+	if val.offset != eval.offset {
+		t.Errorf("expected %v, got %v", eval.offset, val.offset)
 	}
 }
 

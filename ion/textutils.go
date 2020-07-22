@@ -488,7 +488,7 @@ func roundFractionalSeconds(val string, idx int, offset bool) (Timestamp, error)
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestamp(timeValue, Nanosecond), err
+		return NewTimestampWithOffset(timeValue, Nanosecond, offset), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]
