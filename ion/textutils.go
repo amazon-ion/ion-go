@@ -379,17 +379,19 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	switch val[16] {
 	case 'z', 'Z', '+', '-':
-		kind, hasOffset := computeTimestampKind(val, 16)
-		if kind != Unspecified {
-			if hasOffset {
-				return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute, kind)
-			}
-			return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute, kind)
+		kind, hasOffset, err := computeTimestampKind(val, 16)
+		if err != nil {
+			break
 		}
+
+		if hasOffset {
+			return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute, kind)
+		}
+		return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute, kind)
 	case ':':
 		//yyyy-mm-ddThh:mm:ss
 		if len(val) < 20 {
-			return invalidTimestamp(val)
+			break
 		}
 
 		idx := 19
@@ -400,16 +402,18 @@ func parseTimestamp(val string) (Timestamp, error) {
 			}
 		}
 
-		kind, _ := computeTimestampKind(val, idx)
-		if kind != Unspecified {
-			if idx >= 29 {
-				// Greater than 9 fractional seconds.
-				return roundFractionalSeconds(val, idx, kind)
-			} else if idx <= 20 {
-				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, kind)
-			}
-			return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
+		kind, _, err := computeTimestampKind(val, idx)
+		if err != nil {
+			break
 		}
+
+		if idx >= 29 {
+			// Greater than 9 fractional seconds.
+			return roundFractionalSeconds(val, idx, kind)
+		} else if idx <= 20 {
+			return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, kind)
+		}
+		return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
 	}
 
 	return invalidTimestamp(val)
@@ -434,24 +438,27 @@ func hourMinOffset(val string, idx int) (int64, int64, error) {
 	return hourOffset, minuteOffset, nil
 }
 
-func computeTimestampKind(val string, idx int) (TimestampKind, bool) {
+func computeTimestampKind(val string, idx int) (TimestampKind, bool, error) {
 	switch val[idx] {
 	case 'z', 'Z':
-		return UTC, false
+		return UTC, false, nil
 	case '+', '-':
 		hourOffset, minuteOffset, err := hourMinOffset(val, idx)
 		if err != nil {
-			return Unspecified, false
+			return Unspecified, false, err
 		}
 
 		if hourOffset == 0 && minuteOffset == 0 {
-			return UTC, true
+			if val[idx] == '-' {
+				return Unspecified, true, nil
+			}
+			return UTC, true, nil
 		} else if hourOffset < 24 && minuteOffset < 60 {
-			return Local, true
+			return Local, true, nil
 		}
 	}
 
-	return Unspecified, false
+	return Unspecified, false, fmt.Errorf("ion: invalid character: '%v'", val[idx])
 }
 
 func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Time, error) {
