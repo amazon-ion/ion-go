@@ -216,21 +216,21 @@ func TestTimestamps(t *testing.T) {
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
-	test("2001T", NewTimestamp(et, Year))
-	test("2001-01T", NewTimestamp(et, Month))
-	test("2001-01-01", NewTimestamp(et, Day))
-	test("2001-01-01T", NewTimestamp(et, Day))
-	test("2001-01-01T00:00Z", NewTimestamp(et, Minute))
-	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second))
-	test("2001-01-01T00:00:00.000Z", NewTimestamp(et, Nanosecond))
-	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithOffset(et, Nanosecond, true))
-	test("2001-01-01T00:00:00.000000Z", NewTimestamp(et, Nanosecond))
-	test("2001-01-01T00:00:00.000000000Z", NewTimestamp(et, Nanosecond))
+	test("2001T", NewSimpleTimestamp(et, Year))
+	test("2001-01T", NewSimpleTimestamp(et, Month))
+	test("2001-01-01", NewSimpleTimestamp(et, Day))
+	test("2001-01-01T", NewSimpleTimestamp(et, Day))
+	test("2001-01-01T00:00Z", NewTimestamp(et, Minute, false, UTC))
+	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second, false, UTC))
+	test("2001-01-01T00:00:00.000Z", NewTimestamp(et, Nanosecond, false, UTC))
+	test("2001-01-01T00:00:00.000+00:00", NewTimestamp(et, Nanosecond, true, UTC))
+	test("2001-01-01T00:00:00.000000Z", NewTimestamp(et, Nanosecond, false, UTC))
+	test("2001-01-01T00:00:00.000000000Z", NewTimestamp(et, Nanosecond, false, UTC))
 
 	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
-	test("2001-01-01T00:00:00.000000000999Z", NewTimestamp(et2, Nanosecond))
+	test("2001-01-01T00:00:00.000000000999Z", NewTimestamp(et2, Nanosecond, false, UTC))
 
-	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, NewTimestamp(et, Nanosecond))
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, NewTimestamp(et, Nanosecond, false, UTC))
 }
 
 func TestDecimals(t *testing.T) {
