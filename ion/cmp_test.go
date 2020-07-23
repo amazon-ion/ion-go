@@ -31,7 +31,7 @@ func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 
 func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	if val, ok := other.(ionTimestamp); ok {
-		return thisTimestamp.Equivalent(val.Timestamp)
+		return thisTimestamp.Equal(val.Timestamp)
 	}
 	return false
 }

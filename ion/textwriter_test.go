@@ -240,9 +240,9 @@ func TestWriteTextTimestamp(t *testing.T) {
 	expected := "1970-01-01T00:00:00.001Z\n1970-01-01T01:23:00+01:23"
 	testTextWriter(t, expected, func(w Writer) {
 		dateTime := time.Unix(0, 1000000).In(time.UTC)
-		w.WriteTimestamp(NewTimestamp(dateTime, Nanosecond, false, UTC))
+		w.WriteTimestamp(NewTimestamp(dateTime, Nanosecond, UTC))
 		dateTime = time.Unix(0, 0).In(time.FixedZone("wtf", 4980))
-		w.WriteTimestamp(NewTimestamp(dateTime, Second, true, Local))
+		w.WriteTimestamp(NewTimestamp(dateTime, Second, Local))
 	})
 }
 

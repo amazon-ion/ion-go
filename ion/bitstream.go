@@ -581,12 +581,12 @@ func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, off
 	date = date.In(time.FixedZone("fixed", int(offset)*60))
 
 	if precision <= Day {
-		return NewTimestamp(date, precision, false, Unspecified), nil
+		return NewTimestamp(date, precision, Unspecified), nil
 	} else if offset == 0 {
-		return NewTimestamp(date, precision, false, UTC), nil
+		return NewTimestamp(date, precision, UTC), nil
 	}
 
-	return NewTimestamp(date, precision, true, Local), nil
+	return NewTimestamp(date, precision, Local), nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.

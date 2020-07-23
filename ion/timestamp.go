@@ -40,7 +40,7 @@ func (tp TimestampPrecision) String() string {
 	}
 }
 
-func (tp TimestampPrecision) formatString(hasOffset bool) string {
+func (tp TimestampPrecision) formatString(kind TimestampKind) string {
 	switch tp {
 	case NoPrecision:
 		return ""
@@ -51,17 +51,17 @@ func (tp TimestampPrecision) formatString(hasOffset bool) string {
 	case Day:
 		return "2006-01-02T"
 	case Minute:
-		if hasOffset {
+		if kind == Local {
 			return "2006-01-02T15:04Z07:00"
 		}
 		return "2006-01-02T15:04Z"
 	case Second:
-		if hasOffset {
+		if kind == Local {
 			return "2006-01-02T15:04:05Z07:00"
 		}
 		return "2006-01-02T15:04:05Z"
 	case Nanosecond:
-		if hasOffset {
+		if kind == Local {
 			return "2006-01-02T15:04:05.999999999Z07:00"
 		}
 		return "2006-01-02T15:04:05.999999999Z"
@@ -84,55 +84,44 @@ const (
 type Timestamp struct {
 	DateTime  time.Time
 	precision TimestampPrecision
-	hasOffset bool
 	kind      TimestampKind
 }
 
 // NewSimpleTimestamp constructor
 func NewSimpleTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
-	return Timestamp{dateTime, precision, false, Unspecified}
+	return Timestamp{dateTime, precision, Unspecified}
 }
 
 // NewTimestamp constructor
-func NewTimestamp(dateTime time.Time, precision TimestampPrecision, hasOffset bool, kind TimestampKind) Timestamp {
+func NewTimestamp(dateTime time.Time, precision TimestampPrecision, kind TimestampKind) Timestamp {
 	if precision <= Day {
-		// offset does not apply to Timestamps with Year, Month, or Day precision
-		return Timestamp{dateTime, precision, false, kind}
+		// Timestamps with Year, Month, or Day precision necessarily have Unspecified kind
+		return Timestamp{dateTime, precision, Unspecified}
 	}
-	return Timestamp{dateTime, precision, hasOffset, kind}
+	return Timestamp{dateTime, precision, kind}
 }
 
 // NewTimestampFromStr constructor
-func NewTimestampFromStr(dateStr string, precision TimestampPrecision, hasOffset bool, kind TimestampKind) (Timestamp, error) {
-	dateTime, err := time.Parse(precision.formatString(hasOffset), dateStr)
+func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind TimestampKind) (Timestamp, error) {
+	dateTime, err := time.Parse(precision.formatString(kind), dateStr)
 	if err != nil {
-		return Timestamp{time.Time{}, NoPrecision, false, Unspecified}, err
+		return Timestamp{time.Time{}, NoPrecision, Unspecified}, err
 	}
 
-	return NewTimestamp(dateTime, precision, hasOffset, kind), nil
+	return NewTimestamp(dateTime, precision, kind), nil
 }
 
 func emptyTimestamp() Timestamp {
-	return Timestamp{time.Time{}, NoPrecision, false, Unspecified}
+	return Timestamp{time.Time{}, NoPrecision, Unspecified}
 }
 
 // Format returns a formatted Timestamp string.
 func (ts *Timestamp) Format() string {
-	return ts.DateTime.Format(ts.precision.formatString(ts.hasOffset))
+	return ts.DateTime.Format(ts.precision.formatString(ts.kind))
 }
 
 // Equal figures out if two timestamps are equal for each component.
 func (ts *Timestamp) Equal(ts1 Timestamp) bool {
-	return ts.DateTime.Equal(ts1.DateTime) &&
-		ts.precision == ts1.precision &&
-		ts.hasOffset == ts1.hasOffset &&
-		ts.kind == ts1.kind
-}
-
-// Equivalent figures out if two timestamps have equal DateTime, precision, and kind.
-// eg. "2004-12-11T12:10" and "2004-12-11T12:10+00:00" are considered equivalent to each other
-// even though one has an offset and the other does not.
-func (ts *Timestamp) Equivalent(ts1 Timestamp) bool {
 	return ts.DateTime.Equal(ts1.DateTime) &&
 		ts.precision == ts1.precision &&
 		ts.kind == ts1.kind

@@ -379,12 +379,12 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	switch val[16] {
 	case 'z', 'Z', '+', '-':
-		hasOffset, kind := computeOffsetAndKind(val, 16)
+		kind, hasOffset := computeTimestampKind(val, 16)
 		if kind != Unspecified {
 			if hasOffset {
-				return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute, true, kind)
+				return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute, kind)
 			}
-			return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute, false, kind)
+			return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute, kind)
 		}
 	case ':':
 		//yyyy-mm-ddThh:mm:ss
@@ -400,15 +400,15 @@ func parseTimestamp(val string) (Timestamp, error) {
 			}
 		}
 
-		hasOffset, kind := computeOffsetAndKind(val, idx)
+		kind, _ := computeTimestampKind(val, idx)
 		if kind != Unspecified {
 			if idx >= 29 {
 				// Greater than 9 fractional seconds.
-				return roundFractionalSeconds(val, idx, hasOffset, kind)
+				return roundFractionalSeconds(val, idx, kind)
 			} else if idx <= 20 {
-				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, hasOffset, kind)
+				return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, kind)
 			}
-			return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, hasOffset, kind)
+			return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
 		}
 	}
 
@@ -434,24 +434,24 @@ func hourMinOffset(val string, idx int) (int64, int64, error) {
 	return hourOffset, minuteOffset, nil
 }
 
-func computeOffsetAndKind(val string, idx int) (bool, TimestampKind) {
+func computeTimestampKind(val string, idx int) (TimestampKind, bool) {
 	switch val[idx] {
 	case 'z', 'Z':
-		return false, UTC
+		return UTC, false
 	case '+', '-':
 		hourOffset, minuteOffset, err := hourMinOffset(val, idx)
 		if err != nil {
-			return false, Unspecified
+			return Unspecified, false
 		}
 
 		if hourOffset == 0 && minuteOffset == 0 {
-			return true, UTC
+			return UTC, true
 		} else if hourOffset < 24 && minuteOffset < 60 {
-			return true, Local
+			return Local, true
 		}
 	}
 
-	return false, Unspecified
+	return Unspecified, false
 }
 
 func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Time, error) {
@@ -472,13 +472,13 @@ func tryCreateTimestamp(val string, year int64, month int64, day int64, precisio
 	return NewSimpleTimestamp(date, precision), nil
 }
 
-func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision, hasOffset bool, kind TimestampKind) (Timestamp, error) {
+func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision, kind TimestampKind) (Timestamp, error) {
 	date, err := time.Parse(layout, val)
 	if err != nil {
 		return invalidTimestamp(val)
 	}
 
-	return NewTimestamp(date, precision, hasOffset, kind), nil
+	return NewTimestamp(date, precision, kind), nil
 }
 
 func invalidTimeDate(val string) (time.Time, error) {
@@ -489,7 +489,7 @@ func invalidTimestamp(val string) (Timestamp, error) {
 	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
 }
 
-func roundFractionalSeconds(val string, idx int, hasOffset bool, kind TimestampKind) (Timestamp, error) {
+func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp, error) {
 	// Convert to float to perform rounding.
 	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
 	if err != nil {
@@ -512,10 +512,10 @@ func roundFractionalSeconds(val string, idx int, hasOffset bool, kind TimestampK
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestamp(timeValue, Nanosecond, hasOffset, kind), err
+		return NewTimestamp(timeValue, Nanosecond, kind), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]
 
-	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, hasOffset, kind)
+	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
 }

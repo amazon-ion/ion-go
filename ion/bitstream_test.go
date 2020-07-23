@@ -113,7 +113,7 @@ func TestBitcodeString(t *testing.T) {
 }
 
 func TestBinaryReadTimestamp(t *testing.T) {
-	test := func(ion []byte, expectedValue string, expectedPrecision TimestampPrecision, expectedOffset bool, expectedKind TimestampKind) {
+	test := func(ion []byte, expectedValue string, expectedPrecision TimestampPrecision, expectedKind TimestampKind) {
 		t.Run(expectedValue, func(t *testing.T) {
 			b := bitstream{}
 			b.InitBytes(ion)
@@ -124,7 +124,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			expectedTimestamp, err := NewTimestampFromStr(expectedValue, expectedPrecision, expectedOffset, expectedKind)
+			expectedTimestamp, err := NewTimestampFromStr(expectedValue, expectedPrecision, expectedKind)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -139,14 +139,14 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x63,
 		0x80,       // offset 0
 		0x0F, 0xD0, // year: 2000
-	}, "2000T", Year, false, Unspecified)
+	}, "2000T", Year, Unspecified)
 
 	test([]byte{
 		0x64,
 		0x80,       // offset 0
 		0x0F, 0xD0, // year: 2000
 		0x85, // month: 5
-	}, "2000-05T", Month, false, Unspecified)
+	}, "2000-05T", Month, Unspecified)
 
 	test([]byte{
 		0x65,
@@ -154,7 +154,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x0F, 0xD0, // year: 2000
 		0x85, // month: 5
 		0x86, // day: 6
-	}, "2000-05-06T", Day, false, Unspecified)
+	}, "2000-05-06T", Day, Unspecified)
 
 	test([]byte{
 		0x67,
@@ -164,7 +164,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x86, // day: 6
 		0x87, // hour: 7
 		0x88, // minute: 8
-	}, "2000-05-06T07:08Z", Minute, false, UTC)
+	}, "2000-05-06T07:08Z", Minute, UTC)
 
 	test([]byte{
 		0x68,
@@ -175,7 +175,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x87, // hour: 7
 		0x88, // minute: 8
 		0x89, // second: 9
-	}, "2000-05-06T07:08:09Z", Second, false, UTC)
+	}, "2000-05-06T07:08:09Z", Second, UTC)
 
 	test([]byte{
 		0x6A,
@@ -188,7 +188,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x80, // second: 0
 		0x80, // 0 precision units
 		0x00, // 0
-	}, "2000-01-01T00:00:00Z", Second, false, UTC)
+	}, "2000-01-01T00:00:00Z", Second, UTC)
 
 	test([]byte{
 		0x69,
@@ -200,7 +200,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x80, // minute: 0
 		0x80, // second: 0
 		0xC2, // 2 precision units
-	}, "2000-01-01T00:00:00.00Z", Second, false, UTC)
+	}, "2000-01-01T00:00:00.00Z", Second, UTC)
 
 	test([]byte{
 		0x6A,
@@ -213,7 +213,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x89, // second: 9
 		0xC3, // 3 precision units
 		0x64, // 100
-	}, "2000-05-06T07:08:09.100Z", Nanosecond, false, UTC)
+	}, "2000-05-06T07:08:09.100Z", Nanosecond, UTC)
 
 	test([]byte{
 		0x6C,
@@ -226,7 +226,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x89,             // second: 9
 		0xC6,             // 6 precision units
 		0x01, 0x87, 0x04, // 100100
-	}, "2000-05-06T07:08:09.100100Z", Nanosecond, false, UTC)
+	}, "2000-05-06T07:08:09.100100Z", Nanosecond, UTC)
 
 	test([]byte{
 		0x6C,
@@ -239,7 +239,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x89,             // second: 9
 		0xC6,             // 6 precision units
 		0x01, 0x87, 0x04, // 100100
-	}, "2000-05-06T07:08:09.100100Z", Nanosecond, true, Local)
+	}, "2000-05-06T07:08:09.100100Z", Nanosecond, Local)
 
 	// Test >9 fractional seconds.
 	test([]byte{
@@ -253,7 +253,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x80, // second: 0
 		0xCA, // 10 precision units
 		0x2C, // 44
-	}, "2000-01-01T00:00:00.000000004Z", Nanosecond, false, UTC)
+	}, "2000-01-01T00:00:00.000000004Z", Nanosecond,  UTC)
 
 	test([]byte{
 		0x6A,
@@ -266,7 +266,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x80, // second: 0
 		0xCA, // 10 precision units
 		0x2D, // 45
-	}, "2000-01-01T00:00:00.000000005Z", Nanosecond, false, UTC)
+	}, "2000-01-01T00:00:00.000000005Z", Nanosecond, UTC)
 
 	test([]byte{
 		0x6A,
@@ -279,7 +279,7 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0x80, // second: 0
 		0xCA, // 10 precision units
 		0x2E, // 46
-	}, "2000-01-01T00:00:00.000000005Z", Nanosecond, false, UTC)
+	}, "2000-01-01T00:00:00.000000005Z", Nanosecond, UTC)
 
 	test([]byte{
 		0x6E,
@@ -293,5 +293,5 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		0xBB,                         // second: 59
 		0xCA,                         // 10 precision units
 		0x02, 0x54, 0x0B, 0xE3, 0xFF, // 9999999999
-	}, "2001-01-01T00:00:00.00000000Z", Second, false, UTC)
+	}, "2001-01-01T00:00:00.00000000Z", Second, UTC)
 }
