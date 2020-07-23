@@ -247,10 +247,10 @@ func appendTag(b []byte, code byte, len uint64) []byte {
 func timestampLen(offset int, utc Timestamp) uint64 {
 	var ret uint64
 
-	if utc.hasOffset {
-		ret = varIntLen(int64(offset))
-	} else {
+	if utc.kind == Unspecified {
 		ret = 1
+	} else {
+		ret = varIntLen(int64(offset))
 	}
 
 	if utc.precision >= Year {
@@ -289,11 +289,11 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 
 // appendTimestamp appends a timestamp value
 func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
-	if utc.hasOffset {
-		b = appendVarInt(b, int64(offset))
-	} else {
+	if utc.kind == Unspecified {
 		// Unknown offset
 		b = append(b, 0xC0)
+	} else {
+		b = appendVarInt(b, int64(offset))
 	}
 
 	if utc.precision >= Year {
