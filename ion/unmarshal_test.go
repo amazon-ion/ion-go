@@ -592,6 +592,8 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test("with::multiple::annotations::null", "null", foo{nil, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::true", "bool", foo{true, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2", "int", foo{2, []string{"with", "multiple", "annotations"}})
+	bi := new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF))
+	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", []string{"with", "multiple", "annotations"}})

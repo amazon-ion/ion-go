@@ -318,7 +318,6 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 				return err
 			}
 			v.Set(reflect.ValueOf(*val))
-			return d.attachAnnotations(v)
 		}
 		return d.decodeToStructWithAnnotation(v)
 
@@ -736,13 +735,7 @@ func (d *Decoder) attachAnnotations(v reflect.Value) error {
 			return err
 		}
 		annotations := d.r.Annotations()
-		annotationsType := indirect(reflect.ValueOf(annotations), false).Type()
-		valueSlice := reflect.MakeSlice(annotationsType, 0, len(annotations))
-
-		for _, an := range annotations {
-			valueSlice = reflect.Append(valueSlice, reflect.ValueOf(an))
-		}
-		subValue.Set(valueSlice)
+		subValue.Set(reflect.ValueOf(annotations))
 	}
 	return nil
 }
