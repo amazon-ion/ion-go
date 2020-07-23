@@ -80,7 +80,7 @@ func TestMarshalBinary(t *testing.T) {
 		})
 	}
 
-	test(nil, "null", []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
+	test(nil, "null", prefixIVM([]byte{0x0F}))
 
 	// Float32 valid type. Go treats floats as float64 by default, unless specified.
 	// Explicitly cast number to be of float32 and ensure type is handled. This should not be an unknown type.
@@ -94,13 +94,12 @@ func TestMarshalBinary(t *testing.T) {
 	test(math.MaxFloat64, "float64", prefixIVM([]byte{0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})) // 1.797693134862315708145274237317043567981e+308
 
 	// Struct.
-	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", []byte{
-		0xE0, 0x01, 0x00, 0xEA,
+	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", prefixIVM([]byte{
 		0xE9, 0x81, 0x83, 0xD6, 0x87, 0xB4, 0x81, 'A', 0x81, 'B',
 		0xD5,
 		0x8A, 0x21, 0x2A,
 		0x8B, 0x20,
-	})
+	}))
 }
 
 func prefixIVM(data []byte) []byte {
