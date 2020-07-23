@@ -363,7 +363,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 	case 'z', 'Z', '+', '-':
 		kind, err := computeTimestampKind(val, 16)
 		if err != nil {
-			break
+			return emptyTimestamp(), err
 		}
 
 		return NewTimestampFromStr(val, Minute, kind)
@@ -383,16 +383,17 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 		kind, err := computeTimestampKind(val, idx)
 		if err != nil {
-			break
+			return emptyTimestamp(), err
 		}
 
-		if idx >= 29 {
-			// Greater than 9 fractional seconds.
-			return roundFractionalSeconds(val, idx, kind)
-		} else if idx <= 20 {
+		if idx <= 20 {
 			return NewTimestampFromStr(val, Second, kind)
+		} else if idx <= 28 {
+			return NewTimestampFromStr(val, Nanosecond, kind)
 		}
-		return NewTimestampFromStr(val, Nanosecond, kind)
+
+		// Greater than 9 fractional seconds.
+		return roundFractionalSeconds(val, idx, kind)
 	}
 
 	return invalidTimestamp(val)
@@ -457,7 +458,7 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 	if roundedFloatValue == 10 {
 		roundedStringValue := "9.000000000"
 		val = val[:18] + roundedStringValue + val[idx:]
-		timeValue, err := time.Parse(layoutNanosecondsAndOffset, val)
+		timeValue, err := time.Parse(Nanosecond.formatString(), val)
 		if err != nil {
 			return invalidTimestamp(val)
 		}

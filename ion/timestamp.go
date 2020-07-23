@@ -5,24 +5,6 @@ import (
 	"time"
 )
 
-const (
-	// layoutMinutesAndOffset layout for time.date with yyyy-mm-ddThh:mm±hh:mm format. time.Parse()
-	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
-	layoutMinutesAndOffset = "2006-01-02T15:04Z07:00"
-
-	// layoutMinutesZulu layout for time.date with yyyy-mm-ddThh:mmZ format. time.Parse()
-	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
-	layoutMinutesZulu = "2006-01-02T15:04Z"
-
-	// layoutNanosecondsAndOffset layout for time.date of RFC3339Nano format.
-	// Such as 2006-01-02T15:04:05.999999999Z07:00.
-	layoutNanosecondsAndOffset = time.RFC3339Nano
-
-	// layoutSecondsAndOffset layout for time.date of RFC3339 format.
-	// Such as: 2006-01-02T15:04:05Z07:00.
-	layoutSecondsAndOffset = time.RFC3339
-)
-
 // TimestampPrecision is for tracking the precision of a timestamp
 type TimestampPrecision uint8
 
@@ -76,6 +58,24 @@ func (tp TimestampPrecision) formatString() string {
 
 	return time.RFC3339Nano
 }
+
+const (
+	// layoutMinutesAndOffset layout for time.date with yyyy-mm-ddThh:mm±hh:mm format. time.Parse()
+	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
+	layoutMinutesAndOffset = "2006-01-02T15:04Z07:00"
+
+	// layoutMinutesZulu layout for time.date with yyyy-mm-ddThh:mmZ format. time.Parse()
+	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
+	layoutMinutesZulu = "2006-01-02T15:04Z"
+
+	// layoutSecondsAndOffset layout for time.date of RFC3339 format.
+	// Such as: 2006-01-02T15:04:05Z07:00.
+	layoutSecondsAndOffset = time.RFC3339
+
+	// layoutNanosecondsAndOffset layout for time.date of RFC3339Nano format.
+	// Such as 2006-01-02T15:04:05.999999999Z07:00.
+	layoutNanosecondsAndOffset = time.RFC3339Nano
+)
 
 // TimestampKind is for tracking the kind of timestamp
 type TimestampKind uint8
