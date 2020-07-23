@@ -9,24 +9,6 @@ import (
 	"time"
 )
 
-const (
-	// layoutMinutesAndOffset layout for time.date with yyyy-mm-ddThh:mm±hh:mm format. time.Parse()
-	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
-	layoutMinutesAndOffset = "2006-01-02T15:04Z07:00"
-
-	// layoutMinutesZulu layout for time.date with yyyy-mm-ddThh:mmZ format. time.Parse()
-	// uses "2006-01-02T15:04Z07:00" explicitly as a string value to identify this format.
-	layoutMinutesZulu = "2006-01-02T15:04Z"
-
-	// layoutNanosecondsAndOffset layout for time.date of RFC3339Nano format.
-	// Such as 2006-01-02T15:04:05.999999999Z07:00.
-	layoutNanosecondsAndOffset = time.RFC3339Nano
-
-	// layoutSecondsAndOffset layout for time.date of RFC3339 format.
-	// Such as: 2006-01-02T15:04:05Z07:00.
-	layoutSecondsAndOffset = time.RFC3339
-)
-
 // Does this symbol need to be quoted in text form?
 func symbolNeedsQuoting(sym string) bool {
 	switch sym {
@@ -379,15 +361,12 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	switch val[16] {
 	case 'z', 'Z', '+', '-':
-		kind, hasOffset, err := computeTimestampKind(val, 16)
+		kind, err := computeTimestampKind(val, 16)
 		if err != nil {
 			break
 		}
 
-		if hasOffset {
-			return tryCreateTimestampUsingLayout(val, layoutMinutesAndOffset, Minute, kind)
-		}
-		return tryCreateTimestampUsingLayout(val, layoutMinutesZulu, Minute, kind)
+		return NewTimestampFromStr(val, Minute, kind)
 	case ':':
 		//yyyy-mm-ddThh:mm:ss
 		if len(val) < 20 {
@@ -402,7 +381,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 			}
 		}
 
-		kind, _, err := computeTimestampKind(val, idx)
+		kind, err := computeTimestampKind(val, idx)
 		if err != nil {
 			break
 		}
@@ -411,9 +390,9 @@ func parseTimestamp(val string) (Timestamp, error) {
 			// Greater than 9 fractional seconds.
 			return roundFractionalSeconds(val, idx, kind)
 		} else if idx <= 20 {
-			return tryCreateTimestampUsingLayout(val, layoutSecondsAndOffset, Second, kind)
+			return NewTimestampFromStr(val, Second, kind)
 		}
-		return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
+		return NewTimestampFromStr(val, Nanosecond, kind)
 	}
 
 	return invalidTimestamp(val)
@@ -438,62 +417,27 @@ func hourMinOffset(val string, idx int) (int64, int64, error) {
 	return hourOffset, minuteOffset, nil
 }
 
-func computeTimestampKind(val string, idx int) (TimestampKind, bool, error) {
+func computeTimestampKind(val string, idx int) (TimestampKind, error) {
 	switch val[idx] {
 	case 'z', 'Z':
-		return UTC, false, nil
+		return UTC, nil
 	case '+', '-':
 		hourOffset, minuteOffset, err := hourMinOffset(val, idx)
 		if err != nil {
-			return Unspecified, false, err
+			return Unspecified, err
 		}
 
 		if hourOffset == 0 && minuteOffset == 0 {
 			if val[idx] == '-' {
-				return Unspecified, true, nil
+				return Unspecified, nil
 			}
-			return UTC, true, nil
+			return UTC, nil
 		} else if hourOffset < 24 && minuteOffset < 60 {
-			return Local, true, nil
+			return Local, nil
 		}
 	}
 
-	return Unspecified, false, fmt.Errorf("ion: invalid character: '%v'", val[idx])
-}
-
-func tryCreateTimeDate(val string, year int64, month int64, day int64) (time.Time, error) {
-	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
-	// time.Date converts 2000-01-32 input to 2000-02-01
-	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
-		return invalidTimeDate(val)
-	}
-	return date, nil
-}
-
-func tryCreateTimestamp(val string, year int64, month int64, day int64, precision TimestampPrecision) (Timestamp, error) {
-	date, err := tryCreateTimeDate(val, year, month, day)
-	if err != nil {
-		return invalidTimestamp(val)
-	}
-
-	return NewSimpleTimestamp(date, precision), nil
-}
-
-func tryCreateTimestampUsingLayout(val string, layout string, precision TimestampPrecision, kind TimestampKind) (Timestamp, error) {
-	date, err := time.Parse(layout, val)
-	if err != nil {
-		return invalidTimestamp(val)
-	}
-
-	return NewTimestamp(date, precision, kind), nil
-}
-
-func invalidTimeDate(val string) (time.Time, error) {
-	return time.Time{}, fmt.Errorf("ion: invalid timedate: %v", val)
-}
-
-func invalidTimestamp(val string) (Timestamp, error) {
-	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
+	return Unspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
 }
 
 func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp, error) {
@@ -502,8 +446,8 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 	if err != nil {
 		return invalidTimestamp(val)
 	}
-	roundedStringValue := fmt.Sprintf("%.9f", floatValue)
 
+	roundedStringValue := fmt.Sprintf("%.9f", floatValue)
 	roundedFloatValue, err := strconv.ParseFloat(roundedStringValue, 64)
 	if err != nil {
 		return invalidTimestamp(val)
@@ -524,5 +468,5 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 
 	val = val[:18] + roundedStringValue + val[idx:]
 
-	return tryCreateTimestampUsingLayout(val, layoutNanosecondsAndOffset, Nanosecond, kind)
+	return NewTimestampFromStr(val, Nanosecond, kind)
 }
