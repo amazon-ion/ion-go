@@ -5,15 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
-)
-
-const (
-	// AnnotationsTag is used to put annotations of Ion values in expected field
-	AnnotationsTag = "annotations"
 )
 
 var (
@@ -259,7 +253,7 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 		return nil
 
 	case reflect.Struct:
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, reflect.Bool)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -270,9 +264,9 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 	return fmt.Errorf("ion: cannot decode bool to %v", v.Type().String())
 }
 
-var bigIntType = reflect.TypeOf(big.Int{})
-
 func (d *Decoder) decodeIntTo(v reflect.Value) error {
+	intAcceptableKinds := []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, err := d.r.Int64Value()
@@ -318,8 +312,9 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 				return err
 			}
 			v.Set(reflect.ValueOf(*val))
+			return nil
 		}
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, intAcceptableKinds...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -335,6 +330,7 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeFloatTo(v reflect.Value) error {
+	floatAcceptableKinds := []reflect.Kind{reflect.Float32, reflect.Float64}
 	val, err := d.r.FloatValue()
 	if err != nil {
 		return err
@@ -358,7 +354,7 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(*dec))
 			return d.attachAnnotations(v)
 		}
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, floatAcceptableKinds...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -381,7 +377,7 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(*val))
 			return d.attachAnnotations(v)
 		}
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, decimalType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -404,7 +400,7 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(val))
 			return d.attachAnnotations(v)
 		}
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, timeType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -427,7 +423,7 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 		return nil
 
 	case reflect.Struct:
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, reflect.String)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -439,6 +435,7 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeLobTo(v reflect.Value) error {
+	lobAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	val, err := d.r.ByteValue()
 	if err != nil {
 		return err
@@ -461,7 +458,7 @@ func (d *Decoder) decodeLobTo(v reflect.Value) error {
 		}
 
 	case reflect.Struct:
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, lobAcceptableKind...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -594,6 +591,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeSliceTo(v reflect.Value) error {
+	listSexpAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	k := v.Kind()
 
 	// If all we know is we need an interface{}, decode an []interface{} with
@@ -608,7 +606,7 @@ func (d *Decoder) decodeSliceTo(v reflect.Value) error {
 	}
 
 	if k == reflect.Struct {
-		return d.decodeToStructWithAnnotation(v)
+		return d.decodeToStructWithAnnotation(v, listSexpAcceptableKind...)
 	}
 
 	// Only other valid targets are arrays and slices.
@@ -701,14 +699,23 @@ func indirect(v reflect.Value, wantPtr bool) reflect.Value {
 	return v
 }
 
-func (d *Decoder) decodeToStructWithAnnotation(v reflect.Value) error {
+func (d *Decoder) decodeToStructWithAnnotation(v reflect.Value, valueAcceptableKinds ...reflect.Kind) error {
+	validAnnotatableStruct, err := isValidAnnotatableStruct(v, valueAcceptableKinds)
+	if err != nil {
+		return err
+	}
+	if !validAnnotatableStruct {
+		return fmt.Errorf("ion: cannot decode %v into %v", v, v.Type().String())
+	}
+
+	// populate annotations to the struct
 	if err := d.attachAnnotations(v); err != nil {
 		return err
 	}
 
 	fields := fieldsFor(v.Type())
 	for _, field := range fields {
-		if field.name != AnnotationsTag {
+		if !field.annotations {
 			field := findField(fields, field.name)
 			if field != nil {
 				subValue, err := findSubvalue(v, field)
@@ -728,14 +735,49 @@ func (d *Decoder) decodeToStructWithAnnotation(v reflect.Value) error {
 
 func (d *Decoder) attachAnnotations(v reflect.Value) error {
 	fields := fieldsFor(v.Type())
-	field := findField(fields, AnnotationsTag)
-	if field != nil {
-		subValue, err := findSubvalue(v, field)
-		if err != nil {
-			return err
+	for _, field := range fields {
+		if field.annotations {
+			subValue, err := findSubvalue(v, &field)
+			if err != nil {
+				return err
+			}
+			annotations := d.r.Annotations()
+			subValue.Set(reflect.ValueOf(annotations))
+			break
 		}
-		annotations := d.r.Annotations()
-		subValue.Set(reflect.ValueOf(annotations))
 	}
 	return nil
+}
+
+// expected struct for decoding Ion values must have only 2 fields: one has `ion:",annotation"`
+// tag, and the other field must be of a type where Ion value can be decoded to.
+func isValidAnnotatableStruct(v reflect.Value, listofkinds []reflect.Kind) (bool, error) {
+	fields := fieldsFor(v.Type())
+	hasAnnotation := false
+	acceptableValueType := false
+	if len(fields) == 2 {
+		for _, field := range fields {
+			subValue, err := findSubvalue(v, &field)
+			if err != nil {
+				return false, err
+			}
+			if field.annotations {
+				hasAnnotation = true
+				continue
+			}
+			if isAcceptableKind(listofkinds, subValue.Type().Kind()) {
+				acceptableValueType = true
+			}
+		}
+	}
+	return hasAnnotation && acceptableValueType, nil
+}
+
+func isAcceptableKind(valueAcceptableKinds []reflect.Kind, valueKind reflect.Kind) bool {
+	for _, kind := range valueAcceptableKinds {
+		if kind == valueKind || reflect.Interface == valueKind {
+			return true
+		}
+	}
+	return false
 }
