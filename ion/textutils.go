@@ -314,7 +314,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateTimestamp(val, year, 1, 1, Year)
+		return tryCreateTimestamp(int(year), 1, 1, Year)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +331,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateTimestamp(val, year, month, 1, Month)
+		return tryCreateTimestamp(int(year), int(month), 1, Month)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,7 +348,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateTimestamp(val, year, month, day, Day)
+		return tryCreateTimestamp(int(year), int(month), int(day), Day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -428,13 +428,13 @@ func computeTimestampKind(val string, idx int) (TimestampKind, error) {
 			return Unspecified, err
 		}
 
-		if hourOffset != 0 || minuteOffset != 0 {
-			if hourOffset >= 24 || minuteOffset >= 60 {
-				return Unspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
-			}
+		if hourOffset >= 24 || minuteOffset >= 60 {
+			return Unspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
+		} else if hourOffset == 0 && minuteOffset == 0 {
 			if val[idx] == '-' {
 				return Unspecified, nil
 			}
+			return UTC, nil
 		}
 
 		return Local, nil

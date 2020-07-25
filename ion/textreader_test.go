@@ -223,7 +223,7 @@ func TestTimestamps(t *testing.T) {
 	test("2001-01-01T00:00Z", NewTimestamp(et, Minute, UTC))
 	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second, UTC))
 	test("2001-01-01T00:00:00.000Z", NewTimestampWithFractionalPrecision(et, Nanosecond, UTC, 3))
-	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithFractionalPrecision(et, Nanosecond, Local, 3))
+	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithFractionalPrecision(et, Nanosecond, UTC, 3))
 	test("2001-01-01T00:00:00.000000Z", NewTimestampWithFractionalPrecision(et, Nanosecond, UTC, 6))
 	test("2001-01-01T00:00:00.000000000Z", NewTimestampWithFractionalPrecision(et, Nanosecond, UTC, 9))
 

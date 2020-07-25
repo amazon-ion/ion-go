@@ -168,21 +168,22 @@ func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, off
 
 	if precision <= Day {
 		return NewSimpleTimestamp(date, precision), nil
-	} else if sign == -1 {
-		return NewTimestampWithFractionalPrecision(date, precision, Unspecified, fractionPrecision), nil
 	} else if offset == 0 {
+		if sign == -1 {
+			return NewTimestampWithFractionalPrecision(date, precision, Unspecified, fractionPrecision), nil
+		}
 		return NewTimestampWithFractionalPrecision(date, precision, UTC, fractionPrecision), nil
 	}
 
 	return NewTimestampWithFractionalPrecision(date, precision, Local, fractionPrecision), nil
 }
 
-func tryCreateTimestamp(val string, year int64, month int64, day int64, precision TimestampPrecision) (Timestamp, error) {
-	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+func tryCreateTimestamp(year int, month int, day int, precision TimestampPrecision) (Timestamp, error) {
+	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 
 	// time.Date converts 2000-01-32 input to 2000-02-01
-	if int(year) != date.Year() || time.Month(month) != date.Month() || int(day) != date.Day() {
-		return invalidTimestamp(val)
+	if year != date.Year() || time.Month(month) != date.Month() || day != date.Day() {
+		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
 	}
 
 	return NewSimpleTimestamp(date, precision), nil
@@ -196,27 +197,30 @@ func invalidTimestamp(val string) (Timestamp, error) {
 func (ts *Timestamp) Format() string {
 	format := ts.DateTime.Format(ts.precision.formatString(ts.kind, ts.fractionPrecision))
 
-	if ts.fractionPrecision > 0 && ts.DateTime.Nanosecond() == 0 {
+	if ts.precision >= Minute && ts.fractionPrecision > 0 && ts.DateTime.Nanosecond() == 0 {
 		tIndex := strings.Index(format, "T")
-		if tIndex != -1 {
-			var index int
-			if ts.kind == Unspecified {
-				index = strings.LastIndex(format, "+")
-				if index == -1 {
-					index = strings.LastIndex(format, "-")
-				}
-			} else {
-				index = strings.LastIndex(format, "Z")
+		if tIndex == -1 {
+			tIndex = strings.Index(format, "t")
+			if tIndex == -1 {
+				return format
+			}
+		}
+
+		index := strings.LastIndex(format, "Z")
+		if index == -1 || index < tIndex {
+			index = strings.LastIndex(format, "+")
+			if index == -1 || index < tIndex {
+				index = strings.LastIndex(format, "-")
+			}
+		}
+
+		if index != -1 && index > tIndex {
+			zeros := "."
+			for i := uint8(0); i < ts.fractionPrecision; i++ {
+				zeros += "0"
 			}
 
-			if index != -1 && index > tIndex {
-				zeros := "."
-				for i := uint8(0); i < ts.fractionPrecision; i++ {
-					zeros += "0"
-				}
-
-				format = format[0:index] + zeros + format[index:]
-			}
+			format = format[0:index] + zeros + format[index:]
 		}
 	}
 

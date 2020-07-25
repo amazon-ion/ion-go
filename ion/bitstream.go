@@ -551,21 +551,32 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		}
 	}
 
+	nsecs := 0
+	overflow := false
 	fractionPrecision := uint8(0)
 
 	if length > 0 {
 		decimalBytes, err := b.in.Peek(int(length))
-		if err != nil || len(decimalBytes) == 0 {
+		if err != nil {
 			return emptyTimestamp(), err
+		}
+
+		if len(decimalBytes) == 0 {
+			return emptyTimestamp(), fmt.Errorf("ion: invalid peek at decimal fractional value in timestamp")
 		}
 
 		if decimalBytes[0] > 0xC0 && (decimalBytes[0]^0xC0) > 0 {
 			precision = Nanosecond
 			fractionPrecision = decimalBytes[0] ^ 0xC0
 		}
+
+		nsecs, overflow, err = b.readNsecs(length)
+		if err != nil {
+			return emptyTimestamp(), err
+		}
 	}
 
-	nsecs, overflow, err := b.readNsecs(length)
+	dateTime, err := tryCreateTimestampWithNSecAndOffset(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
 	if err != nil {
 		return emptyTimestamp(), err
 	}
@@ -573,7 +584,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimestampWithNSecAndOffset(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
+	return dateTime, nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
