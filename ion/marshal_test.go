@@ -285,3 +285,38 @@ func TestMarshalCustomMarshaler(t *testing.T) {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
 }
+
+func TestMarshalValuesWithAnnotation(t *testing.T) {
+	test := func(v interface{}, testName, eval string) {
+		t.Run(testName, func(t *testing.T) {
+			val, err := MarshalText(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(val) != eval {
+				t.Errorf("expected '%v', got '%v'", eval, string(val))
+			}
+		})
+	}
+
+	type foo struct {
+		Value   interface{}
+		AnyName []string `ion:",annotations"`
+	}
+
+	buildValue := func(val interface{}) foo {
+		return foo{val, []string{"multiple", "annotations"}}
+	}
+
+	test(buildValue(nil), "null", "multiple::annotations::null")
+	test(buildValue(true), "bool", "multiple::annotations::true")
+	test(buildValue(5), "int", "multiple::annotations::5")
+	test(buildValue(float32(math.MaxFloat32)), "float", "multiple::annotations::3.4028234663852886e+38")
+	test(buildValue(MustParseDecimal("1.2")), "decimal", "multiple::annotations::1.2")
+	test(buildValue(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)),
+		"timestamp", "multiple::annotations::2000-01-02T03:04:05Z")
+	test(buildValue("stringValue"), "string", "multiple::annotations::\"stringValue\"")
+	test(buildValue([]byte{4, 2}), "blob", "multiple::annotations::{{BAI=}}")
+	test(buildValue([]int{3, 5, 7}), "list", "multiple::annotations::[3,5,7]")
+	test(buildValue(map[string]int{"b": 2, "a": 1}), "struct", "multiple::annotations::{a:1,b:2}")
+}
