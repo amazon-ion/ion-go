@@ -51,12 +51,12 @@ func (tp TimestampPrecision) formatString(kind TimestampKind, precisionUnits uin
 		return "2006-01-02T"
 	case Minute:
 		if kind == Unspecified {
-			return "2006-01-02T15:04-00:00"
+			return "2006-01-02T15:04-07:00"
 		}
 		return "2006-01-02T15:04Z07:00"
 	case Second:
 		if kind == Unspecified {
-			return "2006-01-02T15:04:05-00:00"
+			return "2006-01-02T15:04:05-07:00"
 		}
 		return "2006-01-02T15:04:05Z07:00"
 	case Nanosecond:
@@ -74,7 +74,7 @@ func (tp TimestampPrecision) formatString(kind TimestampKind, precisionUnits uin
 		}
 
 		if kind == Unspecified {
-			formatStr += "-00:00"
+			formatStr += "-07:00"
 		} else {
 			formatStr += "Z07:00"
 		}
@@ -168,10 +168,9 @@ func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, off
 
 	if precision <= Day {
 		return NewSimpleTimestamp(date, precision), nil
+	} else if sign == -1 {
+		return NewTimestampWithFractionalPrecision(date, precision, Unspecified, fractionPrecision), nil
 	} else if offset == 0 {
-		if sign == -1 {
-			return NewTimestampWithFractionalPrecision(date, precision, Unspecified, fractionPrecision), nil
-		}
 		return NewTimestampWithFractionalPrecision(date, precision, UTC, fractionPrecision), nil
 	}
 
@@ -198,20 +197,26 @@ func (ts *Timestamp) Format() string {
 	format := ts.DateTime.Format(ts.precision.formatString(ts.kind, ts.fractionPrecision))
 
 	if ts.fractionPrecision > 0 && ts.DateTime.Nanosecond() == 0 {
-		var index int
-		if ts.kind == Unspecified {
-			index = strings.LastIndex(format, "-")
-		} else {
-			index = strings.LastIndex(format, "Z")
-		}
-
-		if index != -1 {
-			zeros := "."
-			for i := uint8(0); i < ts.fractionPrecision; i++ {
-				zeros += "0"
+		tIndex := strings.Index(format, "T")
+		if tIndex != -1 {
+			var index int
+			if ts.kind == Unspecified {
+				index = strings.LastIndex(format, "+")
+				if index == -1 {
+					index = strings.LastIndex(format, "-")
+				}
+			} else {
+				index = strings.LastIndex(format, "Z")
 			}
 
-			format = format[0:index] + zeros + format[index:]
+			if index != -1 && index > tIndex {
+				zeros := "."
+				for i := uint8(0); i < ts.fractionPrecision; i++ {
+					zeros += "0"
+				}
+
+				format = format[0:index] + zeros + format[index:]
+			}
 		}
 	}
 
@@ -226,7 +231,22 @@ func (ts *Timestamp) Equal(ts1 Timestamp) bool {
 		ts.fractionPrecision == ts1.fractionPrecision
 }
 
+// Equivalent figures out if two timestamps have equal dateTime and precision.
+func (ts *Timestamp) Equivalent(ts1 Timestamp) bool {
+	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision
+}
+
 // SetLocation sets the location for the internal time object.
 func (ts *Timestamp) SetLocation(loc *time.Location) {
 	ts.DateTime = ts.DateTime.In(loc)
+}
+
+// TruncateNS returns nanoseconds with 0's removed and the fractional precision indicator.
+func (ts *Timestamp) TruncateNS() (int, uint8) {
+	nsecs := ts.DateTime.Nanosecond()
+	for i := uint8(0); i < (9-ts.fractionPrecision) && nsecs > 0 && (nsecs%10) == 0; i++ {
+		nsecs /= 10
+	}
+
+	return nsecs, ts.fractionPrecision | 0xC0
 }

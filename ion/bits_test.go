@@ -191,15 +191,15 @@ func TestAppendTimestamp(t *testing.T) {
 	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, Local)
 
 	test(NewSimpleTimestamp(time.Time{}, Second), 7, []byte{0xC0, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
-	test(nowish, 14, []byte{
+	test(nowish, 13, []byte{
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
-		0x88,                   // month:  8
-		0x84,                   // day:    4
-		0x88,                   // hour:   8 utc (18 local)
-		0x8F,                   // minute: 15
-		0xAB,                   // second: 43
-		0xC9,                   // exp:    -9
-		0x33, 0x77, 0xDF, 0x70, // nsec:   863494000
+		0x88,             // month:  8
+		0x84,             // day:    4
+		0x88,             // hour:   8 utc (18 local)
+		0x8F,             // minute: 15
+		0xAB,             // second: 43
+		0xC6,             // exp:    -9
+		0x0D, 0x2D, 0x06, // nsec:   863494
 	})
 }

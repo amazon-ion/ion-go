@@ -428,7 +428,10 @@ func computeTimestampKind(val string, idx int) (TimestampKind, error) {
 			return Unspecified, err
 		}
 
-		if hourOffset == 0 && minuteOffset == 0 {
+		if hourOffset != 0 || minuteOffset != 0 {
+			if hourOffset >= 24 || minuteOffset >= 60 {
+				return Unspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
+			}
 			if val[idx] == '-' {
 				return Unspecified, nil
 			}
@@ -463,7 +466,7 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestamp(timeValue, Nanosecond, kind), err
+		return NewTimestampWithFractionalPrecision(timeValue, Nanosecond, kind, 9), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]

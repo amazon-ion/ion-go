@@ -335,7 +335,7 @@ func TestReadBinaryTimestamps(t *testing.T) {
 	_timestamp(t, r, NewTimestamp(time.Time{}, Minute, UTC))
 	_timestamp(t, r, NewTimestamp(time.Time{}, Second, UTC))
 
-	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, Local)
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494000+10:00", Nanosecond, Local)
 	_timestamp(t, r, nowish)
 	_eof(t, r)
 }

@@ -271,13 +271,12 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 					if utc.precision >= Second {
 						ret++
 
-						if utc.precision >= Nanosecond {
-							ns := utc.DateTime.Nanosecond()
+						if utc.precision >= Nanosecond && utc.fractionPrecision > 0 {
+							ret++ // For fractional seconds precision indicator
+
+							ns, _ := utc.TruncateNS()
 							if ns > 0 {
-								ret++ // varIntLen(-9)
 								ret += intLen(int64(ns))
-							} else if utc.fractionPrecision > 0 {
-								ret += varUintLen(uint64(utc.fractionPrecision))
 							}
 						}
 					}
@@ -315,13 +314,11 @@ func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
 					if utc.precision >= Second {
 						b = appendVarUint(b, uint64(utc.DateTime.Second()))
 
-						if utc.precision >= Nanosecond {
-							ns := utc.DateTime.Nanosecond()
+						if utc.precision >= Nanosecond && utc.fractionPrecision > 0 {
+							ns, precisionUnitsByte := utc.TruncateNS()
+							b = append(b, precisionUnitsByte)
 							if ns > 0 {
-								b = appendVarInt(b, -9)
 								b = appendInt(b, int64(ns))
-							} else if utc.fractionPrecision > 0 {
-								b = append(b, utc.fractionPrecision|0xC0)
 							}
 						}
 					}

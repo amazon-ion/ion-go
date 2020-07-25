@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseTimestamp(t *testing.T) {
-	test := func(str string, eval string, expectedPrecision TimestampPrecision, expectedKind TimestampKind) {
+	test := func(str string, eval string, expectedPrecision TimestampPrecision, expectedKind TimestampKind, expectedFractionSeconds uint8) {
 		t.Run(str, func(t *testing.T) {
 			val, err := parseTimestamp(str)
 			if err != nil {
@@ -19,7 +19,7 @@ func TestParseTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			expectedTimestamp := NewTimestamp(et, expectedPrecision, expectedKind)
+			expectedTimestamp := NewTimestampWithFractionalPrecision(et, expectedPrecision, expectedKind, expectedFractionSeconds)
 
 			if !val.Equal(expectedTimestamp) {
 				t.Errorf("expected %v, got %v", expectedTimestamp, val)
@@ -27,34 +27,34 @@ func TestParseTimestamp(t *testing.T) {
 		})
 	}
 
-	test("1234T", "1234-01-01T00:00:00Z", Year, Unspecified)
-	test("1234-05T", "1234-05-01T00:00:00Z", Month, Unspecified)
-	test("1234-05-06", "1234-05-06T00:00:00Z", Day, Unspecified)
-	test("1234-05-06T", "1234-05-06T00:00:00Z", Day, Unspecified)
-	test("1234-05-06T07:08Z", "1234-05-06T07:08:00Z", Minute, UTC)
-	test("1234-05-06T07:08:09Z", "1234-05-06T07:08:09Z", Second, UTC)
-	test("1234-05-06T07:08:09.100Z", "1234-05-06T07:08:09.100Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.100100Z", "1234-05-06T07:08:09.100100Z", Nanosecond, UTC)
+	test("1234T", "1234-01-01T00:00:00Z", Year, Unspecified, 0)
+	test("1234-05T", "1234-05-01T00:00:00Z", Month, Unspecified, 0)
+	test("1234-05-06", "1234-05-06T00:00:00Z", Day, Unspecified, 0)
+	test("1234-05-06T", "1234-05-06T00:00:00Z", Day, Unspecified, 0)
+	test("1234-05-06T07:08Z", "1234-05-06T07:08:00Z", Minute, UTC, 0)
+	test("1234-05-06T07:08:09Z", "1234-05-06T07:08:09Z", Second, UTC, 0)
+	test("1234-05-06T07:08:09.100Z", "1234-05-06T07:08:09.100Z", Nanosecond, UTC, 3)
+	test("1234-05-06T07:08:09.100100Z", "1234-05-06T07:08:09.100100Z", Nanosecond, UTC, 6)
 
 	// Test rounding of >=9 fractional seconds.
-	test("1234-05-06T07:08:09.000100100Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.100100100Z", "1234-05-06T07:08:09.100100100Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.00010010055Z", "1234-05-06T07:08:09.000100101Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.00010010099Z", "1234-05-06T07:08:09.000100101Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.99999999999Z", "1234-05-06T07:08:10.000000000Z", Nanosecond, UTC)
-	test("1234-12-31T23:59:59.99999999999Z", "1235-01-01T00:00:00.000000000Z", Nanosecond, UTC)
-	test("1234-05-06T07:08:09.000100100+09:10", "1234-05-06T07:08:09.000100100+09:10", Nanosecond, Local)
-	test("1234-05-06T07:08:09.100100100-10:11", "1234-05-06T07:08:09.100100100-10:11", Nanosecond, Local)
-	test("1234-05-06T07:08:09.00010010044+09:10", "1234-05-06T07:08:09.000100100+09:10", Nanosecond, Local)
-	test("1234-05-06T07:08:09.00010010055-10:11", "1234-05-06T07:08:09.000100101-10:11", Nanosecond, Local)
-	test("1234-05-06T07:08:09.00010010099+09:10", "1234-05-06T07:08:09.000100101+09:10", Nanosecond, Local)
-	test("1234-05-06T07:08:09.99999999999-10:11", "1234-05-06T07:08:10.000000000-10:11", Nanosecond, Local)
-	test("1234-12-31T23:59:59.99999999999+09:10", "1235-01-01T00:00:00.000000000+09:10", Nanosecond, Local)
+	test("1234-05-06T07:08:09.000100100Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.100100100Z", "1234-05-06T07:08:09.100100100Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.00010010055Z", "1234-05-06T07:08:09.000100101Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.00010010099Z", "1234-05-06T07:08:09.000100101Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.99999999999Z", "1234-05-06T07:08:10.000000000Z", Nanosecond, UTC, 9)
+	test("1234-12-31T23:59:59.99999999999Z", "1235-01-01T00:00:00.000000000Z", Nanosecond, UTC, 9)
+	test("1234-05-06T07:08:09.000100100+09:10", "1234-05-06T07:08:09.000100100+09:10", Nanosecond, Local, 9)
+	test("1234-05-06T07:08:09.100100100-10:11", "1234-05-06T07:08:09.100100100-10:11", Nanosecond, Unspecified, 9)
+	test("1234-05-06T07:08:09.00010010044+09:10", "1234-05-06T07:08:09.000100100+09:10", Nanosecond, Local, 9)
+	test("1234-05-06T07:08:09.00010010055-10:11", "1234-05-06T07:08:09.000100101-10:11", Nanosecond, Unspecified, 9)
+	test("1234-05-06T07:08:09.00010010099+09:10", "1234-05-06T07:08:09.000100101+09:10", Nanosecond, Local, 9)
+	test("1234-05-06T07:08:09.99999999999-10:11", "1234-05-06T07:08:10.000000000-10:11", Nanosecond, Unspecified, 9)
+	test("1234-12-31T23:59:59.99999999999+09:10", "1235-01-01T00:00:00.000000000+09:10", Nanosecond, Local, 9)
 
-	test("1234-05-06T07:08+09:10", "1234-05-06T07:08:00+09:10", Minute, Local)
-	test("1234-05-06T07:08:09-10:11", "1234-05-06T07:08:09-10:11", Second, Local)
+	test("1234-05-06T07:08+09:10", "1234-05-06T07:08:00+09:10", Minute, Local, 0)
+	test("1234-05-06T07:08:09-10:11", "1234-05-06T07:08:09-10:11", Second, Unspecified, 0)
 }
 
 func TestWriteSymbol(t *testing.T) {
