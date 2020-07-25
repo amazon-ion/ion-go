@@ -369,7 +369,8 @@ func (m *Encoder) encodeWithAnnotation(v reflect.Value) error {
 				return err
 			}
 			if annotations.Kind() != reflect.Slice {
-				return fmt.Errorf("ion: '%v' is provided for annotations, it must be []string", annotations.Kind())
+				return fmt.Errorf("ion: '%v' is provided for annotations,"+
+					"it must be of type []string", annotations.Kind())
 			}
 			listOfAnnotations := annotations.Interface().([]string)
 			err = m.w.Annotations(listOfAnnotations...)
