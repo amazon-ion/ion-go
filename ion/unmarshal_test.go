@@ -626,3 +626,47 @@ func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 	test("with::multiple::annotations::[1, 2, 3]", "list", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::(1 2 3)", "sexp", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
 }
+
+func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
+	type innerStruct struct {
+		Value           int
+		ValueAnnotation []string `ion:",annotations"`
+	}
+
+	type mainStruct struct {
+		Field2                innerStruct
+		InnerStructAnnotation []string `ion:",annotations"`
+	}
+
+	type topLevelStruct struct {
+		Field1             mainStruct
+		TopLevelAnnotation []string `ion:",annotations"`
+	}
+
+	test := func(str, testName string, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			var val topLevelStruct
+			err := UnmarshalStr(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	/*
+		foo::{
+		  field1: bar::{
+		    field2: baz::5
+		  }
+		}
+	*/
+	innerStructVal := innerStruct{Value: 5, ValueAnnotation: []string{"baz"}}
+	mainStructVal := mainStruct{Field2: innerStructVal, InnerStructAnnotation: []string{"bar"}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []string{"foo"}}
+
+	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
+}

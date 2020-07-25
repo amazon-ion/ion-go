@@ -493,12 +493,12 @@ func (d *Decoder) decodeStructTo(v reflect.Value) error {
 func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 	fields := fieldsFor(v.Type())
 
-	if err := d.r.StepIn(); err != nil {
+	err := d.attachAnnotations(v)
+	if err != nil {
 		return err
 	}
 
-	err := d.attachAnnotations(v)
-	if err != nil {
+	if err := d.r.StepIn(); err != nil {
 		return err
 	}
 
