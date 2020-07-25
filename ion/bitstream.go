@@ -8,7 +8,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"time"
 	"unicode/utf8"
 )
 
@@ -520,28 +519,28 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		panic("not a timestamp")
 	}
 
-	len := b.len
+	length := b.len
 
-	offset, olen, err := b.readVarIntLen(len)
+	offset, sign, olen, err := b.readVarIntLen(length)
 	if err != nil {
 		return emptyTimestamp(), err
 	}
-	len -= olen
+	length -= olen
 
 	ts := []int{1, 1, 1, 0, 0, 0}
 	precision := NoPrecision
-	for i := 0; len > 0 && i < 6 && precision < Second; i++ {
-		val, vlen, err := b.readVarUintLen(len)
+	for i := 0; length > 0 && i < 6 && precision < Second; i++ {
+		val, vlen, err := b.readVarUintLen(length)
 		if err != nil {
 			return emptyTimestamp(), err
 		}
-		len -= vlen
+		length -= vlen
 		ts[i] = int(val)
 
 		// When i is 3, it means we are setting hour component. A timestamp with
-		// hour, must follow by minute. Hence, len cannot be zero at this point.
+		// hour, must follow by minute. Hence, length cannot be zero at this point.
 		if i == 3 {
-			if len == 0 {
+			if length == 0 {
 				return emptyTimestamp(),
 					&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
 			}
@@ -552,41 +551,29 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		}
 	}
 
-	nsecs, overflow, err := b.readNsecs(len)
-	if err != nil {
-		return emptyTimestamp(), err
+	fractionPrecision := uint8(0)
+
+	if length > 0 {
+		decimalBytes, err := b.in.Peek(int(length))
+		if err != nil || len(decimalBytes) == 0 {
+			return emptyTimestamp(), err
+		}
+
+		if decimalBytes[0] > 0xC0 && (decimalBytes[0]^0xC0) > 0 {
+			precision = Nanosecond
+			fractionPrecision = decimalBytes[0] ^ 0xC0
+		}
 	}
 
-	if nsecs != 0 {
-		precision = Nanosecond
+	nsecs, overflow, err := b.readNsecs(length)
+	if err != nil {
+		return emptyTimestamp(), err
 	}
 
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimestampWithNSecAndOffset(ts, nsecs, overflow, offset, precision)
-}
-
-func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, precision TimestampPrecision) (Timestamp, error) {
-	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
-	// time.Date converts 2000-01-32 input to 2000-02-01
-	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
-		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
-	}
-
-	if overflow {
-		date = date.Add(time.Second)
-	}
-
-	date = date.In(time.FixedZone("fixed", int(offset)*60))
-
-	if precision <= Day {
-		return NewTimestamp(date, precision, Unspecified), nil
-	} else if offset == 0 {
-		return NewTimestamp(date, precision, UTC), nil
-	}
-
-	return NewTimestamp(date, precision, Local), nil
+	return tryCreateTimestampWithNSecAndOffset(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
@@ -625,7 +612,7 @@ func (b *bitstream) readDecimal(len uint64) (*Decimal, error) {
 	coef := new(big.Int)
 
 	if len > 0 {
-		val, vlen, err := b.readVarIntLen(len)
+		val, _, vlen, err := b.readVarIntLen(len)
 		if err != nil {
 			return nil, err
 		}
@@ -829,10 +816,10 @@ func (b *bitstream) remaining() uint64 {
 }
 
 // ReadVarIntLen reads a variable-length-encoded int of at most max bytes,
-// returning the value and its actual length in bytes
-func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
+// returning the value, the sign, and its actual length in bytes
+func (b *bitstream) readVarIntLen(max uint64) (int64, int64, uint64, error) {
 	if max == 0 {
-		return 0, 0, &SyntaxError{"varint too large", b.pos}
+		return 0, 0, 0, &SyntaxError{"varint too large", b.pos}
 	}
 	if max > 10 {
 		max = 10
@@ -841,7 +828,7 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 	// Read the first byte, which contains the sign bit.
 	c, err := b.read1()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	sign := int64(1)
@@ -854,17 +841,17 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 
 	// Check if that was the last (only) byte.
 	if c&0x80 != 0 {
-		return val * sign, len, nil
+		return val * sign, sign, len, nil
 	}
 
 	for {
 		if len >= max {
-			return 0, 0, &SyntaxError{"varint too large", b.pos - len}
+			return 0, 0, 0, &SyntaxError{"varint too large", b.pos - len}
 		}
 
 		c, err := b.read1()
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, 0, err
 		}
 
 		val <<= 7
@@ -872,7 +859,7 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 		len++
 
 		if c&0x80 != 0 {
-			return val * sign, len, nil
+			return val * sign, sign, len, nil
 		}
 	}
 }

@@ -276,6 +276,8 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 							if ns > 0 {
 								ret++ // varIntLen(-9)
 								ret += intLen(int64(ns))
+							} else if utc.fractionPrecision > 0 {
+								ret += varUintLen(uint64(utc.fractionPrecision))
 							}
 						}
 					}
@@ -318,6 +320,8 @@ func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
 							if ns > 0 {
 								b = appendVarInt(b, -9)
 								b = appendInt(b, int64(ns))
+							} else if utc.fractionPrecision > 0 {
+								b = append(b, utc.fractionPrecision|0xC0)
 							}
 						}
 					}

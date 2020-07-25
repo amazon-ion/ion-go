@@ -301,7 +301,7 @@ func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
 	t := v.Type()
 	if t == timestampType {
-		return m.encodeTime(v)
+		return m.encodeTimestamp(v)
 	}
 	if t == decimalType {
 		return m.encodeDecimal(v)
@@ -340,7 +340,7 @@ FieldLoop:
 }
 
 // EncodeTime encodes a timestamp to the output writer as an Ion timestamp.
-func (m *Encoder) encodeTime(v reflect.Value) error {
+func (m *Encoder) encodeTimestamp(v reflect.Value) error {
 	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
 }

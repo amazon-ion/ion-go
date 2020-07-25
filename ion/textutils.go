@@ -432,10 +432,9 @@ func computeTimestampKind(val string, idx int) (TimestampKind, error) {
 			if val[idx] == '-' {
 				return Unspecified, nil
 			}
-			return UTC, nil
-		} else if hourOffset < 24 && minuteOffset < 60 {
-			return Local, nil
 		}
+
+		return Local, nil
 	}
 
 	return Unspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
@@ -458,7 +457,7 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 	if roundedFloatValue == 10 {
 		roundedStringValue := "9.000000000"
 		val = val[:18] + roundedStringValue + val[idx:]
-		timeValue, err := time.Parse(Nanosecond.formatString(), val)
+		timeValue, err := time.Parse(Nanosecond.formatString(kind, 9), val)
 		if err != nil {
 			return invalidTimestamp(val)
 		}
