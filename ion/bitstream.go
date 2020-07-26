@@ -537,8 +537,8 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		length -= vlen
 		ts[i] = int(val)
 
-		// When i is 3, it means we are setting hour component. A timestamp with
-		// hour, must follow by minute. Hence, length cannot be zero at this point.
+		// When i is 3, it means we are setting hour component. A timestamp with hour
+		// must follow by minute. Hence, length cannot be zero at this point.
 		if i == 3 {
 			if length == 0 {
 				return emptyTimestamp(),
@@ -568,7 +568,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 		// First byte indicates number of precision units in fractional seconds.
 		if fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
-			// We have at least one fractional second
+			// We have at least one fractional second.
 			precision = Nanosecond
 			fractionPrecision = fracSecsBytes[0] ^ 0xC0
 		}
