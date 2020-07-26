@@ -361,7 +361,8 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	switch val[16] {
 	case 'z', 'Z', '+', '-':
-		kind, err := computeTimestampKind(val, 16)
+		//yyyy-mm-ddThh:mm
+		kind, err := computeTimezoneKind(val, 16)
 		if err != nil {
 			return emptyTimestamp(), err
 		}
@@ -381,7 +382,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 			}
 		}
 
-		kind, err := computeTimestampKind(val, idx)
+		kind, err := computeTimezoneKind(val, idx)
 		if err != nil {
 			return emptyTimestamp(), err
 		}
@@ -399,10 +400,10 @@ func parseTimestamp(val string) (Timestamp, error) {
 	return invalidTimestamp(val)
 }
 
-func hourMinOffset(val string, idx int) (int64, int64, error) {
+func computeOffset(val string, idx int) (int64, int64, error) {
 	// +hh:mm
 	if idx+5 > len(val) || val[idx+3] != ':' {
-		return 0, 0, fmt.Errorf("ion: invalid offset: %v", val)
+		return 0, 0, fmt.Errorf("ion: invalid offset: '%v'", val)
 	}
 
 	hourOffset, err := strconv.ParseInt(val[idx+1:idx+3], 10, 32)
@@ -418,12 +419,13 @@ func hourMinOffset(val string, idx int) (int64, int64, error) {
 	return hourOffset, minuteOffset, nil
 }
 
-func computeTimestampKind(val string, idx int) (TimestampKind, error) {
+func computeTimezoneKind(val string, idx int) (TimezoneKind, error) {
 	switch val[idx] {
 	case 'z', 'Z':
+		// 'Z' zulu time means UTC timezone.
 		return UTC, nil
 	case '+', '-':
-		hourOffset, minuteOffset, err := hourMinOffset(val, idx)
+		hourOffset, minuteOffset, err := computeOffset(val, idx)
 		if err != nil {
 			return Unspecified, err
 		}
@@ -431,19 +433,22 @@ func computeTimestampKind(val string, idx int) (TimestampKind, error) {
 		if hourOffset >= 24 || minuteOffset >= 60 {
 			return Unspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
 		} else if hourOffset == 0 && minuteOffset == 0 {
+			// Negative zero offset is Unspecified timezone.
 			if val[idx] == '-' {
 				return Unspecified, nil
 			}
+			// Positive zero offset is UTC.
 			return UTC, nil
 		}
 
+		// Valid non-zero offset is Local timezone.
 		return Local, nil
 	}
 
 	return Unspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
 }
 
-func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp, error) {
+func roundFractionalSeconds(val string, idx int, kind TimezoneKind) (Timestamp, error) {
 	// Convert to float to perform rounding.
 	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
 	if err != nil {
@@ -466,7 +471,7 @@ func roundFractionalSeconds(val string, idx int, kind TimestampKind) (Timestamp,
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestampWithFractionalPrecision(timeValue, Nanosecond, kind, 9), err
+		return NewTimestampWithFractionalSeconds(timeValue, Nanosecond, kind, 9), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]

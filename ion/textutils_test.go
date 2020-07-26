@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseTimestamp(t *testing.T) {
-	test := func(str string, eval string, expectedPrecision TimestampPrecision, expectedKind TimestampKind, expectedFractionSeconds uint8) {
+	test := func(str string, eval string, expectedPrecision TimestampPrecision, expectedKind TimezoneKind, expectedFractionSeconds uint8) {
 		t.Run(str, func(t *testing.T) {
 			val, err := parseTimestamp(str)
 			if err != nil {
@@ -19,7 +19,7 @@ func TestParseTimestamp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			expectedTimestamp := NewTimestampWithFractionalPrecision(et, expectedPrecision, expectedKind, expectedFractionSeconds)
+			expectedTimestamp := NewTimestampWithFractionalSeconds(et, expectedPrecision, expectedKind, expectedFractionSeconds)
 
 			if !val.Equal(expectedTimestamp) {
 				t.Errorf("expected %v, got %v", expectedTimestamp, val)

@@ -113,7 +113,7 @@ func TestBitcodeString(t *testing.T) {
 }
 
 func TestBinaryReadTimestamp(t *testing.T) {
-	test := func(ion []byte, expectedValue string, expectedPrecision TimestampPrecision, expectedKind TimestampKind) {
+	test := func(ion []byte, expectedValue string, expectedPrecision TimestampPrecision, expectedKind TimezoneKind) {
 		t.Run(expectedValue, func(t *testing.T) {
 			b := bitstream{}
 			b.InitBytes(ion)

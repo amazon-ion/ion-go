@@ -41,7 +41,7 @@ func (tp TimestampPrecision) String() string {
 	}
 }
 
-func (tp TimestampPrecision) formatString(kind TimestampKind, precisionUnits uint8) string {
+func (tp TimestampPrecision) formatString(kind TimezoneKind, precisionUnits uint8) string {
 	switch tp {
 	case Year:
 		return "2006T"
@@ -85,22 +85,28 @@ func (tp TimestampPrecision) formatString(kind TimestampKind, precisionUnits uin
 	return time.RFC3339Nano
 }
 
-// TimestampKind is for tracking the kind of timestamp
-type TimestampKind uint8
+// TimezoneKind tracks the type of timezone.
+type TimezoneKind uint8
 
-// Possible TimestampPrecision values
 const (
-	Unspecified TimestampKind = iota
+	// Unspecified is for dates without a timezone such as imprecise dates with only year, month, or day precision.
+	// Also dates with a negative zero offset (ie. yyyy-mm-ddThh:mm-00:00) are Unspecified.
+	Unspecified TimezoneKind = iota
+
+	// UTC is for UTC dates and they are usually denoted with a trailing 'Z' (ie. yyyy-mm-ddThh:mmZ).
+	// Dates with a positive zero offset (ie. yyyy-mm-ddThh:mm+00:00) are also considered UTC.
 	UTC
+
+	// Local is for dates that have a non-zero offset from UTC (ie. 2001-02-03T04:05+08:30, 2009-05-18T16:20-04:00)
 	Local
 )
 
 // Timestamp struct
 type Timestamp struct {
-	DateTime          time.Time
-	precision         TimestampPrecision
-	kind              TimestampKind
-	fractionPrecision uint8
+	DateTime             time.Time
+	precision            TimestampPrecision
+	kind                 TimezoneKind
+	numFractionalSeconds uint8
 }
 
 // NewSimpleTimestamp constructor
@@ -109,16 +115,16 @@ func NewSimpleTimestamp(dateTime time.Time, precision TimestampPrecision) Timest
 }
 
 // NewTimestamp constructor
-func NewTimestamp(dateTime time.Time, precision TimestampPrecision, kind TimestampKind) Timestamp {
+func NewTimestamp(dateTime time.Time, precision TimestampPrecision, kind TimezoneKind) Timestamp {
 	if precision <= Day {
-		// Timestamps with Year, Month, or Day precision necessarily have Unspecified kind
+		// Timestamps with Year, Month, or Day precision necessarily have Unspecified timezone.
 		kind = Unspecified
 	}
 	return Timestamp{dateTime, precision, kind, 0}
 }
 
-// NewTimestampWithFractionalPrecision constructor
-func NewTimestampWithFractionalPrecision(dateTime time.Time, precision TimestampPrecision, kind TimestampKind, fractionPrecision uint8) Timestamp {
+// NewTimestampWithFractionalSeconds constructor
+func NewTimestampWithFractionalSeconds(dateTime time.Time, precision TimestampPrecision, kind TimezoneKind, fractionPrecision uint8) Timestamp {
 	if fractionPrecision > 9 {
 		// 9 is the max precision supported
 		fractionPrecision = 9
@@ -127,7 +133,7 @@ func NewTimestampWithFractionalPrecision(dateTime time.Time, precision Timestamp
 }
 
 // NewTimestampFromStr constructor
-func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind TimestampKind) (Timestamp, error) {
+func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind TimezoneKind) (Timestamp, error) {
 	precisionUnits := uint8(0)
 
 	if precision >= Nanosecond {
@@ -146,14 +152,14 @@ func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind Time
 		return Timestamp{time.Time{}, NoPrecision, Unspecified, 0}, err
 	}
 
-	return NewTimestampWithFractionalPrecision(dateTime, precision, kind, precisionUnits), nil
+	return NewTimestampWithFractionalSeconds(dateTime, precision, kind, precisionUnits), nil
 }
 
 func emptyTimestamp() Timestamp {
 	return Timestamp{time.Time{}, NoPrecision, Unspecified, 0}
 }
 
-func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64, sign int64, precision TimestampPrecision, fractionPrecision uint8) (Timestamp, error) {
+func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset, sign int64, precision TimestampPrecision, fractionPrecision uint8) (Timestamp, error) {
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
@@ -170,15 +176,18 @@ func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, off
 		return NewSimpleTimestamp(date, precision), nil
 	} else if offset == 0 {
 		if sign == -1 {
-			return NewTimestampWithFractionalPrecision(date, precision, Unspecified, fractionPrecision), nil
+			// Negative zero timezone offset is Unspecified
+			return NewTimestampWithFractionalSeconds(date, precision, Unspecified, fractionPrecision), nil
 		}
-		return NewTimestampWithFractionalPrecision(date, precision, UTC, fractionPrecision), nil
+		// Positive zero timezone offset is UTC
+		return NewTimestampWithFractionalSeconds(date, precision, UTC, fractionPrecision), nil
 	}
 
-	return NewTimestampWithFractionalPrecision(date, precision, Local, fractionPrecision), nil
+	// Non-zero offset is Local
+	return NewTimestampWithFractionalSeconds(date, precision, Local, fractionPrecision), nil
 }
 
-func tryCreateTimestamp(year int, month int, day int, precision TimestampPrecision) (Timestamp, error) {
+func tryCreateTimestamp(year, month, day int, precision TimestampPrecision) (Timestamp, error) {
 	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 
 	// time.Date converts 2000-01-32 input to 2000-02-01
@@ -195,9 +204,12 @@ func invalidTimestamp(val string) (Timestamp, error) {
 
 // Format returns a formatted Timestamp string.
 func (ts *Timestamp) Format() string {
-	format := ts.DateTime.Format(ts.precision.formatString(ts.kind, ts.fractionPrecision))
+	format := ts.DateTime.Format(ts.precision.formatString(ts.kind, ts.numFractionalSeconds))
 
-	if ts.precision >= Minute && ts.fractionPrecision > 0 && ts.DateTime.Nanosecond() == 0 {
+	// The above time.Format() removes trailing zeros from fractional seconds (ie. ".000")
+	// so we're adding them back if necessary.
+	if ts.precision >= Minute && ts.numFractionalSeconds > 0 && ts.DateTime.Nanosecond() == 0 {
+		// Find the position of 'T'
 		tIndex := strings.Index(format, "T")
 		if tIndex == -1 {
 			tIndex = strings.Index(format, "t")
@@ -214,9 +226,10 @@ func (ts *Timestamp) Format() string {
 			}
 		}
 
-		if index != -1 && index > tIndex {
+		// This position better be right of 'T'
+		if index != -1 && tIndex < index {
 			zeros := "."
-			for i := uint8(0); i < ts.fractionPrecision; i++ {
+			for i := uint8(0); i < ts.numFractionalSeconds; i++ {
 				zeros += "0"
 			}
 
@@ -232,7 +245,7 @@ func (ts *Timestamp) Equal(ts1 Timestamp) bool {
 	return ts.DateTime.Equal(ts1.DateTime) &&
 		ts.precision == ts1.precision &&
 		ts.kind == ts1.kind &&
-		ts.fractionPrecision == ts1.fractionPrecision
+		ts.numFractionalSeconds == ts1.numFractionalSeconds
 }
 
 // Equivalent figures out if two timestamps have equal dateTime and precision.
@@ -248,9 +261,9 @@ func (ts *Timestamp) SetLocation(loc *time.Location) {
 // TruncateNS returns nanoseconds with 0's removed and the fractional precision indicator.
 func (ts *Timestamp) TruncateNS() (int, uint8) {
 	nsecs := ts.DateTime.Nanosecond()
-	for i := uint8(0); i < (9-ts.fractionPrecision) && nsecs > 0 && (nsecs%10) == 0; i++ {
+	for i := uint8(0); i < (9-ts.numFractionalSeconds) && nsecs > 0 && (nsecs%10) == 0; i++ {
 		nsecs /= 10
 	}
 
-	return nsecs, ts.fractionPrecision | 0xC0
+	return nsecs, ts.numFractionalSeconds | 0xC0
 }

@@ -555,19 +555,22 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	overflow := false
 	fractionPrecision := uint8(0)
 
+	// Check the fractional seconds part of the timestamp.
 	if length > 0 {
-		decimalBytes, err := b.in.Peek(int(length))
+		fracSecsBytes, err := b.in.Peek(int(length))
 		if err != nil {
 			return emptyTimestamp(), err
 		}
 
-		if len(decimalBytes) == 0 {
+		if len(fracSecsBytes) == 0 {
 			return emptyTimestamp(), fmt.Errorf("ion: invalid peek at decimal fractional value in timestamp")
 		}
 
-		if decimalBytes[0] > 0xC0 && (decimalBytes[0]^0xC0) > 0 {
+		// First byte indicates number of precision units in fractional seconds.
+		if fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
+			// We have at least one fractional second
 			precision = Nanosecond
-			fractionPrecision = decimalBytes[0] ^ 0xC0
+			fractionPrecision = fracSecsBytes[0] ^ 0xC0
 		}
 
 		nsecs, overflow, err = b.readNsecs(length)
