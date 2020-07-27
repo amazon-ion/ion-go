@@ -162,7 +162,7 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 		0x8F,             // minute: 15
 		0xAB,             // second: 43
 		0xC6,             // exp:    6 precision units
-		0x0D, 0x2D, 0x06, // nsec:   863494000
+		0x0D, 0x2D, 0x06, // nsec:   863494
 	}
 
 	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494000+10:00", Nanosecond, Local)
