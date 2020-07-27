@@ -80,7 +80,17 @@ func TestMarshalBinary(t *testing.T) {
 		})
 	}
 
+	// Null.
 	test(nil, "null", prefixIVM([]byte{0x0F}))
+
+	// Boolean.
+	test(true, "boolean", prefixIVM([]byte{0x11})) // true
+
+	// Positive Integer.
+	test(32767, "integer", prefixIVM([]byte{0x22, 0x7F, 0xFF})) // 32767
+
+	// Negative Integer.
+	test(-32767, "negative integer", prefixIVM([]byte{0x32, 0x7F, 0xFF})) // -32767
 
 	// Float32 valid type. Go treats floats as float64 by default, unless specified.
 	// Explicitly cast number to be of float32 and ensure type is handled. This should not be an unknown type.
@@ -92,6 +102,15 @@ func TestMarshalBinary(t *testing.T) {
 
 	// Float 64.
 	test(math.MaxFloat64, "float64", prefixIVM([]byte{0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})) // 1.797693134862315708145274237317043567981e+308
+
+	// Decimal.
+	test(MustParseDecimal("0d-63"), "decimal", prefixIVM([]byte{0x51, 0xFF})) // 0d-63
+
+	// String.
+	test("abc", "string", prefixIVM([]byte{0x83, 'a', 'b', 'c'})) // "abc"
+
+	// Blob.
+	test([]byte{97, 98, 99}, "blob", prefixIVM([]byte{0xA3, 'a', 'b', 'c'}))
 
 	// Struct.
 	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", prefixIVM([]byte{
