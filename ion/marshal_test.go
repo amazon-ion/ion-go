@@ -313,7 +313,7 @@ func TestMarshalValuesWithAnnotation(t *testing.T) {
 	test(buildValue(5), "int", "'symbols or string'::annotations::5")
 	test(buildValue(float32(math.MaxFloat32)), "float", "'symbols or string'::annotations::3.4028234663852886e+38")
 	test(buildValue(MustParseDecimal("1.2")), "decimal", "'symbols or string'::annotations::1.2")
-	test(buildValue(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)),
+	test(buildValue(NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), Second, UTC)),
 		"timestamp", "'symbols or string'::annotations::2000-01-02T03:04:05Z")
 	test(buildValue("stringValue"), "string", "'symbols or string'::annotations::\"stringValue\"")
 	test(buildValue([]byte{4, 2}), "blob", "'symbols or string'::annotations::{{BAI=}}")

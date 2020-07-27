@@ -575,7 +575,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		}
 	}
 
-	dateTime, err := tryCreateTimestamp(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
+	timestamp, err := tryCreateTimestamp(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
 	if err != nil {
 		return emptyTimestamp(), err
 	}
@@ -583,7 +583,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return dateTime, nil
+	return timestamp, nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.

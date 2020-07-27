@@ -135,7 +135,6 @@ func NewTimestampWithFractionalSeconds(dateTime time.Time, precision TimestampPr
 // NewTimestampFromStr constructor
 func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind TimezoneKind) (Timestamp, error) {
 	precisionUnits := uint8(0)
-
 	if precision >= Nanosecond {
 		idx := strings.LastIndex(dateStr, ".")
 		if idx != -1 {
@@ -250,7 +249,7 @@ func (ts *Timestamp) Equal(ts1 Timestamp) bool {
 		ts.numFractionalSeconds == ts1.numFractionalSeconds
 }
 
-// Equivalent figures out if two timestamps have equal dateTime and precision.
+// Equivalent figures out if two timestamps have equal DateTime and precision.
 func (ts *Timestamp) Equivalent(ts1 Timestamp) bool {
 	return ts.DateTime.Equal(ts1.DateTime) && ts.precision == ts1.precision
 }
