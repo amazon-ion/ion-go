@@ -176,7 +176,6 @@ var nonEquivsSkipList = []string{
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",
-	"timestamps.ion",
 }
 
 func TestLoadGood(t *testing.T) {

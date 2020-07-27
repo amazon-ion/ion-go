@@ -314,7 +314,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateImpreciseTimestamp(int(year), 1, 1, Year)
+		return tryCreateDateTimestamp(int(year), 1, 1, Year)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +331,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateImpreciseTimestamp(int(year), int(month), 1, Month)
+		return tryCreateDateTimestamp(int(year), int(month), 1, Month)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,7 +348,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateImpreciseTimestamp(int(year), int(month), int(day), Day)
+		return tryCreateDateTimestamp(int(year), int(month), int(day), Day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -465,7 +465,7 @@ func roundFractionalSeconds(val string, idx int, kind TimezoneKind) (Timestamp, 
 	if roundedFloatValue == 10 {
 		roundedStringValue := "9.000000000"
 		val = val[:18] + roundedStringValue + val[idx:]
-		timeValue, err := time.Parse(Nanosecond.formatString(kind, 9), val)
+		timeValue, err := time.Parse(Nanosecond.Layout(kind, 9), val)
 		if err != nil {
 			return invalidTimestamp(val)
 		}

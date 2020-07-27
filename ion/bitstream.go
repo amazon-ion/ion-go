@@ -562,16 +562,26 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 			return emptyTimestamp(), err
 		}
 
-		// First byte indicates number of precision units in fractional seconds.
-		if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
-			// We have at least one fractional second.
-			precision = Nanosecond
-			fractionPrecision = fracSecsBytes[0] ^ 0xC0
-		}
-
 		nsecs, overflow, err = b.readNsecs(length)
 		if err != nil {
 			return emptyTimestamp(), err
+		}
+
+		if nsecs > 0 {
+			fractionPrecision = 9
+
+			// Adjust fractionPrecision for each trailing zero.
+			// ie. .123456000 should have 6 fractionPrecision instead of 9
+			ns := nsecs
+			for ns > 0 && (ns%10) == 0 {
+				ns /= 10
+				fractionPrecision--
+			}
+			precision = Nanosecond
+		} else if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
+			// First byte indicates number of precision units in fractional seconds.
+			fractionPrecision = fracSecsBytes[0] ^ 0xC0
+			precision = Nanosecond
 		}
 	}
 

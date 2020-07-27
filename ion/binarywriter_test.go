@@ -153,7 +153,7 @@ func TestWriteBinarySymbol(t *testing.T) {
 func TestWriteBinaryTimestamp(t *testing.T) {
 	eval := []byte{
 		0x67, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80, // 0001-01-01T00:00:00Z
-		0x6D,
+		0x6D,       // 0x0D-bit timestamp
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
 		0x88,             // month:  8
@@ -165,7 +165,7 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 		0x0D, 0x2D, 0x06, // nsec:   863494000
 	}
 
-	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, Local)
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494000+10:00", Nanosecond, Local)
 
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteTimestamp(NewTimestamp(time.Time{}, Nanosecond, UTC))
