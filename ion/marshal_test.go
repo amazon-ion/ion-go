@@ -112,6 +112,9 @@ func TestMarshalBinary(t *testing.T) {
 	// Blob.
 	test([]byte{97, 98, 99}, "blob", prefixIVM([]byte{0xA3, 'a', 'b', 'c'}))
 
+	// List.
+	test([]int{2, 3, 4}, "list", prefixIVM([]byte{0xB6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}))
+
 	// Struct.
 	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", prefixIVM([]byte{
 		0xE9, 0x81, 0x83, 0xD6, 0x87, 0xB4, 0x81, 'A', 0x81, 'B',
