@@ -28,6 +28,7 @@ func TestUnmarshalBool(t *testing.T) {
 	test("true", true)
 	test("false", false)
 }
+
 func TestUnmarshalBoolPtr(t *testing.T) {
 	test := func(str string, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
@@ -267,6 +268,132 @@ func TestUnmarshalBigInt(t *testing.T) {
 	test("null", new(big.Int))
 	test("1", new(big.Int).SetUint64(1))
 	test("-0xFFFFFFFFFFFFFFFF", new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF)))
+}
+
+func TestUnmarshalBinary(t *testing.T) {
+	test := func(data []byte, val, eval interface{}) {
+		t.Run(reflect.TypeOf(val).String(), func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res := false
+			switch thisValue := val.(type) {
+			case *Decimal:
+				thisDecimal := ionDecimal{thisValue}
+				res = thisDecimal.eq(ionDecimal{eval.(*Decimal)})
+			case time.Time:
+				thisTime := ionTimestamp{thisValue}
+				res = thisTime.eq(ionTimestamp{eval.(time.Time)})
+			default:
+				res = reflect.DeepEqual(val, eval)
+			}
+			if !res {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	var nullVal string
+	nullBytes := prefixIVM([]byte{0x0F}) // null
+	test(nullBytes, nullVal, nil)
+
+	var boolVal bool
+	boolBytes := prefixIVM([]byte{0x11}) // true
+	test(boolBytes, boolVal, true)
+
+	var intVal int16
+	intBytes := prefixIVM([]byte{0x22, 0x7F, 0xFF}) // 32767
+	test(intBytes, intVal, 32767)
+
+	var uintVal uint16
+	uintBytes := prefixIVM([]byte{0x32, 0x7F, 0xFF}) // -32767
+	test(uintBytes, uintVal, -32767)
+
+	var floatVal float32
+	floatBytes := prefixIVM([]byte{0x44, 0x12, 0x12, 0x12, 0x12}) // 4.609175024471393E-28
+	test(floatBytes, floatVal, 4.609175024471393e-28)
+
+	var decimalVal Decimal
+	decimalBytes := prefixIVM([]byte{0x51, 0xFF}) // 0d-63
+	test(decimalBytes, decimalVal, MustParseDecimal("0d-63"))
+
+	var timeValue time.Time
+	timeBytes := prefixIVM([]byte{0x67, 0xC0, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
+	test(timeBytes, timeValue, time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0)))
+
+	var symbolVal string
+	symbolBytes := prefixIVM([]byte{0x71, 0x0A}) // $10
+	test(symbolBytes, symbolVal, "$10")
+
+	var stringVal string
+	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
+	test(stringBytes, stringVal, "abc")
+
+	var clobVal []byte
+	clobBytes := prefixIVM([]byte{0x92, 0x0A, 0x0B})
+	test(clobBytes, clobVal, []byte{10, 11})
+
+	var blobVal []byte
+	blobBytes := prefixIVM([]byte{0xA3, 'a', 'b', 'c'})
+	test(blobBytes, blobVal, []byte{97, 98, 99})
+
+}
+
+func TestUnmarshalStructBinary(t *testing.T) {
+	test := func(data []byte, testName string, val, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	eval := map[string]interface{}{}
+	eval["name"] = 2
+	ionByteValue := prefixIVM([]byte{0xD3, 0x84, 0x21, 0x02}) // {name:2}
+
+	var boolVal interface{}
+	test(ionByteValue, "structToInterface", boolVal, eval) // unmarshal IonStruct to an interface
+
+	test(ionByteValue, "structToMap", map[string]string{}, eval) // unmarshal IonStruct to a map
+
+	ionByteValue = prefixIVM([]byte{0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'A', //$10=A
+		0xD3, 0x8A, 0x21, 0x02}) // {A:2}
+	type foo struct {
+		Foo int `ion:"A"`
+	}
+	test(ionByteValue, "structToStruct", &foo{}, &foo{2}) // unmarshal IonStruct to a Go struct
+}
+
+func TestUnmarshalListSexpBinary(t *testing.T) {
+	test := func(data []byte, testName string, val, eval interface{}) {
+		t.Run("reflect.TypeOf(val).String()", func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	ionByteValue := prefixIVM([]byte{0xB6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}) // list : [2, 3, 4]
+
+	test(ionByteValue, "listToInterface", &[]interface{}{}, &[]interface{}{2, 3, 4}) // unmarshal IonList to an interface
+	test(ionByteValue, "listToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonList to Slice of int
+
+	ionByteValue = prefixIVM([]byte{0xC6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}) // sexp : (2 3 4)
+
+	test(ionByteValue, "sexpToInterface", &[]interface{}{}, &[]interface{}{2, 3, 4}) // unmarshal IonSexp to an interface
+	test(ionByteValue, "sexpToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonSexp to Slice of int
 }
 
 func TestDecodeFloat(t *testing.T) {
