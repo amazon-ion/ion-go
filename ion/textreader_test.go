@@ -216,10 +216,10 @@ func TestTimestamps(t *testing.T) {
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
-	test("2001T", NewSimpleTimestamp(et, Year))
-	test("2001-01T", NewSimpleTimestamp(et, Month))
-	test("2001-01-01", NewSimpleTimestamp(et, Day))
-	test("2001-01-01T", NewSimpleTimestamp(et, Day))
+	test("2001T", NewImpreciseTimestamp(et, Year))
+	test("2001-01T", NewImpreciseTimestamp(et, Month))
+	test("2001-01-01", NewImpreciseTimestamp(et, Day))
+	test("2001-01-01T", NewImpreciseTimestamp(et, Day))
 	test("2001-01-01T00:00Z", NewTimestamp(et, Minute, UTC))
 	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second, UTC))
 	test("2001-01-01T00:00:00.000Z", NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 3))

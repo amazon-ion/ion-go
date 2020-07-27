@@ -109,8 +109,8 @@ type Timestamp struct {
 	numFractionalSeconds uint8
 }
 
-// NewSimpleTimestamp constructor
-func NewSimpleTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
+// NewImpreciseTimestamp constructor meant for timestamps with limited precision
+func NewImpreciseTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
 	return Timestamp{dateTime, precision, Unspecified, 0}
 }
 
@@ -159,22 +159,37 @@ func emptyTimestamp() Timestamp {
 	return Timestamp{time.Time{}, NoPrecision, Unspecified, 0}
 }
 
-func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset, sign int64, precision TimestampPrecision, fractionPrecision uint8) (Timestamp, error) {
+func invalidTimestamp(val string) (Timestamp, error) {
+	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
+}
+
+func tryCreateImpreciseTimestamp(year, month, day int, precision TimestampPrecision) (Timestamp, error) {
+	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+
+	// time.Date converts 2000-01-32 input to 2000-02-01
+	if year != date.Year() || time.Month(month) != date.Month() || day != date.Day() {
+		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
+	}
+
+	return NewImpreciseTimestamp(date, precision), nil
+}
+
+func tryCreateTimestamp(ts []int, nsecs int, overflow bool, offset, sign int64, precision TimestampPrecision, fractionPrecision uint8) (Timestamp, error) {
 	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
 	// time.Date converts 2000-01-32 input to 2000-02-01
 	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
 		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
 	}
 
+	if precision <= Day {
+		return NewImpreciseTimestamp(date, precision), nil
+	}
+
 	if overflow {
 		date = date.Add(time.Second)
 	}
 
-	date = date.In(time.FixedZone("fixed", int(offset)*60))
-
-	if precision <= Day {
-		return NewSimpleTimestamp(date, precision), nil
-	} else if offset == 0 {
+	if offset == 0 {
 		if sign == -1 {
 			// Negative zero timezone offset is Unspecified
 			return NewTimestampWithFractionalSeconds(date, precision, Unspecified, fractionPrecision), nil
@@ -183,23 +198,10 @@ func tryCreateTimestampWithNSecAndOffset(ts []int, nsecs int, overflow bool, off
 		return NewTimestampWithFractionalSeconds(date, precision, UTC, fractionPrecision), nil
 	}
 
+	date = date.In(time.FixedZone("fixed", int(offset)*60))
+
 	// Non-zero offset is Local
 	return NewTimestampWithFractionalSeconds(date, precision, Local, fractionPrecision), nil
-}
-
-func tryCreateTimestamp(year, month, day int, precision TimestampPrecision) (Timestamp, error) {
-	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-
-	// time.Date converts 2000-01-32 input to 2000-02-01
-	if year != date.Year() || time.Month(month) != date.Month() || day != date.Day() {
-		return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp")
-	}
-
-	return NewSimpleTimestamp(date, precision), nil
-}
-
-func invalidTimestamp(val string) (Timestamp, error) {
-	return emptyTimestamp(), fmt.Errorf("ion: invalid timestamp: %v", val)
 }
 
 // Format returns a formatted Timestamp string.
@@ -258,7 +260,8 @@ func (ts *Timestamp) SetLocation(loc *time.Location) {
 	ts.DateTime = ts.DateTime.In(loc)
 }
 
-// TruncateNS returns nanoseconds with 0's removed and the fractional precision indicator.
+// TruncateNS returns nanoseconds with zeros removed and the fractional precision indicator.
+// ie. 123456000 gets truncated to 123456
 func (ts *Timestamp) TruncateNS() (int, uint8) {
 	nsecs := ts.DateTime.Nanosecond()
 	for i := uint8(0); i < (9-ts.numFractionalSeconds) && nsecs > 0 && (nsecs%10) == 0; i++ {

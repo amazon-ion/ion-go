@@ -314,7 +314,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateTimestamp(int(year), 1, 1, Year)
+		return tryCreateImpreciseTimestamp(int(year), 1, 1, Year)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +331,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateTimestamp(int(year), int(month), 1, Month)
+		return tryCreateImpreciseTimestamp(int(year), int(month), 1, Month)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,7 +348,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateTimestamp(int(year), int(month), int(day), Day)
+		return tryCreateImpreciseTimestamp(int(year), int(month), int(day), Day)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
