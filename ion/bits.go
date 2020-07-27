@@ -255,7 +255,7 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 
 	if utc.precision >= Year {
 		// Almost certainly two but let's be safe.
-		ret += varUintLen(uint64(utc.DateTime.Year()))
+		ret += varUintLen(uint64(utc.dateTime.Year()))
 
 		// Month, day, hour, minute, and second are all guaranteed to be one byte.
 		if utc.precision >= Month {
@@ -298,21 +298,21 @@ func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
 	}
 
 	if utc.precision >= Year {
-		b = appendVarUint(b, uint64(utc.DateTime.Year()))
+		b = appendVarUint(b, uint64(utc.dateTime.Year()))
 
 		if utc.precision >= Month {
-			b = appendVarUint(b, uint64(utc.DateTime.Month()))
+			b = appendVarUint(b, uint64(utc.dateTime.Month()))
 
 			if utc.precision >= Day {
-				b = appendVarUint(b, uint64(utc.DateTime.Day()))
+				b = appendVarUint(b, uint64(utc.dateTime.Day()))
 
 				if utc.precision >= Minute {
 					// The hour and minute is considered as a single component.
-					b = appendVarUint(b, uint64(utc.DateTime.Hour()))
-					b = appendVarUint(b, uint64(utc.DateTime.Minute()))
+					b = appendVarUint(b, uint64(utc.dateTime.Hour()))
+					b = appendVarUint(b, uint64(utc.dateTime.Minute()))
 
 					if utc.precision >= Second {
-						b = appendVarUint(b, uint64(utc.DateTime.Second()))
+						b = appendVarUint(b, uint64(utc.dateTime.Second()))
 
 						if utc.precision >= Nanosecond && utc.numFractionalSeconds > 0 {
 							b = append(b, utc.numFractionalSeconds|0xC0)

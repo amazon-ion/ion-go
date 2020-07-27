@@ -171,8 +171,8 @@ func TestAppendTag(t *testing.T) {
 
 func TestAppendTimestamp(t *testing.T) {
 	test := func(val Timestamp, elen uint64, ebits []byte) {
-		t.Run(fmt.Sprintf("%x", val.DateTime), func(t *testing.T) {
-			_, offset := val.DateTime.Zone()
+		t.Run(fmt.Sprintf("%x", val.dateTime), func(t *testing.T) {
+			_, offset := val.dateTime.Zone()
 			offset /= 60
 			val.SetLocation(time.UTC)
 
@@ -199,7 +199,7 @@ func TestAppendTimestamp(t *testing.T) {
 		0x88,             // hour:   8 utc (18 local)
 		0x8F,             // minute: 15
 		0xAB,             // second: 43
-		0xC6,             // exp:    -9
+		0xC6,             // exp:    6 precision units
 		0x0D, 0x2D, 0x06, // nsec:   863494
 	})
 }

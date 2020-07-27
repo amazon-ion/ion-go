@@ -19,72 +19,72 @@ func TestNewTimestampFromStr(t *testing.T) {
 		{
 			testCase: "2000T",
 			args:     args{"2000T", Year, Unspecified},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 1, 0, 0, 0, 0, time.UTC), precision: Year},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 1, 0, 0, 0, 0, time.UTC), precision: Year},
 		},
 		{
 			testCase: "2000-01T",
 			args:     args{"2000-01T", Month, Unspecified},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 1, 0, 0, 0, 0, time.UTC), precision: Month},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 1, 0, 0, 0, 0, time.UTC), precision: Month},
 		},
 		{
 			testCase: "2000-01-02T",
 			args:     args{"2000-01-02T", Day, Unspecified},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 0, 0, 0, 0, time.UTC), precision: Day},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 0, 0, 0, 0, time.UTC), precision: Day},
 		},
 		{
 			testCase: "2000-01-02T03:04Z",
 			args:     args{"2000-01-02T03:04Z", Minute, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 0, 0, time.UTC), precision: Minute, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 0, 0, time.UTC), precision: Minute, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05Z",
 			args:     args{"2000-01-02T03:04:05Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 0, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 0, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.1Z",
 			args:     args{"2000-01-02T03:04:05.1Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 100000000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 100000000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.12Z",
 			args:     args{"2000-01-02T03:04:05.12Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 120000000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 120000000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.123Z",
 			args:     args{"2000-01-02T03:04:05.123Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123000000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123000000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.1234Z",
 			args:     args{"2000-01-02T03:04:05.1234Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123400000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123400000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.12345Z",
 			args:     args{"2000-01-02T03:04:05.12345Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123450000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123450000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.123456Z",
 			args:     args{"2000-01-02T03:04:05.123456Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456000, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456000, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.1234567Z",
 			args:     args{"2000-01-02T03:04:05.1234567Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456700, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456700, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.12345678Z",
 			args:     args{"2000-01-02T03:04:05.12345678Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456780, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456780, time.UTC), precision: Second, kind: UTC},
 		},
 		{
 			testCase: "2000-01-02T03:04:05.123456789Z",
 			args:     args{"2000-01-02T03:04:05.123456789Z", Second, UTC},
-			expected: Timestamp{DateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456789, time.UTC), precision: Second, kind: UTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456789, time.UTC), precision: Second, kind: UTC},
 		},
 	}
 	for _, tt := range tests {
@@ -185,7 +185,7 @@ func TestTimestampFormat(t *testing.T) {
 			}
 
 			ts := &Timestamp{
-				DateTime:             dateTime,
+				dateTime:             dateTime,
 				precision:            tt.fields.precision,
 				kind:                 kind,
 				numFractionalSeconds: tt.fields.numFractionalSeconds,

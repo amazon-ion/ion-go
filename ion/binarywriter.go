@@ -208,7 +208,7 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 
 // WriteTimestamp writes a timestamp value.
 func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
-	_, offset := val.DateTime.Zone()
+	_, offset := val.dateTime.Zone()
 	offset /= 60
 	val.SetLocation(time.UTC)
 
