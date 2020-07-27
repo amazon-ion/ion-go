@@ -41,7 +41,7 @@ func (tp TimestampPrecision) String() string {
 	}
 }
 
-// Layout returns a suitable format string to be used in time.Parse()
+// Layout returns a suitable format string to be used in time.Parse() or time.Format().
 func (tp TimestampPrecision) Layout(kind TimezoneKind, precisionUnits uint8) string {
 	switch tp {
 	case Year:
@@ -232,7 +232,9 @@ func (ts *Timestamp) Format() string {
 
 	// The above time.Format() does not produce the format we want in some scenarios.
 	// So we may need to make some adjustments.
-	if ts.precision >= Minute && ts.DateTime.Nanosecond() == 0 {
+
+	// Add back removed trailing zeros from fractional seconds (ie. ".000")
+	if ts.precision >= Nanosecond && ts.DateTime.Nanosecond() == 0 && ts.numFractionalSeconds > 0 {
 		// Find the position of 'T'
 		tIndex := strings.Index(format, "T")
 		if tIndex == -1 {
@@ -242,34 +244,31 @@ func (ts *Timestamp) Format() string {
 			}
 		}
 
-		// Add back removed trailing zeros from fractional seconds (ie. ".000")
-		if ts.numFractionalSeconds > 0 {
-			index := strings.LastIndex(format, "Z")
+		index := strings.LastIndex(format, "Z")
+		if index == -1 || index < tIndex {
+			index = strings.LastIndex(format, "+")
 			if index == -1 || index < tIndex {
-				index = strings.LastIndex(format, "+")
-				if index == -1 || index < tIndex {
-					index = strings.LastIndex(format, "-")
-				}
-			}
-
-			// This position better be right of 'T'
-			if index != -1 && tIndex < index {
-				zeros := "."
-				for i := uint8(0); i < ts.numFractionalSeconds; i++ {
-					zeros += "0"
-				}
-
-				format = format[0:index] + zeros + format[index:]
+				index = strings.LastIndex(format, "-")
 			}
 		}
 
-		// Unspecified timezone and time precision (ie. Minute/Second/Nanosecond) should have a "-00:00" offset
-		// but time.Format() is returning a "+00:00" offset.
-		if ts.kind == Unspecified {
-			index := strings.LastIndex(format, "+00:00")
-			if index != -1 && tIndex < index {
-				format = format[0:index] + "-00:00"
+		// This position better be right of 'T'
+		if index != -1 && tIndex < index {
+			zeros := "."
+			for i := uint8(0); i < ts.numFractionalSeconds; i++ {
+				zeros += "0"
 			}
+
+			format = format[0:index] + zeros + format[index:]
+		}
+	}
+
+	// A timestamp with time precision (ie. Minute/Second/Nanosecond) and Unspecified timezone
+	// should have a "-00:00" offset but time.Format() is returning a "+00:00" offset.
+	if ts.precision >= Minute && ts.kind == Unspecified {
+		index := strings.LastIndex(format, "+00:00")
+		if index != -1 {
+			format = format[0:index] + "-00:00"
 		}
 	}
 
