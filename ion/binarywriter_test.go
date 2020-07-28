@@ -153,7 +153,7 @@ func TestWriteBinarySymbol(t *testing.T) {
 func TestWriteBinaryTimestamp(t *testing.T) {
 	eval := []byte{
 		0x67, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80, // 0001-01-01T00:00:00Z
-		0x6D,       // 0x0D-bit timestamp
+		0x6D,       // 0x0D-byte timestamp
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
 		0x88,             // month:  8
