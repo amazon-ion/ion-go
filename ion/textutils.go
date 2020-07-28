@@ -364,7 +364,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 		// yyyy-mm-ddThh:mm
 		kind, err := computeTimezoneKind(val, 16)
 		if err != nil {
-			return emptyTimestamp(), err
+			return Timestamp{}, err
 		}
 
 		return NewTimestampFromStr(val, TimestampPrecisionMinute, kind)
@@ -384,7 +384,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 		kind, err := computeTimezoneKind(val, idx)
 		if err != nil {
-			return emptyTimestamp(), err
+			return Timestamp{}, err
 		}
 
 		if idx <= 20 {

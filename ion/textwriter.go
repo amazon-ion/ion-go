@@ -90,7 +90,7 @@ func (w *textWriter) WriteDecimal(val *Decimal) error {
 
 // WriteTimestamp writes a timestamp.
 func (w *textWriter) WriteTimestamp(val Timestamp) error {
-	return w.writeValue("Writer.WriteTimestamp", val.Format())
+	return w.writeValue("Writer.WriteTimestamp", val.String())
 }
 
 // WriteSymbol writes a symbol.

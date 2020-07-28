@@ -523,7 +523,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	offset, osign, olen, err := b.readVarIntLen(length)
 	if err != nil {
-		return emptyTimestamp(), err
+		return Timestamp{}, err
 	}
 	length -= olen
 
@@ -532,7 +532,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	for i := 0; length > 0 && i < 6 && precision < TimestampPrecisionSecond; i++ {
 		val, vlen, err := b.readVarUintLen(length)
 		if err != nil {
-			return emptyTimestamp(), err
+			return Timestamp{}, err
 		}
 		length -= vlen
 		ts[i] = int(val)
@@ -541,8 +541,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		// component must also have a minute component. Hence, length cannot be zero at this point.
 		if i == 3 {
 			if length == 0 {
-				return emptyTimestamp(),
-					&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+				return Timestamp{}, &SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
 			}
 		} else {
 			// Update precision as we read the timestamp.
@@ -560,12 +559,12 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		// First byte indicates number of precision units in fractional seconds.
 		fracSecsBytes, err := b.in.Peek(1)
 		if err != nil {
-			return emptyTimestamp(), err
+			return Timestamp{}, err
 		}
 
 		nsecs, overflow, err = b.readNsecs(length)
 		if err != nil {
-			return emptyTimestamp(), err
+			return Timestamp{}, err
 		}
 
 		if nsecs > 0 {
@@ -587,7 +586,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	timestamp, err := tryCreateTimestamp(ts, nsecs, overflow, offset, osign, precision, fractionPrecision)
 	if err != nil {
-		return emptyTimestamp(), err
+		return Timestamp{}, err
 	}
 
 	b.state = b.stateAfterValue()

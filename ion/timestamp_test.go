@@ -100,7 +100,7 @@ func TestNewTimestampFromStr(t *testing.T) {
 	}
 }
 
-func TestTimestampFormat(t *testing.T) {
+func TestTimestampString(t *testing.T) {
 	type fields struct {
 		year                 int
 		month                int
@@ -190,7 +190,7 @@ func TestTimestampFormat(t *testing.T) {
 				kind:                 kind,
 				numFractionalSeconds: tt.fields.numFractionalSeconds,
 			}
-			if actual := ts.Format(); actual != tt.expected {
+			if actual := ts.String(); actual != tt.expected {
 				t.Fatalf("expected %v, got %v", tt.expected, actual)
 			}
 		})

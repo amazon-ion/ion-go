@@ -347,7 +347,7 @@ func TestDecodeTimestampTo(t *testing.T) {
 			}
 		})
 	}
-	test("null", emptyTimestamp())
+	test("null", Timestamp{})
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 }
 

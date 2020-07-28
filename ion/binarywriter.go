@@ -210,7 +210,7 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	_, offset := val.dateTime.Zone()
 	offset /= 60
-	val.SetLocation(time.UTC)
+	val.dateTime = val.dateTime.In(time.UTC)
 
 	vlen := timestampLen(offset, val)
 	buflen := vlen + tagLen(vlen)

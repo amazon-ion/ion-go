@@ -174,7 +174,7 @@ func TestAppendTimestamp(t *testing.T) {
 		t.Run(fmt.Sprintf("%x", val.dateTime), func(t *testing.T) {
 			_, offset := val.dateTime.Zone()
 			offset /= 60
-			val.SetLocation(time.UTC)
+			val.dateTime = val.dateTime.In(time.UTC)
 
 			len := timestampLen(offset, val)
 			if len != elen {
