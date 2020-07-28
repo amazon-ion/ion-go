@@ -400,7 +400,7 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(val))
 			return d.attachAnnotations(v)
 		}
-		return d.decodeToStructWithAnnotation(v, timeType.Kind())
+		return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
