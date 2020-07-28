@@ -241,7 +241,7 @@ func TestWriteTextTimestamp(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		dateTime := time.Unix(0, 1000000).In(time.UTC)
 		w.WriteTimestamp(NewTimestampWithFractionalSeconds(dateTime, Nanosecond, UTC, 3))
-		dateTime = time.Unix(0, 0).In(time.FixedZone("wtf", 4980))
+		dateTime = time.Unix(0, 0).In(time.FixedZone("foo", 4980))
 		w.WriteTimestamp(NewTimestamp(dateTime, Second, Local))
 	})
 }
