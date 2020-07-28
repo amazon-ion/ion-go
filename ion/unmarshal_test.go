@@ -628,18 +628,18 @@ func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 }
 
 func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
-	type innerStruct struct {
+	type nestedInt struct {
 		Value           int
 		ValueAnnotation []string `ion:",annotations"`
 	}
 
-	type mainStruct struct {
-		Field2                innerStruct
+	type nestedStruct struct {
+		Field2                nestedInt
 		InnerStructAnnotation []string `ion:",annotations"`
 	}
 
 	type topLevelStruct struct {
-		Field1             mainStruct
+		Field1             nestedStruct
 		TopLevelAnnotation []string `ion:",annotations"`
 	}
 
@@ -664,8 +664,8 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 		  }
 		}
 	*/
-	innerStructVal := innerStruct{Value: 5, ValueAnnotation: []string{"baz"}}
-	mainStructVal := mainStruct{Field2: innerStructVal, InnerStructAnnotation: []string{"bar"}}
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []string{"baz"}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []string{"bar"}}
 	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []string{"foo"}}
 
 	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
