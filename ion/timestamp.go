@@ -42,6 +42,8 @@ func (tp TimestampPrecision) String() string {
 }
 
 // Layout returns a suitable format string to be used in time.Parse() or time.Format().
+// The idea of the format string is to format the particular date Mon Jan 2 15:04:05 MST 2006 (Unix time 1136239445)
+// in the desired layout we want to use to format other dates.
 func (tp TimestampPrecision) Layout(kind TimezoneKind, precisionUnits uint8) string {
 	switch tp {
 	case TimestampPrecisionYear:
