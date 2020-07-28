@@ -1112,7 +1112,7 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 }
 
 // ScanForNumericType attempts to determine what type of number we
-// have by peeking at a fininte number of characters. We can rule
+// have by peeking at a finite number of characters. We can rule
 // out binary (0b...), hex (0x...), and timestamps (....-) via this
 // method. There are a couple other cases where we *could* distinguish,
 // but it's unclear that it's worth it.

@@ -82,7 +82,7 @@ func (d *datagram) EmitTo(w io.Writer) error {
 	return nil
 }
 
-// A container is a datagram that's preceeded by a code+length tag.
+// A container is a datagram that's preceded by a code+length tag.
 type container struct {
 	code byte
 	datagram

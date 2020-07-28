@@ -52,8 +52,8 @@ func (e *eventwriter) Annotation(val string) error {
 	return nil
 }
 
-func (e *eventwriter) Annotations(vals ...string) error {
-	e.annotations = append(e.annotations, vals...)
+func (e *eventwriter) Annotations(values ...string) error {
+	e.annotations = append(e.annotations, values...)
 	return nil
 }
 

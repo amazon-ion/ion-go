@@ -93,8 +93,7 @@ type Reader interface {
 	Type() Type
 
 	// IsNull returns true if the current value is an explicit null. This may be true
-	// even if the Type is not NullType (for example, null.struct has type Struct). Yes,
-	// that's a bit confusing.
+	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
 	// FieldName returns the field name associated with the current value. It returns

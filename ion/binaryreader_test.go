@@ -135,7 +135,7 @@ func TestReadBinaryLST(t *testing.T) {
 
 	lst := r.SymbolTable()
 	if lst == nil {
-		t.Fatal("symboltable is nil")
+		t.Fatal("symbolTable is nil")
 	}
 
 	if lst.MaxID() != 112 {

@@ -118,7 +118,7 @@ func bigIntLen(v *big.Int) uint64 {
 	bitl := v.BitLen()
 	bytel := bitl / 8
 
-	// Either bitl is evenly divisibly by 8, in which case we need another
+	// Either bitl is evenly divisible by 8, in which case we need another
 	// byte for the sign bit, or its not in which case we need to round up
 	// (but will then have room for the sign bit).
 	return uint64(bytel) + 1

@@ -56,7 +56,7 @@ func NewDecimalInt(n int64) *Decimal {
 }
 
 // MustParseDecimal parses the given string into a decimal object,
-// panicing on error.
+// panicking on error.
 func MustParseDecimal(in string) *Decimal {
 	d, err := ParseDecimal(in)
 	if err != nil {

@@ -128,7 +128,7 @@ func (b *bitstream) InitBytes(in []byte) {
 	b.in = bufio.NewReader(bytes.NewReader(in))
 }
 
-// Code returns the typecode of the current value.
+// Code returns the type code of the current value.
 func (b *bitstream) Code() bitcode {
 	return b.code
 }
@@ -898,7 +898,7 @@ var bitcodes = []bitcode{
 	bitcodeAnnotation, // 0xE0
 }
 
-// ParseTag parses a tag byte into a typecode and a length.
+// ParseTag parses a tag byte into a type code and a length.
 func parseTag(c int) (bitcode, uint64) {
 	high := (c >> 4) & 0x0F
 	low := c & 0x0F
@@ -976,7 +976,7 @@ func (b *bitstream) skip(n uint64) error {
 	return nil
 }
 
-// A bitnode represents a container value, including its typecode and
+// A bitnode represents a container value, including its type code and
 // the offset at which it (supposedly) ends.
 type bitnode struct {
 	code bitcode

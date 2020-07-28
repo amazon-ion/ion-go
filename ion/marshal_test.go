@@ -66,10 +66,10 @@ func TestMarshalText(t *testing.T) {
 	test(struct{ V interface{} }{}, "{V:null}")
 	test(struct{ V interface{} }{"42"}, "{V:\"42\"}")
 
-	fourtytwo := 42
+	fortyTwo := 42
 
 	test(struct{ V *int }{}, "{V:null}")
-	test(struct{ V *int }{&fourtytwo}, "{V:42}")
+	test(struct{ V *int }{&fortyTwo}, "{V:42}")
 
 	test(map[string]int{"b": 2, "a": 1}, "{a:1,b:2}")
 
