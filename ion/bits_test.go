@@ -188,9 +188,9 @@ func TestAppendTimestamp(t *testing.T) {
 		})
 	}
 
-	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", Nanosecond, Local)
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 
-	test(NewDateTimestamp(time.Time{}, Second), 7, []byte{0xC0, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
+	test(NewDateTimestamp(time.Time{}, TimestampPrecisionSecond), 7, []byte{0xC0, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
 	test(nowish, 13, []byte{
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019

@@ -314,7 +314,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 	}
 	if len(val) == 5 && (val[4] == 't' || val[4] == 'T') {
 		// yyyyT
-		return tryCreateDateTimestamp(int(year), 1, 1, Year)
+		return tryCreateDateTimestamp(int(year), 1, 1, TimestampPrecisionYear)
 	}
 	if val[4] != '-' {
 		return invalidTimestamp(val)
@@ -331,7 +331,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 8 && (val[7] == 't' || val[7] == 'T') {
 		// yyyy-mmT
-		return tryCreateDateTimestamp(int(year), int(month), 1, Month)
+		return tryCreateDateTimestamp(int(year), int(month), 1, TimestampPrecisionMonth)
 	}
 	if val[7] != '-' {
 		return invalidTimestamp(val)
@@ -348,7 +348,7 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	if len(val) == 10 || (len(val) == 11 && (val[10] == 't' || val[10] == 'T')) {
 		// yyyy-mm-dd or yyyy-mm-ddT
-		return tryCreateDateTimestamp(int(year), int(month), int(day), Day)
+		return tryCreateDateTimestamp(int(year), int(month), int(day), TimestampPrecisionDay)
 	}
 	if val[10] != 't' && val[10] != 'T' {
 		return invalidTimestamp(val)
@@ -361,15 +361,15 @@ func parseTimestamp(val string) (Timestamp, error) {
 
 	switch val[16] {
 	case 'z', 'Z', '+', '-':
-		//yyyy-mm-ddThh:mm
+		// yyyy-mm-ddThh:mm
 		kind, err := computeTimezoneKind(val, 16)
 		if err != nil {
 			return emptyTimestamp(), err
 		}
 
-		return NewTimestampFromStr(val, Minute, kind)
+		return NewTimestampFromStr(val, TimestampPrecisionMinute, kind)
 	case ':':
-		//yyyy-mm-ddThh:mm:ss
+		// yyyy-mm-ddThh:mm:ss
 		if len(val) < 20 {
 			break
 		}
@@ -388,9 +388,9 @@ func parseTimestamp(val string) (Timestamp, error) {
 		}
 
 		if idx <= 20 {
-			return NewTimestampFromStr(val, Second, kind)
+			return NewTimestampFromStr(val, TimestampPrecisionSecond, kind)
 		} else if idx <= 28 {
-			return NewTimestampFromStr(val, Nanosecond, kind)
+			return NewTimestampFromStr(val, TimestampPrecisionNanosecond, kind)
 		}
 
 		// Greater than 9 fractional seconds.
@@ -423,29 +423,30 @@ func computeTimezoneKind(val string, idx int) (TimezoneKind, error) {
 	switch val[idx] {
 	case 'z', 'Z':
 		// 'Z' zulu time means UTC timezone.
-		return UTC, nil
+		return TimezoneUTC, nil
 	case '+', '-':
 		hourOffset, minuteOffset, err := computeOffset(val, idx)
 		if err != nil {
-			return Unspecified, err
+			return TimezoneUnspecified, err
 		}
 
 		if hourOffset >= 24 || minuteOffset >= 60 {
-			return Unspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
+			return TimezoneUnspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
 		} else if hourOffset == 0 && minuteOffset == 0 {
 			// Negative zero offset is Unspecified timezone.
 			if val[idx] == '-' {
-				return Unspecified, nil
+				return TimezoneUnspecified, nil
 			}
+
 			// Positive zero offset is UTC.
-			return UTC, nil
+			return TimezoneUTC, nil
 		}
 
 		// Valid non-zero offset is Local timezone.
-		return Local, nil
+		return TimezoneLocal, nil
 	}
 
-	return Unspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
+	return TimezoneUnspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
 }
 
 func roundFractionalSeconds(val string, idx int, kind TimezoneKind) (Timestamp, error) {
@@ -465,16 +466,16 @@ func roundFractionalSeconds(val string, idx int, kind TimezoneKind) (Timestamp, 
 	if roundedFloatValue == 10 {
 		roundedStringValue := "9.000000000"
 		val = val[:18] + roundedStringValue + val[idx:]
-		timeValue, err := time.Parse(Nanosecond.Layout(kind, 9), val)
+		timeValue, err := time.Parse(TimestampPrecisionNanosecond.Layout(kind, 9), val)
 		if err != nil {
 			return invalidTimestamp(val)
 		}
 
 		timeValue = timeValue.Add(time.Second)
-		return NewTimestampWithFractionalSeconds(timeValue, Nanosecond, kind, 9), err
+		return NewTimestampWithFractionalSeconds(timeValue, TimestampPrecisionNanosecond, kind, 9), err
 	}
 
 	val = val[:18] + roundedStringValue + val[idx:]
 
-	return NewTimestampFromStr(val, Nanosecond, kind)
+	return NewTimestampFromStr(val, TimestampPrecisionNanosecond, kind)
 }

@@ -64,7 +64,7 @@ func printVersion() {
 		w.FieldName("version")
 		w.WriteString(internal.GitCommit)
 
-		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.Second, ion.UTC)
+		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.TimestampPrecisionSecond, ion.TimezoneUTC)
 		if err == nil {
 			w.FieldName("build_time")
 			w.WriteTimestamp(buildtime)

@@ -247,7 +247,7 @@ func appendTag(b []byte, code byte, len uint64) []byte {
 func timestampLen(offset int, utc Timestamp) uint64 {
 	var ret uint64
 
-	if utc.kind == Unspecified {
+	if utc.kind == TimezoneUnspecified {
 		ret = 1
 	} else {
 		ret = varIntLen(int64(offset))
@@ -258,21 +258,21 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 
 	// Month, day, hour, minute, and second are all guaranteed to be one byte.
 	switch utc.precision {
-	case Month:
+	case TimestampPrecisionMonth:
 		ret++
-	case Day:
+	case TimestampPrecisionDay:
 		ret += 2
-	case Minute:
+	case TimestampPrecisionMinute:
 		// Hour and Minute combined
 		ret += 4
-	case Second, Nanosecond:
+	case TimestampPrecisionSecond, TimestampPrecisionNanosecond:
 		ret += 5
 	}
 
-	if utc.precision == Nanosecond && utc.numFractionalSeconds > 0 {
+	if utc.precision == TimestampPrecisionNanosecond && utc.numFractionalSeconds > 0 {
 		ret++ // For fractional seconds precision indicator
 
-		ns := utc.TruncatedNanoSeconds()
+		ns := utc.TruncatedNanoseconds()
 		if ns > 0 {
 			ret += intLen(int64(ns))
 		}
@@ -283,7 +283,7 @@ func timestampLen(offset int, utc Timestamp) uint64 {
 
 // appendTimestamp appends a timestamp value
 func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
-	if utc.kind == Unspecified {
+	if utc.kind == TimezoneUnspecified {
 		// Unknown offset
 		b = append(b, 0xC0)
 	} else {
@@ -294,19 +294,19 @@ func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
 	b = appendVarUint(b, uint64(utc.dateTime.Year()))
 
 	switch utc.precision {
-	case Month:
+	case TimestampPrecisionMonth:
 		b = appendVarUint(b, uint64(utc.dateTime.Month()))
-	case Day:
+	case TimestampPrecisionDay:
 		b = appendVarUint(b, uint64(utc.dateTime.Month()))
 		b = appendVarUint(b, uint64(utc.dateTime.Day()))
-	case Minute:
+	case TimestampPrecisionMinute:
 		b = appendVarUint(b, uint64(utc.dateTime.Month()))
 		b = appendVarUint(b, uint64(utc.dateTime.Day()))
 
 		// The hour and minute is considered as a single component.
 		b = appendVarUint(b, uint64(utc.dateTime.Hour()))
 		b = appendVarUint(b, uint64(utc.dateTime.Minute()))
-	case Second, Nanosecond:
+	case TimestampPrecisionSecond, TimestampPrecisionNanosecond:
 		b = appendVarUint(b, uint64(utc.dateTime.Month()))
 		b = appendVarUint(b, uint64(utc.dateTime.Day()))
 
@@ -316,10 +316,10 @@ func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
 		b = appendVarUint(b, uint64(utc.dateTime.Second()))
 	}
 
-	if utc.precision == Nanosecond && utc.numFractionalSeconds > 0 {
+	if utc.precision == TimestampPrecisionNanosecond && utc.numFractionalSeconds > 0 {
 		b = append(b, utc.numFractionalSeconds|0xC0)
 
-		ns := utc.TruncatedNanoSeconds()
+		ns := utc.TruncatedNanoseconds()
 		if ns > 0 {
 			b = appendInt(b, int64(ns))
 		}

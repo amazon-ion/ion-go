@@ -521,15 +521,15 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	length := b.len
 
-	offset, sign, olen, err := b.readVarIntLen(length)
+	offset, osign, olen, err := b.readVarIntLen(length)
 	if err != nil {
 		return emptyTimestamp(), err
 	}
 	length -= olen
 
 	ts := []int{1, 1, 1, 0, 0, 0}
-	precision := NoPrecision
-	for i := 0; length > 0 && i < 6 && precision < Second; i++ {
+	precision := TimestampNoPrecision
+	for i := 0; length > 0 && i < 6 && precision < TimestampPrecisionSecond; i++ {
 		val, vlen, err := b.readVarUintLen(length)
 		if err != nil {
 			return emptyTimestamp(), err
@@ -557,7 +557,8 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	// Check the fractional seconds part of the timestamp.
 	if length > 0 {
-		fracSecsBytes, err := b.in.Peek(int(length))
+		// First byte indicates number of precision units in fractional seconds.
+		fracSecsBytes, err := b.in.Peek(1)
 		if err != nil {
 			return emptyTimestamp(), err
 		}
@@ -577,15 +578,14 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 				ns /= 10
 				fractionPrecision--
 			}
-			precision = Nanosecond
+			precision = TimestampPrecisionNanosecond
 		} else if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
-			// First byte indicates number of precision units in fractional seconds.
 			fractionPrecision = fracSecsBytes[0] ^ 0xC0
-			precision = Nanosecond
+			precision = TimestampPrecisionNanosecond
 		}
 	}
 
-	timestamp, err := tryCreateTimestamp(ts, nsecs, overflow, offset, sign, precision, fractionPrecision)
+	timestamp, err := tryCreateTimestamp(ts, nsecs, overflow, offset, osign, precision, fractionPrecision)
 	if err != nil {
 		return emptyTimestamp(), err
 	}

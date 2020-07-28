@@ -216,21 +216,21 @@ func TestTimestamps(t *testing.T) {
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
-	test("2001T", NewDateTimestamp(et, Year))
-	test("2001-01T", NewDateTimestamp(et, Month))
-	test("2001-01-01", NewDateTimestamp(et, Day))
-	test("2001-01-01T", NewDateTimestamp(et, Day))
-	test("2001-01-01T00:00Z", NewTimestamp(et, Minute, UTC))
-	test("2001-01-01T00:00:00Z", NewTimestamp(et, Second, UTC))
-	test("2001-01-01T00:00:00.000Z", NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 3))
-	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 3))
-	test("2001-01-01T00:00:00.000000Z", NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 6))
-	test("2001-01-01T00:00:00.000000000Z", NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 9))
+	test("2001T", NewDateTimestamp(et, TimestampPrecisionYear))
+	test("2001-01T", NewDateTimestamp(et, TimestampPrecisionMonth))
+	test("2001-01-01", NewDateTimestamp(et, TimestampPrecisionDay))
+	test("2001-01-01T", NewDateTimestamp(et, TimestampPrecisionDay))
+	test("2001-01-01T00:00Z", NewTimestamp(et, TimestampPrecisionMinute, TimezoneUTC))
+	test("2001-01-01T00:00:00Z", NewTimestamp(et, TimestampPrecisionSecond, TimezoneUTC))
+	test("2001-01-01T00:00:00.000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+	test("2001-01-01T00:00:00.000000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 6))
+	test("2001-01-01T00:00:00.000000000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 9))
 
 	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
-	test("2001-01-01T00:00:00.000000000999Z", NewTimestampWithFractionalSeconds(et2, Nanosecond, UTC, 12))
+	test("2001-01-01T00:00:00.000000000999Z", NewTimestampWithFractionalSeconds(et2, TimestampPrecisionNanosecond, TimezoneUTC, 12))
 
-	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, NewTimestampWithFractionalSeconds(et, Nanosecond, UTC, 3))
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
 }
 
 func TestDecimals(t *testing.T) {

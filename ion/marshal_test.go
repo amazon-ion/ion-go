@@ -36,7 +36,7 @@ func TestMarshalText(t *testing.T) {
 	test(math.NaN(), "nan")
 
 	test(MustParseDecimal("1.20"), "1.20")
-	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), Second, UTC), "2010-01-01T00:00:00Z")
+	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC), "2010-01-01T00:00:00Z")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 
@@ -313,7 +313,7 @@ func TestMarshalValuesWithAnnotation(t *testing.T) {
 	test(buildValue(5), "int", "'symbols or string'::annotations::5")
 	test(buildValue(float32(math.MaxFloat32)), "float", "'symbols or string'::annotations::3.4028234663852886e+38")
 	test(buildValue(MustParseDecimal("1.2")), "decimal", "'symbols or string'::annotations::1.2")
-	test(buildValue(NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), Second, UTC)),
+	test(buildValue(NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)),
 		"timestamp", "'symbols or string'::annotations::2000-01-02T03:04:05Z")
 	test(buildValue("stringValue"), "string", "'symbols or string'::annotations::\"stringValue\"")
 	test(buildValue([]byte{4, 2}), "blob", "'symbols or string'::annotations::{{BAI=}}")
