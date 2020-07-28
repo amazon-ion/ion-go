@@ -80,14 +80,31 @@ func TestMarshalBinary(t *testing.T) {
 		})
 	}
 
-	test(nil, "null", []byte{0xE0, 0x01, 0x00, 0xEA, 0x0F})
-	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", []byte{
-		0xE0, 0x01, 0x00, 0xEA,
+	test(nil, "null", prefixIVM([]byte{0x0F}))
+
+	// Float32 valid type. Go treats floats as float64 by default, unless specified.
+	// Explicitly cast number to be of float32 and ensure type is handled. This should not be an unknown type.
+	test(float32(math.MaxFloat32), "float32 valid type", prefixIVM([]byte{0x44, 0x7F, 0x7F, 0xFF, 0xFF})) // 3.40282346638528859811704183484516925440e+38
+
+	// Float32. Ensure number can be represented losslessly as a float32 by testing that byte length is 5.
+	// This should not be represented as a float64.
+	test(math.MaxFloat32, "float32", prefixIVM([]byte{0x44, 0x7F, 0x7F, 0xFF, 0xFF})) // 3.40282346638528859811704183484516925440e+38
+
+	// Float 64.
+	test(math.MaxFloat64, "float64", prefixIVM([]byte{0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})) // 1.797693134862315708145274237317043567981e+308
+
+	// Struct.
+	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", prefixIVM([]byte{
 		0xE9, 0x81, 0x83, 0xD6, 0x87, 0xB4, 0x81, 'A', 0x81, 'B',
 		0xD5,
 		0x8A, 0x21, 0x2A,
 		0x8B, 0x20,
-	})
+	}))
+}
+
+func prefixIVM(data []byte) []byte {
+	prefix := []byte{0xE0, 0x01, 0x00, 0xEA} // $ion_1_0
+	return append(prefix, data...)
 }
 
 func TestMarshalBinaryLST(t *testing.T) {
@@ -267,4 +284,39 @@ func TestMarshalCustomMarshaler(t *testing.T) {
 	if val != eval {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
+}
+
+func TestMarshalValuesWithAnnotation(t *testing.T) {
+	test := func(v interface{}, testName, eval string) {
+		t.Run(testName, func(t *testing.T) {
+			val, err := MarshalText(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(val) != eval {
+				t.Errorf("expected '%v', got '%v'", eval, string(val))
+			}
+		})
+	}
+
+	type foo struct {
+		Value   interface{}
+		AnyName []string `ion:",annotations"`
+	}
+
+	buildValue := func(val interface{}) foo {
+		return foo{val, []string{"symbols or string", "annotations"}}
+	}
+
+	test(buildValue(nil), "null", "'symbols or string'::annotations::null")
+	test(buildValue(true), "bool", "'symbols or string'::annotations::true")
+	test(buildValue(5), "int", "'symbols or string'::annotations::5")
+	test(buildValue(float32(math.MaxFloat32)), "float", "'symbols or string'::annotations::3.4028234663852886e+38")
+	test(buildValue(MustParseDecimal("1.2")), "decimal", "'symbols or string'::annotations::1.2")
+	test(buildValue(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)),
+		"timestamp", "'symbols or string'::annotations::2000-01-02T03:04:05Z")
+	test(buildValue("stringValue"), "string", "'symbols or string'::annotations::\"stringValue\"")
+	test(buildValue([]byte{4, 2}), "blob", "'symbols or string'::annotations::{{BAI=}}")
+	test(buildValue([]int{3, 5, 7}), "list", "'symbols or string'::annotations::[3,5,7]")
+	test(buildValue(map[string]int{"b": 2, "a": 1}), "struct", "'symbols or string'::annotations::{a:1,b:2}")
 }

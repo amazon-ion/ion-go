@@ -179,7 +179,7 @@ func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 		return m.encodePtr(v, hint)
 
 	case reflect.Struct:
-		return m.encodeStruct(v, hint)
+		return m.encodeStruct(v)
 
 	case reflect.Map:
 		return m.encodeMap(v, hint)
@@ -299,7 +299,14 @@ func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 }
 
 // EncodeStruct encodes a struct to the output writer as an Ion struct.
-func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
+func (m *Encoder) encodeStruct(v reflect.Value) error {
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if field.annotations {
+			return m.encodeWithAnnotation(v)
+		}
+	}
+
 	t := v.Type()
 	if t == timeType {
 		return m.encodeTime(v)
@@ -308,9 +315,9 @@ func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
 		return m.encodeDecimal(v)
 	}
 
-	fields := fieldsFor(v.Type())
-
-	m.w.BeginStruct()
+	if err := m.w.BeginStruct(); err != nil {
+		return err
+	}
 
 FieldLoop:
 	for i := range fields {
@@ -350,6 +357,31 @@ func (m *Encoder) encodeTime(v reflect.Value) error {
 func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	d := v.Addr().Interface().(*Decimal)
 	return m.w.WriteDecimal(d)
+}
+
+func (m *Encoder) encodeWithAnnotation(v reflect.Value) error {
+	original := v
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if field.annotations {
+			annotations, err := findSubvalue(original, &field)
+			if err != nil {
+				return err
+			}
+			if annotations.Kind() != reflect.Slice {
+				return fmt.Errorf("ion: '%v' is provided for annotations,"+
+					"it must be of type []string", annotations.Kind())
+			}
+			listOfAnnotations := annotations.Interface().([]string)
+			err = m.w.Annotations(listOfAnnotations...)
+			if err != nil {
+				return err
+			}
+		} else {
+			v, _ = findSubvalue(original, &field)
+		}
+	}
+	return m.encodeValue(v, NoType)
 }
 
 // EmptyValue returns true if the given value is the empty value for its type.
