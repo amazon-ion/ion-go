@@ -222,6 +222,26 @@ func tryCreateTimestamp(ts []int, nsecs int, overflow bool, offset, sign int64, 
 	return NewTimestampWithFractionalSeconds(date, precision, TimezoneLocal, fractionPrecision), nil
 }
 
+// GetDateTime returns the timestamps date time.
+func (ts Timestamp) GetDateTime() time.Time {
+	return ts.dateTime
+}
+
+// GetPrecision returns the timestamp's precision.
+func (ts Timestamp) GetPrecision() TimestampPrecision {
+	return ts.precision
+}
+
+// GetTimezoneKind returns the kind of timezone.
+func (ts Timestamp) GetTimezoneKind() TimezoneKind {
+	return ts.kind
+}
+
+// GetNumberOfFractionalSeconds returns the number of precision units in the timestamp's fractional seconds.
+func (ts Timestamp) GetNumberOfFractionalSeconds() uint8 {
+	return ts.numFractionalSeconds
+}
+
 // String returns a formatted Timestamp string.
 func (ts Timestamp) String() string {
 	layout := ts.precision.Layout(ts.kind, ts.numFractionalSeconds)
