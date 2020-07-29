@@ -380,7 +380,7 @@ func fmtbytes(bs []byte) string {
 }
 
 func writeBinary(t *testing.T, f func(w Writer)) []byte {
-	bogusSyms := []string{}
+	var bogusSyms []string
 	for i := 0; i < 100; i++ {
 		bogusSyms = append(bogusSyms, fmt.Sprintf("bogus_sym_%v", i))
 	}

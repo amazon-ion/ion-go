@@ -260,8 +260,8 @@ func (r *binaryReader) readLocalSymbolTable() error {
 		return err
 	}
 
-	imps := []SharedSymbolTable{}
-	syms := []string{}
+	var imps []SharedSymbolTable
+	var syms []string
 
 	for r.Next() {
 		var err error
@@ -304,7 +304,7 @@ func (r *binaryReader) readImports() ([]SharedSymbolTable, error) {
 		return nil, err
 	}
 
-	imps := []SharedSymbolTable{}
+	var imps []SharedSymbolTable
 	for r.Next() {
 		imp, err := r.readImport()
 		if err != nil {
@@ -407,7 +407,7 @@ func (r *binaryReader) readSymbols() ([]string, error) {
 		return nil, err
 	}
 
-	syms := []string{}
+	var syms []string
 	for r.Next() {
 		if r.Type() == StringType {
 			sym, err := r.StringValue()

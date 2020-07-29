@@ -169,7 +169,7 @@ func (d *Decoder) decodeSlice() ([]interface{}, error) {
 		return nil, err
 	}
 
-	result := []interface{}{}
+	var result []interface{}
 
 	for d.r.Next() {
 		value, err := d.decode()

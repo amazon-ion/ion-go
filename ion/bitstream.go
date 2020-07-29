@@ -408,7 +408,7 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		return nil, &SyntaxError{"malformed annotation", b.pos - lenlen}
 	}
 
-	as := []uint64{}
+	var as []uint64
 	for alen > 0 {
 		id, idlen, err := b.readVarUintLen(alen)
 		if err != nil {
