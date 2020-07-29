@@ -282,9 +282,9 @@ func TestUnmarshalBinary(t *testing.T) {
 			case *Decimal:
 				thisDecimal := ionDecimal{thisValue}
 				res = thisDecimal.eq(ionDecimal{eval.(*Decimal)})
-			case time.Time:
+			case Timestamp:
 				thisTime := ionTimestamp{thisValue}
-				res = thisTime.eq(ionTimestamp{eval.(time.Time)})
+				res = thisTime.eq(ionTimestamp{eval.(Timestamp)})
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -318,9 +318,10 @@ func TestUnmarshalBinary(t *testing.T) {
 	decimalBytes := prefixIVM([]byte{0x51, 0xFF}) // 0d-63
 	test(decimalBytes, decimalVal, MustParseDecimal("0d-63"))
 
-	var timeValue time.Time
-	timeBytes := prefixIVM([]byte{0x67, 0xC0, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
-	test(timeBytes, timeValue, time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0)))
+	var timestampValue Timestamp
+	timestampBytes := prefixIVM([]byte{0x67, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
+	dateTime := time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0))
+	test(timestampBytes, timestampValue, NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneUTC))
 
 	var symbolVal string
 	symbolBytes := prefixIVM([]byte{0x71, 0x0A}) // $10
