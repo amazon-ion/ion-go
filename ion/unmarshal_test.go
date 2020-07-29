@@ -512,15 +512,15 @@ func TestDecode(t *testing.T) {
 	test("false", false)
 
 	test("null.int", nil)
-	test("0", int(0))
+	test("0", 0)
 	test("2147483647", math.MaxInt32)
 	test("-2147483648", math.MinInt32)
 	test("2147483648", int64(math.MaxInt32)+1)
 	test("-2147483649", int64(math.MinInt32)-1)
 	test("9223372036854775808", new(big.Int).SetUint64(math.MaxInt64+1))
 
-	test("0e0", float64(0.0))
-	test("1e100", float64(1e100))
+	test("0e0", 0.0)
+	test("1e100", 1e100)
 
 	test("0.", MustParseDecimal("0."))
 

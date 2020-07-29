@@ -95,7 +95,7 @@ func (s *sst) Symbols() []string {
 }
 
 func (s *sst) MaxID() uint64 {
-	return uint64(s.maxID)
+	return s.maxID
 }
 
 func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
@@ -130,7 +130,7 @@ func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
 
 func (s *sst) FindByName(sym string) (uint64, bool) {
 	id, ok := s.index[sym]
-	return uint64(id), ok
+	return id, ok
 }
 
 func (s *sst) FindByID(id uint64) (string, bool) {
@@ -437,7 +437,7 @@ func (b *symbolTableBuilder) Build() SymbolTable {
 	symbols := append([]string{}, b.symbols...)
 	index := make(map[string]uint64)
 	for s, i := range b.index {
-		index[s] = uint64(i)
+		index[s] = i
 	}
 
 	return &lst{

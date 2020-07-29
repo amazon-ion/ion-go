@@ -246,12 +246,12 @@ func (w *binaryWriter) WriteSymbol(val string) error {
 		return err
 	}
 
-	vlen := uintLen(uint64(id))
+	vlen := uintLen(id)
 	buflen := vlen + tagLen(vlen)
 	buf := make([]byte, 0, buflen)
 
 	buf = appendTag(buf, 0x70, vlen)
-	buf = appendUint(buf, uint64(id))
+	buf = appendUint(buf, id)
 
 	return w.writeValue("Writer.WriteSymbol", buf)
 }
