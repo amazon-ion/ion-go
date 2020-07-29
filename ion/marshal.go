@@ -346,7 +346,7 @@ FieldLoop:
 	return m.w.EndStruct()
 }
 
-// EncodeTime encodes a timestamp to the output writer as an Ion timestamp.
+// encodeTimestamp encodes a timestamp to the output writer as an Ion timestamp.
 func (m *Encoder) encodeTimestamp(v reflect.Value) error {
 	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)

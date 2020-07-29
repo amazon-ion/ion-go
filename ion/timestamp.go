@@ -2,6 +2,7 @@ package ion
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -222,6 +223,188 @@ func tryCreateTimestamp(ts []int, nsecs int, overflow bool, offset, sign int64, 
 
 	// Non-zero offset is Local
 	return NewTimestampWithFractionalSeconds(date, precision, TimezoneLocal, fractionPrecision), nil
+}
+
+// ParseTimestampFromStr parses a timestamp string and returns an ion timestamp.
+func ParseTimestampFromStr(dateStr string) (Timestamp, error) {
+	if len(dateStr) < 5 {
+		return invalidTimestamp(dateStr)
+	}
+
+	year, err := strconv.ParseInt(dateStr[:4], 10, 32)
+	if err != nil || year < 1 {
+		return invalidTimestamp(dateStr)
+	}
+
+	if len(dateStr) == 5 && (dateStr[4] == 't' || dateStr[4] == 'T') {
+		// yyyyT
+		return tryCreateDateTimestamp(int(year), 1, 1, TimestampPrecisionYear)
+	}
+
+	if dateStr[4] != '-' {
+		return invalidTimestamp(dateStr)
+	}
+
+	if len(dateStr) < 8 {
+		return invalidTimestamp(dateStr)
+	}
+
+	month, err := strconv.ParseInt(dateStr[5:7], 10, 32)
+	if err != nil {
+		return invalidTimestamp(dateStr)
+	}
+
+	if len(dateStr) == 8 && (dateStr[7] == 't' || dateStr[7] == 'T') {
+		// yyyy-mmT
+		return tryCreateDateTimestamp(int(year), int(month), 1, TimestampPrecisionMonth)
+	}
+
+	if dateStr[7] != '-' {
+		return invalidTimestamp(dateStr)
+	}
+
+	if len(dateStr) < 10 {
+		return invalidTimestamp(dateStr)
+	}
+
+	day, err := strconv.ParseInt(dateStr[8:10], 10, 32)
+	if err != nil {
+		return invalidTimestamp(dateStr)
+	}
+
+	if len(dateStr) == 10 || (len(dateStr) == 11 && (dateStr[10] == 't' || dateStr[10] == 'T')) {
+		// yyyy-mm-dd or yyyy-mm-ddT
+		return tryCreateDateTimestamp(int(year), int(month), int(day), TimestampPrecisionDay)
+	}
+
+	if dateStr[10] != 't' && dateStr[10] != 'T' {
+		return invalidTimestamp(dateStr)
+	}
+
+	// At this point timestamp must have hour:minute
+	if len(dateStr) < 17 {
+		return invalidTimestamp(dateStr)
+	}
+
+	switch dateStr[16] {
+	case 'z', 'Z', '+', '-':
+		// yyyy-mm-ddThh:mm
+		kind, err := computeTimezoneKind(dateStr, 16)
+		if err != nil {
+			return Timestamp{}, err
+		}
+
+		return NewTimestampFromStr(dateStr, TimestampPrecisionMinute, kind)
+	case ':':
+		// yyyy-mm-ddThh:mm:ss
+		if len(dateStr) < 20 {
+			break
+		}
+
+		idx := 19
+		if dateStr[idx] == '.' {
+			idx++
+			for idx < len(dateStr) && isDigit(int(dateStr[idx])) {
+				idx++
+			}
+		}
+
+		kind, err := computeTimezoneKind(dateStr, idx)
+		if err != nil {
+			return Timestamp{}, err
+		}
+
+		if idx <= 20 {
+			return NewTimestampFromStr(dateStr, TimestampPrecisionSecond, kind)
+		} else if idx <= 28 {
+			return NewTimestampFromStr(dateStr, TimestampPrecisionNanosecond, kind)
+		}
+
+		// Greater than 9 fractional seconds.
+		return roundFractionalSeconds(dateStr, idx, kind)
+	}
+
+	return invalidTimestamp(dateStr)
+}
+
+func computeOffset(val string, idx int) (int64, int64, error) {
+	// +hh:mm
+	if idx+5 > len(val) || val[idx+3] != ':' {
+		return 0, 0, fmt.Errorf("ion: invalid offset: '%v'", val)
+	}
+
+	hourOffset, err := strconv.ParseInt(val[idx+1:idx+3], 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	minuteOffset, err := strconv.ParseInt(val[idx+4:], 10, 32)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return hourOffset, minuteOffset, nil
+}
+
+func computeTimezoneKind(val string, idx int) (TimezoneKind, error) {
+	switch val[idx] {
+	case 'z', 'Z':
+		// 'Z' zulu time means UTC timezone.
+		return TimezoneUTC, nil
+	case '+', '-':
+		hourOffset, minuteOffset, err := computeOffset(val, idx)
+		if err != nil {
+			return TimezoneUnspecified, err
+		}
+
+		if hourOffset >= 24 || minuteOffset >= 60 {
+			return TimezoneUnspecified, fmt.Errorf("ion: invalid offset %v:%v", hourOffset, minuteOffset)
+		} else if hourOffset == 0 && minuteOffset == 0 {
+			// Negative zero offset is Unspecified timezone.
+			if val[idx] == '-' {
+				return TimezoneUnspecified, nil
+			}
+
+			// Positive zero offset is UTC.
+			return TimezoneUTC, nil
+		}
+
+		// Valid non-zero offset is Local timezone.
+		return TimezoneLocal, nil
+	}
+
+	return TimezoneUnspecified, fmt.Errorf("ion: invalid character: '%v' at position %v in %v", val[idx], idx, val)
+}
+
+func roundFractionalSeconds(val string, idx int, kind TimezoneKind) (Timestamp, error) {
+	// Convert to float to perform rounding.
+	floatValue, err := strconv.ParseFloat(val[18:idx], 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	roundedStringValue := fmt.Sprintf("%.9f", floatValue)
+	roundedFloatValue, err := strconv.ParseFloat(roundedStringValue, 64)
+	if err != nil {
+		return invalidTimestamp(val)
+	}
+
+	// Microsecond overflow 9.9999999999 -> 10.00000000.
+	if roundedFloatValue == 10 {
+		roundedStringValue := "9.000000000"
+		val = val[:18] + roundedStringValue + val[idx:]
+		timeValue, err := time.Parse(TimestampPrecisionNanosecond.Layout(kind, 9), val)
+		if err != nil {
+			return invalidTimestamp(val)
+		}
+
+		timeValue = timeValue.Add(time.Second)
+		return NewTimestampWithFractionalSeconds(timeValue, TimestampPrecisionNanosecond, kind, 9), err
+	}
+
+	val = val[:18] + roundedStringValue + val[idx:]
+
+	return NewTimestampFromStr(val, TimestampPrecisionNanosecond, kind)
 }
 
 // GetDateTime returns the timestamps date time.
