@@ -7,7 +7,6 @@ import (
 	"math"
 	"math/big"
 	"strings"
-	"time"
 )
 
 // A Reader reads a stream of Ion values.
@@ -136,9 +135,9 @@ type Reader interface {
 	// makes sense). It returns an error if the current value is not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
-	// TimeValue returns the current value as a timestamp (if that makes sense). It returns
+	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
 	// an error if the current value is not an Ion timestamp.
-	TimeValue() (time.Time, error)
+	TimestampValue() (Timestamp, error)
 
 	// StringValue returns the current value as a string (if that makes sense). It returns
 	// an error if the current value is not an Ion symbol or an Ion string.
@@ -348,15 +347,15 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 	return r.value.(*Decimal), nil
 }
 
-// TimeValue returns the current value as a time.
-func (r *reader) TimeValue() (time.Time, error) {
+// TimestampValue returns the current value as a Timestamp.
+func (r *reader) TimestampValue() (Timestamp, error) {
 	if r.valueType != TimestampType {
-		return time.Time{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return Timestamp{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
 	}
 	if r.value == nil {
-		return time.Time{}, nil
+		return Timestamp{}, nil
 	}
-	return r.value.(time.Time), nil
+	return r.value.(Timestamp), nil
 }
 
 // StringValue returns the current value as a string.

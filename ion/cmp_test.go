@@ -2,7 +2,6 @@ package ion
 
 import (
 	"reflect"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -14,7 +13,7 @@ type ionEqual interface {
 
 type ionFloat struct{ float64 }
 type ionDecimal struct{ *Decimal }
-type ionTimestamp struct{ time.Time }
+type ionTimestamp struct{ Timestamp }
 
 func (thisFloat ionFloat) eq(other ionEqual) bool {
 	return cmp.Equal(thisFloat.float64, other.(ionFloat).float64, cmpopts.EquateNaNs())
@@ -32,7 +31,7 @@ func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 
 func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	if val, ok := other.(ionTimestamp); ok {
-		return thisTimestamp.Time.Equal(val.Time)
+		return thisTimestamp.Equal(val.Timestamp)
 	}
 	return false
 }
@@ -81,9 +80,9 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	switch val := thisValue.(type) {
 	case string: // null.timestamp
 		return strNullTypeCmp(val, otherValue)
-	case time.Time:
+	case Timestamp:
 		thisTimestamp := ionTimestamp{val}
-		return thisTimestamp.eq(ionTimestamp{otherValue.(time.Time)})
+		return thisTimestamp.eq(ionTimestamp{otherValue.(Timestamp)})
 	default:
 		return false
 	}

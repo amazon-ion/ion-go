@@ -8,7 +8,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"time"
 	"unicode/utf8"
 )
 
@@ -515,58 +514,85 @@ func (b *bitstream) ReadDecimal() (*Decimal, error) {
 }
 
 // ReadTimestamp reads a timestamp value.
-func (b *bitstream) ReadTimestamp() (time.Time, error) {
+func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 	if b.code != bitcodeTimestamp {
 		panic("not a timestamp")
 	}
 
-	len := b.len
+	length := b.len
 
-	offset, olen, err := b.readVarIntLen(len)
+	offset, osign, olen, err := b.readVarIntLen(length)
 	if err != nil {
-		return time.Time{}, err
+		return Timestamp{}, err
 	}
-	len -= olen
+	length -= olen
 
 	ts := []int{1, 1, 1, 0, 0, 0}
-	for i := 0; len > 0 && i < 6; i++ {
-		val, vlen, err := b.readVarUintLen(len)
+	precision := TimestampNoPrecision
+	for i := 0; length > 0 && i < 6 && precision < TimestampPrecisionSecond; i++ {
+		val, vlen, err := b.readVarUintLen(length)
 		if err != nil {
-			return time.Time{}, err
+			return Timestamp{}, err
 		}
-		len -= vlen
+		length -= vlen
 		ts[i] = int(val)
 
-		// When i is 3, it means we are setting hour component. A timestamp with
-		// hour, must follow by minute. Hence, len cannot be zero at this point.
-		if i == 3 && len == 0 {
-			return time.Time{},
-				&SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+		// When i is 3, it means we are setting the hour component. A timestamp with an hour
+		// component must also have a minute component. Hence, length cannot be zero at this point.
+		if i == 3 {
+			if length == 0 {
+				return Timestamp{}, &SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+			}
+		} else {
+			// Update precision as we read the timestamp.
+			// We don't update precision when i is 3 because there is no Hour precision.
+			precision++
 		}
 	}
 
-	nsecs, overflow, err := b.readNsecs(len)
+	nsecs := 0
+	overflow := false
+	fractionPrecision := uint8(0)
+
+	// Check the fractional seconds part of the timestamp.
+	if length > 0 {
+		// First byte indicates number of precision units in fractional seconds.
+		fracSecsBytes, err := b.in.Peek(1)
+		if err != nil {
+			return Timestamp{}, err
+		}
+
+		nsecs, overflow, err = b.readNsecs(length)
+		if err != nil {
+			return Timestamp{}, err
+		}
+
+		if nsecs > 0 {
+			fractionPrecision = 9
+
+			// Adjust fractionPrecision for each trailing zero.
+			// ie. .123456000 should have 6 fractionPrecision instead of 9
+			ns := nsecs
+			for ns > 0 && (ns%10) == 0 {
+				ns /= 10
+				fractionPrecision--
+			}
+			precision = TimestampPrecisionNanosecond
+		} else if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
+			fractionPrecision = fracSecsBytes[0] ^ 0xC0
+			precision = TimestampPrecisionNanosecond
+		}
+	}
+
+	timestamp, err := tryCreateTimestamp(ts, nsecs, overflow, offset, osign, precision, fractionPrecision)
 	if err != nil {
-		return time.Time{}, err
+		return Timestamp{}, err
 	}
 
 	b.state = b.stateAfterValue()
 	b.clear()
 
-	return tryCreateTimeWithNSecAndOffset(ts, nsecs, overflow, offset)
-}
-
-func tryCreateTimeWithNSecAndOffset(ts []int, nsecs int, overflow bool, offset int64) (time.Time, error) {
-	date := time.Date(ts[0], time.Month(ts[1]), ts[2], ts[3], ts[4], ts[5], nsecs, time.UTC)
-	// time.Date converts 2000-01-32 input to 2000-02-01
-	if ts[0] != date.Year() || time.Month(ts[1]) != date.Month() || ts[2] != date.Day() {
-		return time.Time{}, fmt.Errorf("ion: invalid timestamp")
-	}
-
-	if overflow {
-		date = date.Add(time.Second)
-	}
-	return date.In(time.FixedZone("fixed", int(offset)*60)), nil
+	return timestamp, nil
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
@@ -605,7 +631,7 @@ func (b *bitstream) readDecimal(len uint64) (*Decimal, error) {
 	coef := new(big.Int)
 
 	if len > 0 {
-		val, vlen, err := b.readVarIntLen(len)
+		val, _, vlen, err := b.readVarIntLen(len)
 		if err != nil {
 			return nil, err
 		}
@@ -809,10 +835,10 @@ func (b *bitstream) remaining() uint64 {
 }
 
 // ReadVarIntLen reads a variable-length-encoded int of at most max bytes,
-// returning the value and its actual length in bytes
-func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
+// returning the value, the sign, and its actual length in bytes
+func (b *bitstream) readVarIntLen(max uint64) (int64, int64, uint64, error) {
 	if max == 0 {
-		return 0, 0, &SyntaxError{"varint too large", b.pos}
+		return 0, 0, 0, &SyntaxError{"varint too large", b.pos}
 	}
 	if max > 10 {
 		max = 10
@@ -821,7 +847,7 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 	// Read the first byte, which contains the sign bit.
 	c, err := b.read1()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	sign := int64(1)
@@ -834,17 +860,17 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 
 	// Check if that was the last (only) byte.
 	if c&0x80 != 0 {
-		return val * sign, len, nil
+		return val * sign, sign, len, nil
 	}
 
 	for {
 		if len >= max {
-			return 0, 0, &SyntaxError{"varint too large", b.pos - len}
+			return 0, 0, 0, &SyntaxError{"varint too large", b.pos - len}
 		}
 
 		c, err := b.read1()
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, 0, err
 		}
 
 		val <<= 7
@@ -852,7 +878,7 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, uint64, error) {
 		len++
 
 		if c&0x80 != 0 {
-			return val * sign, len, nil
+			return val * sign, sign, len, nil
 		}
 	}
 }

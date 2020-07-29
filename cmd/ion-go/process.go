@@ -254,7 +254,7 @@ func (p *processor) process(in ion.Reader) error {
 			err = p.out.WriteDecimal(val)
 
 		case ion.TimestampType:
-			val, err := in.TimeValue()
+			val, err := in.TimestampValue()
 			if err != nil {
 				return p.error(read, err)
 			}

@@ -282,9 +282,9 @@ func TestUnmarshalBinary(t *testing.T) {
 			case *Decimal:
 				thisDecimal := ionDecimal{thisValue}
 				res = thisDecimal.eq(ionDecimal{eval.(*Decimal)})
-			case time.Time:
+			case Timestamp:
 				thisTime := ionTimestamp{thisValue}
-				res = thisTime.eq(ionTimestamp{eval.(time.Time)})
+				res = thisTime.eq(ionTimestamp{eval.(Timestamp)})
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -318,9 +318,10 @@ func TestUnmarshalBinary(t *testing.T) {
 	decimalBytes := prefixIVM([]byte{0x51, 0xFF}) // 0d-63
 	test(decimalBytes, decimalVal, MustParseDecimal("0d-63"))
 
-	var timeValue time.Time
-	timeBytes := prefixIVM([]byte{0x67, 0xC0, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
-	test(timeBytes, timeValue, time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0)))
+	var timestampValue Timestamp
+	timestampBytes := prefixIVM([]byte{0x67, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
+	dateTime := time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0))
+	test(timestampBytes, timestampValue, NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneUTC))
 
 	var symbolVal string
 	symbolBytes := prefixIVM([]byte{0x71, 0x0A}) // $10
@@ -458,24 +459,24 @@ func TestDecodeDecimal(t *testing.T) {
 	test("1.20", MustParseDecimal("1.20"))
 }
 
-func TestDecodeTimeTo(t *testing.T) {
-	test := func(str string, eval time.Time) {
+func TestDecodeTimestampTo(t *testing.T) {
+	test := func(str string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
 			d := NewDecoder(NewReaderStr(str))
 
-			var val time.Time
+			var val Timestamp
 			err := d.DecodeTo(&val)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if val != eval {
+			if !val.Equal(eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 		})
 	}
-	test("null", time.Time{})
-	test("2020T", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	test("null", Timestamp{})
+	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 }
 
 func TestDecodeStringTo(t *testing.T) {
@@ -636,7 +637,7 @@ func TestDecode(t *testing.T) {
 
 	test("0.", MustParseDecimal("0."))
 
-	test("2020T", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
 	test("hello", "hello")
 	test("\"hello\"", "hello")
@@ -724,7 +725,7 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", []string{"with", "multiple", "annotations"}})
-	timestamp := time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)
+	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
 	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::{{/w==}}", "blob", foo{[]byte{255}, []string{"with", "multiple", "annotations"}})

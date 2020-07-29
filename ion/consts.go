@@ -3,7 +3,6 @@ package ion
 import (
 	"math/big"
 	"reflect"
-	"time"
 )
 
 var binaryNulls = func() []byte {
@@ -49,6 +48,6 @@ var hexChars = []byte{
 	'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
 }
 
-var timeType = reflect.TypeOf(time.Time{})
+var timestampType = reflect.TypeOf(Timestamp{})
 var decimalType = reflect.TypeOf(Decimal{})
 var bigIntType = reflect.TypeOf(big.Int{})

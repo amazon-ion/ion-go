@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // EncoderOpts holds bit-flag options for an Encoder.
@@ -308,8 +307,8 @@ func (m *Encoder) encodeStruct(v reflect.Value) error {
 	}
 
 	t := v.Type()
-	if t == timeType {
-		return m.encodeTime(v)
+	if t == timestampType {
+		return m.encodeTimestamp(v)
 	}
 	if t == decimalType {
 		return m.encodeDecimal(v)
@@ -347,9 +346,9 @@ FieldLoop:
 	return m.w.EndStruct()
 }
 
-// EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
-func (m *Encoder) encodeTime(v reflect.Value) error {
-	t := v.Interface().(time.Time)
+// encodeTimestamp encodes a timestamp to the output writer as an Ion timestamp.
+func (m *Encoder) encodeTimestamp(v reflect.Value) error {
+	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
 }
 
