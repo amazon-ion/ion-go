@@ -875,7 +875,7 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, int64, uint64, error) {
 
 	// Check if that was the last (only) byte.
 	if c&0x80 != 0 {
-		return val * sign, sign, len, nil
+		return val * sign, sign, length, nil
 	}
 
 	for {
