@@ -208,15 +208,16 @@ func TestBlobs(t *testing.T) {
 }
 
 func TestTimestamps(t *testing.T) {
-	testA := func(str string, etas []string, eval time.Time) {
+	testA := func(str string, etas []string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
 			r := NewReaderStr(str)
 			_nextAF(t, r, TimestampType, nil, etas)
 
-			val, err := r.TimeValue()
+			val, err := r.TimestampValue()
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !val.Equal(eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
@@ -225,26 +226,26 @@ func TestTimestamps(t *testing.T) {
 		})
 	}
 
-	test := func(str string, eval time.Time) {
+	test := func(str string, eval Timestamp) {
 		testA(str, nil, eval)
 	}
 
 	et := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
-	test("2001T", et)
-	test("2001-01T", et)
-	test("2001-01-01", et)
-	test("2001-01-01T", et)
-	test("2001-01-01T00:00Z", et)
-	test("2001-01-01T00:00:00Z", et)
-	test("2001-01-01T00:00:00.000Z", et)
-	test("2001-01-01T00:00:00.000+00:00", et)
-	test("2001-01-01T00:00:00.000000Z", et)
-	test("2001-01-01T00:00:00.000000000Z", et)
+	test("2001T", NewDateTimestamp(et, TimestampPrecisionYear))
+	test("2001-01T", NewDateTimestamp(et, TimestampPrecisionMonth))
+	test("2001-01-01", NewDateTimestamp(et, TimestampPrecisionDay))
+	test("2001-01-01T", NewDateTimestamp(et, TimestampPrecisionDay))
+	test("2001-01-01T00:00Z", NewTimestamp(et, TimestampPrecisionMinute, TimezoneUTC))
+	test("2001-01-01T00:00:00Z", NewTimestamp(et, TimestampPrecisionSecond, TimezoneUTC))
+	test("2001-01-01T00:00:00.000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+	test("2001-01-01T00:00:00.000+00:00", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+	test("2001-01-01T00:00:00.000000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 6))
+	test("2001-01-01T00:00:00.000000000Z", NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 9))
 
 	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
-	test("2001-01-01T00:00:00.000000000999Z", et2)
+	test("2001-01-01T00:00:00.000000000999Z", NewTimestampWithFractionalSeconds(et2, TimestampPrecisionNanosecond, TimezoneUTC, 12))
 
-	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, et)
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []string{"foo", "bar"}, NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
 }
 
 func TestDecimals(t *testing.T) {
@@ -674,17 +675,17 @@ func _decimalAF(t *testing.T, r Reader, efn *string, etas []string, eval *Decima
 	}
 }
 
-func _timestamp(t *testing.T, r Reader, eval time.Time) {
+func _timestamp(t *testing.T, r Reader, eval Timestamp) {
 	_timestampAF(t, r, nil, nil, eval)
 }
 
-func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval time.Time) {
+func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Timestamp) {
 	_nextAF(t, r, TimestampType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.timestamp", eval)
 	}
 
-	val, err := r.TimeValue()
+	val, err := r.TimestampValue()
 	if err != nil {
 		t.Fatal(err)
 	}

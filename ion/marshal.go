@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // EncoderOpts holds bit-flag options for an Encoder.
@@ -318,13 +317,13 @@ func (m *Encoder) encodeStruct(v reflect.Value) error {
 	fields := fieldsFor(v.Type())
 	for _, field := range fields {
 		if field.annotations {
-			return m.encodeWithAnnotation(v)
+			return m.encodeWithAnnotation(v, fields)
 		}
 	}
 
 	t := v.Type()
-	if t == timeType {
-		return m.encodeTime(v)
+	if t == timestampType {
+		return m.encodeTimestamp(v)
 	}
 	if t == decimalType {
 		return m.encodeDecimal(v)
@@ -362,9 +361,9 @@ FieldLoop:
 	return m.w.EndStruct()
 }
 
-// EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
-func (m *Encoder) encodeTime(v reflect.Value) error {
-	t := v.Interface().(time.Time)
+// encodeTimestamp encodes a timestamp to the output writer as an Ion timestamp.
+func (m *Encoder) encodeTimestamp(v reflect.Value) error {
+	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
 }
 
@@ -374,20 +373,19 @@ func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	return m.w.WriteDecimal(d)
 }
 
-func (m *Encoder) encodeWithAnnotation(v reflect.Value) error {
+func (m *Encoder) encodeWithAnnotation(v reflect.Value, fields []field) error {
 	original := v
-	fields := fieldsFor(v.Type())
 	for _, field := range fields {
 		if field.annotations {
 			annotations, err := findSubvalue(original, &field)
 			if err != nil {
 				return err
 			}
-			if annotations.Kind() != reflect.Slice {
-				return fmt.Errorf("ion: '%v' is provided for annotations,"+
+			listOfAnnotations, ok := annotations.Interface().([]string)
+			if !ok {
+				return fmt.Errorf("ion: '%v' is provided for annotations, "+
 					"it must be of type []string", annotations.Kind())
 			}
-			listOfAnnotations := annotations.Interface().([]string)
 			err = m.w.Annotations(listOfAnnotations...)
 			if err != nil {
 				return err

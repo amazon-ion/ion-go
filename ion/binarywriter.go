@@ -222,18 +222,18 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 }
 
 // WriteTimestamp writes a timestamp value.
-func (w *binaryWriter) WriteTimestamp(val time.Time) error {
-	_, offset := val.Zone()
+func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
+	_, offset := val.dateTime.Zone()
 	offset /= 60
-	utc := val.In(time.UTC)
+	val.dateTime = val.dateTime.In(time.UTC)
 
-	vlen := timeLen(offset, utc)
+	vlen := timestampLen(offset, val)
 	buflen := vlen + tagLen(vlen)
 
 	buf := make([]byte, 0, buflen)
 
 	buf = appendTag(buf, 0x60, vlen)
-	buf = appendTime(buf, offset, utc)
+	buf = appendTimestamp(buf, offset, val)
 
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }

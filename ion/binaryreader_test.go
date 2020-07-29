@@ -344,11 +344,13 @@ func TestReadBinaryTimestamps(t *testing.T) {
 
 	_null(t, r, TimestampType)
 
-	for i := 0; i < 5; i++ {
-		_timestamp(t, r, time.Time{})
-	}
+	_timestamp(t, r, NewDateTimestamp(time.Time{}, TimestampPrecisionYear))
+	_timestamp(t, r, NewDateTimestamp(time.Time{}, TimestampPrecisionMonth))
+	_timestamp(t, r, NewDateTimestamp(time.Time{}, TimestampPrecisionDay))
+	_timestamp(t, r, NewTimestamp(time.Time{}, TimestampPrecisionMinute, TimezoneUTC))
+	_timestamp(t, r, NewTimestamp(time.Time{}, TimestampPrecisionSecond, TimezoneUTC))
 
-	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494000+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 	_timestamp(t, r, nowish)
 	_eof(t, r)
 }

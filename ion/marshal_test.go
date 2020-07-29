@@ -51,7 +51,7 @@ func TestMarshalText(t *testing.T) {
 	test(math.NaN(), "nan")
 
 	test(MustParseDecimal("1.20"), "1.20")
-	test(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), "2010-01-01T00:00:00Z")
+	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC), "2010-01-01T00:00:00Z")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 
@@ -95,7 +95,17 @@ func TestMarshalBinary(t *testing.T) {
 		})
 	}
 
+	// Null.
 	test(nil, "null", prefixIVM([]byte{0x0F}))
+
+	// Boolean.
+	test(true, "boolean", prefixIVM([]byte{0x11})) // true
+
+	// Positive Integer.
+	test(32767, "integer", prefixIVM([]byte{0x22, 0x7F, 0xFF})) // 32767
+
+	// Negative Integer.
+	test(-32767, "negative integer", prefixIVM([]byte{0x32, 0x7F, 0xFF})) // -32767
 
 	// Float32 valid type. Go treats floats as float64 by default, unless specified.
 	// Explicitly cast number to be of float32 and ensure type is handled. This should not be an unknown type.
@@ -107,6 +117,18 @@ func TestMarshalBinary(t *testing.T) {
 
 	// Float 64.
 	test(math.MaxFloat64, "float64", prefixIVM([]byte{0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})) // 1.797693134862315708145274237317043567981e+308
+
+	// Decimal.
+	test(MustParseDecimal("0d-63"), "decimal", prefixIVM([]byte{0x51, 0xFF})) // 0d-63
+
+	// String.
+	test("abc", "string", prefixIVM([]byte{0x83, 'a', 'b', 'c'})) // "abc"
+
+	// Blob.
+	test([]byte{97, 98, 99}, "blob", prefixIVM([]byte{0xA3, 'a', 'b', 'c'}))
+
+	// List.
+	test([]int{2, 3, 4}, "list", prefixIVM([]byte{0xB6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}))
 
 	// Struct.
 	test(struct{ A, B int }{42, 0}, "{A:42,B:0}", prefixIVM([]byte{
@@ -328,7 +350,7 @@ func TestMarshalValuesWithAnnotation(t *testing.T) {
 	test(buildValue(5), "int", "'symbols or string'::annotations::5")
 	test(buildValue(float32(math.MaxFloat32)), "float", "'symbols or string'::annotations::3.4028234663852886e+38")
 	test(buildValue(MustParseDecimal("1.2")), "decimal", "'symbols or string'::annotations::1.2")
-	test(buildValue(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC)),
+	test(buildValue(NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)),
 		"timestamp", "'symbols or string'::annotations::2000-01-02T03:04:05Z")
 	test(buildValue("stringValue"), "string", "'symbols or string'::annotations::\"stringValue\"")
 	test(buildValue([]byte{4, 2}), "blob", "'symbols or string'::annotations::{{BAI=}}")
