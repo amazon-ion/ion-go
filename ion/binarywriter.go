@@ -94,11 +94,11 @@ func (w *binaryWriter) WriteInt(val int64) error {
 		mag = uint64(-val)
 	}
 
-	len := uintLen(mag)
-	buflen := len + tagLen(len)
+	length := uintLen(mag)
+	buflen := length + tagLen(length)
 
 	buf := make([]byte, 0, buflen)
-	buf = appendTag(buf, code, len)
+	buf = appendTag(buf, code, length)
 	buf = appendUint(buf, mag)
 
 	return w.writeValue("Writer.WriteInt", buf)
@@ -110,11 +110,11 @@ func (w *binaryWriter) WriteUint(val uint64) error {
 		return w.writeValue("Writer.WriteUint", []byte{0x20})
 	}
 
-	len := uintLen(val)
-	buflen := len + tagLen(len)
+	length := uintLen(val)
+	buflen := length + tagLen(length)
 
 	buf := make([]byte, 0, buflen)
-	buf = appendTag(buf, 0x20, len)
+	buf = appendTag(buf, 0x20, length)
 	buf = appendUint(buf, val)
 
 	return w.writeValue("Writer.WriteUint", buf)

@@ -98,7 +98,7 @@ func (r *binaryReader) next() (bool, error) {
 	case bitcodeFalse, bitcodeTrue:
 		r.valueType = BoolType
 		if !r.bits.IsNull() {
-			r.value = (r.bits.Code() == bitcodeTrue)
+			r.value = r.bits.Code() == bitcodeTrue
 		}
 		return true, nil
 

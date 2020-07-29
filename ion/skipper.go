@@ -854,7 +854,7 @@ func (t *tokenizer) skipBlockComment() error {
 			return nil
 		}
 
-		star = (c == '*')
+		star = c == '*'
 	}
 }
 

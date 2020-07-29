@@ -39,7 +39,7 @@ var binaryNulls = func() []byte {
 	return ret
 }()
 
-var textNulls []string = func() []string {
+var textNulls = func() []string {
 	ret := make([]string, StructType+1)
 	ret[NoType] = "null"
 	ret[NullType] = "null.null"

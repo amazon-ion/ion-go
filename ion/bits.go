@@ -22,15 +22,15 @@ import (
 
 // uintLen pre-calculates the length, in bytes, of the given uint value.
 func uintLen(v uint64) uint64 {
-	len := uint64(1)
+	length := uint64(1)
 	v >>= 8
 
 	for v > 0 {
-		len++
+		length++
 		v >>= 8
 	}
 
-	return len
+	return length
 }
 
 // appendUint appends a uint value to the given slice. The reader is
@@ -62,15 +62,15 @@ func intLen(n int64) uint64 {
 		mag = uint64(-n)
 	}
 
-	len := uintLen(mag)
+	length := uintLen(mag)
 
 	// If the high bit is a one, we need an extra byte to store the sign bit.
-	hb := mag >> ((len - 1) * 8)
+	hb := mag >> ((length - 1) * 8)
 	if hb&0x80 != 0 {
-		len++
+		length++
 	}
 
-	return len
+	return length
 }
 
 // appendInt appends a (signed) int to the given slice. The reader is
@@ -153,15 +153,15 @@ func appendBigInt(b []byte, v *big.Int) []byte {
 
 // varUintLen pre-calculates the length, in bytes, of the given varUint value.
 func varUintLen(v uint64) uint64 {
-	len := uint64(1)
+	length := uint64(1)
 	v >>= 7
 
 	for v > 0 {
-		len++
+		length++
 		v >>= 7
 	}
 
-	return len
+	return length
 }
 
 // appendVarUint appends a variable-length-encoded uint to the given slice.
@@ -191,15 +191,15 @@ func varIntLen(v int64) uint64 {
 	}
 
 	// Reserve one extra bit of the first byte for sign.
-	len := uint64(1)
+	length := uint64(1)
 	mag >>= 6
 
 	for mag > 0 {
-		len++
+		length++
 		mag >>= 7
 	}
 
-	return len
+	return length
 }
 
 // appendVarInt appends a variable-length-encoded int to the given slice.
