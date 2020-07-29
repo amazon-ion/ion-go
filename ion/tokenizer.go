@@ -689,10 +689,10 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 	return 0, &SyntaxError{fmt.Sprintf("bad escape sequence '\\%c'", c), t.pos - 2}
 }
 
-func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
+func (t *tokenizer) readHexEscapeSeq(length int) (rune, error) {
 	val := rune(0)
 
-	for len > 0 {
+	for length > 0 {
 		c, err := t.read()
 		if err != nil {
 			return 0, err
@@ -704,7 +704,7 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 		}
 
 		val = (val << 4) | rune(d)
-		len--
+		length--
 	}
 
 	return val, nil

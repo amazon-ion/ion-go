@@ -240,23 +240,23 @@ func appendVarInt(b []byte, v int64) []byte {
 }
 
 // tagLen pre-calculates the length, in bytes, of a tag.
-func tagLen(len uint64) uint64 {
-	if len < 0x0E {
+func tagLen(length uint64) uint64 {
+	if length < 0x0E {
 		return 1
 	}
-	return 1 + varUintLen(len)
+	return 1 + varUintLen(length)
 }
 
 // appendTag appends a code+len tag to the given slice.
-func appendTag(b []byte, code byte, len uint64) []byte {
-	if len < 0x0E {
+func appendTag(b []byte, code byte, length uint64) []byte {
+	if length < 0x0E {
 		// Short form, with length embedded in the code byte.
-		return append(b, code|byte(len))
+		return append(b, code|byte(length))
 	}
 
 	// Long form, with separate length.
 	b = append(b, code|0x0E)
-	return appendVarUint(b, len)
+	return appendVarUint(b, length)
 }
 
 // timeLen pre-calculates the length, in bytes, of the given time value.

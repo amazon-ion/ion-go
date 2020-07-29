@@ -440,11 +440,11 @@ func (w *binaryWriter) writeValue(api string, val []byte) error {
 
 // WriteTag writes out a type+length tag. Use me when you've already got the value to
 // be written as a []byte and don't want to copy it.
-func (w *binaryWriter) writeTag(code byte, len uint64) error {
-	tl := tagLen(len)
+func (w *binaryWriter) writeTag(code byte, length uint64) error {
+	tl := tagLen(length)
 
 	tag := make([]byte, 0, tl)
-	tag = appendTag(tag, code, len)
+	tag = appendTag(tag, code, length)
 
 	return w.write(tag)
 }

@@ -45,7 +45,7 @@ func TestBitstream(t *testing.T) {
 	b := bitstream{}
 	b.InitBytes(ion)
 
-	next := func(code bitcode, null bool, len uint64) {
+	next := func(code bitcode, null bool, length uint64) {
 		if err := b.Next(); err != nil {
 			t.Fatal(err)
 		}
@@ -55,8 +55,8 @@ func TestBitstream(t *testing.T) {
 		if b.IsNull() != null {
 			t.Errorf("expected null=%v, got %v", null, b.IsNull())
 		}
-		if b.Len() != len {
-			t.Errorf("expected len=%v, got %v", len, b.Len())
+		if b.Len() != length {
+			t.Errorf("expected length=%v, got %v", length, b.Len())
 		}
 	}
 
