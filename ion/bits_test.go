@@ -191,7 +191,7 @@ func TestAppendTimestamp(t *testing.T) {
 			offset /= 60
 			val.dateTime = val.dateTime.In(time.UTC)
 
-			length := timestampLen(offset, utc)
+			length := timestampLen(offset, val)
 			if length != elen {
 				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
