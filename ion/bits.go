@@ -17,7 +17,6 @@ package ion
 
 import (
 	"math/big"
-	"time"
 )
 
 // uintLen pre-calculates the length, in bytes, of the given uint value.
@@ -259,41 +258,86 @@ func appendTag(b []byte, code byte, length uint64) []byte {
 	return appendVarUint(b, length)
 }
 
-// timeLen pre-calculates the length, in bytes, of the given time value.
-func timeLen(offset int, utc time.Time) uint64 {
-	ret := varIntLen(int64(offset))
+// timestampLen pre-calculates the length, in bytes, of the given timestamp value.
+func timestampLen(offset int, utc Timestamp) uint64 {
+	var ret uint64
 
-	// Almost certainly two but let's be safe.
-	ret += varUintLen(uint64(utc.Year()))
+	if utc.kind == TimezoneUnspecified {
+		ret = 1
+	} else {
+		ret = varIntLen(int64(offset))
+	}
+
+	// We expect at least Year precision.
+	ret += varUintLen(uint64(utc.dateTime.Year()))
 
 	// Month, day, hour, minute, and second are all guaranteed to be one byte.
-	ret += 5
+	switch utc.precision {
+	case TimestampPrecisionMonth:
+		ret++
+	case TimestampPrecisionDay:
+		ret += 2
+	case TimestampPrecisionMinute:
+		// Hour and Minute combined
+		ret += 4
+	case TimestampPrecisionSecond, TimestampPrecisionNanosecond:
+		ret += 5
+	}
 
-	ns := utc.Nanosecond()
-	if ns > 0 {
-		ret++ // varIntLen(-9)
-		ret += intLen(int64(ns))
+	if utc.precision == TimestampPrecisionNanosecond && utc.numFractionalSeconds > 0 {
+		ret++ // For fractional seconds precision indicator
+
+		ns := utc.TruncatedNanoseconds()
+		if ns > 0 {
+			ret += intLen(int64(ns))
+		}
 	}
 
 	return ret
 }
 
-// appendTime appends a timestamp value
-func appendTime(b []byte, offset int, utc time.Time) []byte {
-	b = appendVarInt(b, int64(offset))
+// appendTimestamp appends a timestamp value
+func appendTimestamp(b []byte, offset int, utc Timestamp) []byte {
+	if utc.kind == TimezoneUnspecified {
+		// Unknown offset
+		b = append(b, 0xC0)
+	} else {
+		b = appendVarInt(b, int64(offset))
+	}
 
-	b = appendVarUint(b, uint64(utc.Year()))
-	b = appendVarUint(b, uint64(utc.Month()))
-	b = appendVarUint(b, uint64(utc.Day()))
+	// We expect at least Year precision.
+	b = appendVarUint(b, uint64(utc.dateTime.Year()))
 
-	b = appendVarUint(b, uint64(utc.Hour()))
-	b = appendVarUint(b, uint64(utc.Minute()))
-	b = appendVarUint(b, uint64(utc.Second()))
+	switch utc.precision {
+	case TimestampPrecisionMonth:
+		b = appendVarUint(b, uint64(utc.dateTime.Month()))
+	case TimestampPrecisionDay:
+		b = appendVarUint(b, uint64(utc.dateTime.Month()))
+		b = appendVarUint(b, uint64(utc.dateTime.Day()))
+	case TimestampPrecisionMinute:
+		b = appendVarUint(b, uint64(utc.dateTime.Month()))
+		b = appendVarUint(b, uint64(utc.dateTime.Day()))
 
-	ns := utc.Nanosecond()
-	if ns > 0 {
-		b = appendVarInt(b, -9)
-		b = appendInt(b, int64(ns))
+		// The hour and minute is considered as a single component.
+		b = appendVarUint(b, uint64(utc.dateTime.Hour()))
+		b = appendVarUint(b, uint64(utc.dateTime.Minute()))
+	case TimestampPrecisionSecond, TimestampPrecisionNanosecond:
+		b = appendVarUint(b, uint64(utc.dateTime.Month()))
+		b = appendVarUint(b, uint64(utc.dateTime.Day()))
+
+		// The hour and minute is considered as a single component.
+		b = appendVarUint(b, uint64(utc.dateTime.Hour()))
+		b = appendVarUint(b, uint64(utc.dateTime.Minute()))
+		b = appendVarUint(b, uint64(utc.dateTime.Second()))
+	}
+
+	if utc.precision == TimestampPrecisionNanosecond && utc.numFractionalSeconds > 0 {
+		b = append(b, utc.numFractionalSeconds|0xC0)
+
+		ns := utc.TruncatedNanoseconds()
+		if ns > 0 {
+			b = appendInt(b, int64(ns))
+		}
 	}
 
 	return b

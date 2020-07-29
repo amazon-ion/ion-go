@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"time"
 )
 
 // TextWriterOpts defines a set of bit flag options for text writers.
@@ -105,8 +104,8 @@ func (w *textWriter) WriteDecimal(val *Decimal) error {
 }
 
 // WriteTimestamp writes a timestamp.
-func (w *textWriter) WriteTimestamp(val time.Time) error {
-	return w.writeValue("Writer.WriteTimestamp", val.Format(time.RFC3339Nano))
+func (w *textWriter) WriteTimestamp(val Timestamp) error {
+	return w.writeValue("Writer.WriteTimestamp", val.String())
 }
 
 // WriteSymbol writes a symbol.

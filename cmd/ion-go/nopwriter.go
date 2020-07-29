@@ -17,7 +17,6 @@ package main
 
 import (
 	"math/big"
-	"time"
 
 	"github.com/amzn/ion-go/ion"
 )
@@ -73,7 +72,7 @@ func (nopwriter) WriteDecimal(*ion.Decimal) error {
 	return nil
 }
 
-func (nopwriter) WriteTimestamp(time.Time) error {
+func (nopwriter) WriteTimestamp(ion.Timestamp) error {
 	return nil
 }
 

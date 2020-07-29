@@ -184,37 +184,37 @@ func TestAppendTag(t *testing.T) {
 	test(0x50, math.MaxInt64, 10, []byte{0x5E, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFF})
 }
 
-func TestAppendTime(t *testing.T) {
-	test := func(val time.Time, elen uint64, ebits []byte) {
-		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			_, offset := val.Zone()
+func TestAppendTimestamp(t *testing.T) {
+	test := func(val Timestamp, elen uint64, ebits []byte) {
+		t.Run(fmt.Sprintf("%x", val.dateTime), func(t *testing.T) {
+			_, offset := val.dateTime.Zone()
 			offset /= 60
-			utc := val.In(time.UTC)
+			val.dateTime = val.dateTime.In(time.UTC)
 
-			length := timeLen(offset, utc)
+			length := timestampLen(offset, utc)
 			if length != elen {
 				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
-			bits := appendTime(nil, offset, utc)
+			bits := appendTimestamp(nil, offset, val)
 			if !bytes.Equal(bits, ebits) {
 				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 			}
 		})
 	}
 
-	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 
-	test(time.Time{}, 7, []byte{0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
-	test(nowish, 14, []byte{
+	test(NewDateTimestamp(time.Time{}, TimestampPrecisionSecond), 7, []byte{0xC0, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80})
+	test(nowish, 13, []byte{
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
-		0x88,                   // month:  8
-		0x84,                   // day:    4
-		0x88,                   // hour:   8 utc (18 local)
-		0x8F,                   // minute: 15
-		0xAB,                   // second: 43
-		0xC9,                   // exp:    -9
-		0x33, 0x77, 0xDF, 0x70, // nsec:   863494000
+		0x88,             // month:  8
+		0x84,             // day:    4
+		0x88,             // hour:   8 utc (18 local)
+		0x8F,             // minute: 15
+		0xAB,             // second: 43
+		0xC6,             // exp:    6 precision units
+		0x0D, 0x2D, 0x06, // nsec:   863494
 	})
 }
