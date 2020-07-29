@@ -272,7 +272,7 @@ func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
 	reader := NewReader(bytes.NewReader(data))
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
-	writeToWriterFromReader(t, reader, txtWriter)
+	writeFromReaderToWriter(t, reader, txtWriter)
 	err := txtWriter.Finish()
 	if err != nil {
 		t.Fatal(err)
@@ -285,7 +285,7 @@ func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	reader := NewReader(bytes.NewReader(data))
 	buf := bytes.Buffer{}
 	binWriter := NewBinaryWriter(&buf)
-	writeToWriterFromReader(t, reader, binWriter)
+	writeFromReaderToWriter(t, reader, binWriter)
 	err := binWriter.Finish()
 	if err != nil {
 		t.Fatal(err)
@@ -490,7 +490,7 @@ func isInSkipList(skipList []string, fn string) bool {
 }
 
 // Read all the values in the reader and write them in the writer
-func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
+func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		name := reader.FieldName()
 		if name != nil {
@@ -521,48 +521,48 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 		case BoolType:
 			val, err := reader.BoolValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Boolean value: " + err.Error())
 			}
 			err = writer.WriteBool(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Boolean value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
 			}
 
 		case IntType:
 			intSize, err := reader.IntSize()
 			if err != nil {
-				t.Errorf("Something went wrong when retrieving the Int size. " + err.Error())
+				t.Errorf("Something went wrong while retrieving the Int size: " + err.Error())
 			}
 
 			switch intSize {
 			case Int32, Int64:
 				val, err := reader.Int64Value()
 				if err != nil {
-					t.Errorf("Something went wrong when reading Int value. " + err.Error())
+					t.Errorf("Something went wrong while reading an Int value: " + err.Error())
 				}
 
 				err = writer.WriteInt(val)
 				if err != nil {
-					t.Errorf("Something went wrong when writing Int value. " + err.Error())
+					t.Errorf("Something went wrong while writing an Int value: " + err.Error())
 				}
 			case Uint64:
 				val, err := reader.Uint64Value()
 				if err != nil {
-					t.Errorf("Something went wrong when reading UInt value. " + err.Error())
+					t.Errorf("Something went wrong while reading a UInt value: " + err.Error())
 				}
 
 				err = writer.WriteUint(val)
 				if err != nil {
-					t.Errorf("Something went wrong when writing UInt value. " + err.Error())
+					t.Errorf("Something went wrong while writing a UInt value: " + err.Error())
 				}
 			case BigInt:
 				val, err := reader.BigIntValue()
 				if err != nil {
-					t.Errorf("Something went wrong when reading Big Int value. " + err.Error())
+					t.Errorf("Something went wrong while reading a Big Int value: " + err.Error())
 				}
 				err = writer.WriteBigInt(val)
 				if err != nil {
-					t.Errorf("Something went wrong when writing Big Int value. " + err.Error())
+					t.Errorf("Something went wrong while writing a Big Int value: " + err.Error())
 				}
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
@@ -571,71 +571,71 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 		case FloatType:
 			val, err := reader.FloatValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Float value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Float value: " + err.Error())
 			}
 			err = writer.WriteFloat(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Float value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Float value: " + err.Error())
 			}
 
 		case DecimalType:
 			val, err := reader.DecimalValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Decimal value: " + err.Error())
 			}
 			err = writer.WriteDecimal(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Decimal value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
 			}
 
 		case TimestampType:
 			val, err := reader.TimeValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Timestamp value: " + err.Error())
 			}
 			err = writer.WriteTimestamp(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Timestamp value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
 			}
 
 		case SymbolType:
 			val, err := reader.StringValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
 			err = writer.WriteSymbol(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Symbol value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
 			}
 
 		case StringType:
 			val, err := reader.StringValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading String value. " + err.Error())
+				t.Errorf("Something went wrong while reading a String value: " + err.Error())
 			}
 			err = writer.WriteString(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing String value. " + err.Error())
+				t.Errorf("Something went wrong while writing a String value: " + err.Error())
 			}
 
 		case ClobType:
 			val, err := reader.ByteValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Clob value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Clob value: " + err.Error())
 			}
 			err = writer.WriteClob(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Clob value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Clob value: " + err.Error())
 			}
 
 		case BlobType:
 			val, err := reader.ByteValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Blob value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Blob value: " + err.Error())
 			}
 			err = writer.WriteBlob(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Blob value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Blob value: " + err.Error())
 			}
 
 		case SexpType:
@@ -647,7 +647,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
@@ -666,7 +666,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
@@ -685,7 +685,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
