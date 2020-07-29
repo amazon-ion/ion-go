@@ -545,12 +545,14 @@ func TestDecode(t *testing.T) {
 	})
 
 	test("null.list", nil)
-	test("[]", []interface{}{})
 	test("[1, two]", []interface{}{1, "two"})
 
 	test("null.sexp", nil)
-	test("()", []interface{}{})
 	test("(1 + two)", []interface{}{1, "+", "two"})
+
+	var result []interface{}
+	test("()", result)
+	test("[]", result)
 }
 
 func TestDecodeLotsOfInts(t *testing.T) {
