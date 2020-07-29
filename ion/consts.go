@@ -1,6 +1,7 @@
 package ion
 
 import (
+	"math/big"
 	"reflect"
 	"time"
 )
@@ -50,3 +51,4 @@ var hexChars = []byte{
 
 var timeType = reflect.TypeOf(time.Time{})
 var decimalType = reflect.TypeOf(Decimal{})
+var bigIntType = reflect.TypeOf(big.Int{})

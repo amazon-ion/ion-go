@@ -8,11 +8,12 @@ import (
 
 // A field is a reflectively-accessed field of a struct type.
 type field struct {
-	name      string
-	typ       reflect.Type
-	path      []int
-	omitEmpty bool
-	hint      Type
+	name        string
+	typ         reflect.Type
+	path        []int
+	omitEmpty   bool
+	hint        Type
+	annotations bool
 }
 
 func (f *field) setopts(opts string) {
@@ -35,6 +36,8 @@ func (f *field) setopts(opts string) {
 			f.hint = ClobType
 		case "sexp":
 			f.hint = SexpType
+		case "annotations":
+			f.annotations = true
 		}
 	}
 }
