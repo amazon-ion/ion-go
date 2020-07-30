@@ -513,8 +513,7 @@ func (w *binaryWriter) beginValue(api string) error {
 			buf = appendVarUint(buf, id)
 		}
 
-		// TODO: We could theoretically write the actual tag here if we know the
-		// length of the value ahead of time.
+		// https://github.com/amzn/ion-go/issues/120
 		w.bufs.push(&container{code: 0xE0})
 		if err := w.write(buf); err != nil {
 			return err

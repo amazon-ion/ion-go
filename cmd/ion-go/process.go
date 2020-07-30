@@ -83,7 +83,7 @@ func newProcessor(args []string) (*processor, error) {
 			}
 			ret.errf = args[i]
 
-		// TODO: Add more flags here.
+		// https://github.com/amzn/ion-go/issues/121
 
 		default:
 			return nil, errors.New("unrecognized option \"" + arg + "\"")

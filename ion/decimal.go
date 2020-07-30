@@ -34,7 +34,7 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("ion: ParseDecimal(%v): %v", e.Num, e.Msg)
 }
 
-// TODO: Explicitly track precision?
+// https://github.com/amzn/ion-go/issues/119
 
 // Decimal is an arbitrary-precision decimal value.
 type Decimal struct {
@@ -194,7 +194,7 @@ func (d *Decimal) ShiftR(shift int) *Decimal {
 	}
 }
 
-// TODO: Div, Exp, etc?
+// https://github.com/amzn/ion-go/issues/118
 
 // Sign returns -1 if the value is less than 0, 0 if it is equal to zero,
 // and +1 if it is greater than zero.

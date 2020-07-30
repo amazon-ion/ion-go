@@ -593,8 +593,7 @@ func (t *tokenizer) skipBlobHelper() error {
 		return err
 	}
 
-	// TODO: If this is a clob, could we potentially have an embedded
-	// '}' here?
+	// https://github.com/amzn/ion-go/issues/115
 	for c != '}' {
 		c, _, err = t.skipLobWhitespace()
 		if err != nil {

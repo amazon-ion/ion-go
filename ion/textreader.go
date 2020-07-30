@@ -70,7 +70,7 @@ func newTextReaderBuf(in *bufio.Reader) Reader {
 
 // SymbolTable returns the current symbol table.
 func (t *textReader) SymbolTable() SymbolTable {
-	// TODO: Include me if present in the input stream?
+	// https://github.com/amzn/ion-go/issues/114
 	return nil
 }
 
