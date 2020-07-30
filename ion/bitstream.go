@@ -250,12 +250,12 @@ func (b *bitstream) Next() error {
 
 	// This value's actual length is encoded as a separate varUint.
 	if length == 0x0E {
-		var lenlen uint64
-		length, lenlen, err = b.readVarUintLen(rem)
+		var lenghtOfRemaining uint64
+		length, lenghtOfRemaining, err = b.readVarUintLen(rem)
 		if err != nil {
 			return err
 		}
-		rem -= lenlen
+		rem -= lenghtOfRemaining
 	}
 
 	if length > rem {
@@ -396,26 +396,26 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
-	alen, lenlen, err := b.readVarUintLen(b.len)
+	lengthValue, lengthOfLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.len-lenlen <= alen {
+	if b.len-lengthOfLength <= lengthValue {
 		// The size of the annotations is larger than the remaining free space inside the
 		// annotation container.
-		return nil, &SyntaxError{"malformed annotation", b.pos - lenlen}
+		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfLength}
 	}
 
 	var as []uint64
-	for alen > 0 {
-		id, idlen, err := b.readVarUintLen(alen)
+	for lengthValue > 0 {
+		id, idlen, err := b.readVarUintLen(lengthValue)
 		if err != nil {
 			return nil, err
 		}
 
 		as = append(as, id)
-		alen -= idlen
+		lengthValue -= idlen
 	}
 
 	b.state = bssBeforeValue
@@ -536,20 +536,20 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	length := b.len
 
-	offset, osign, olen, err := b.readVarIntLen(length)
+	offset, osign, olength, err := b.readVarIntLen(length)
 	if err != nil {
 		return Timestamp{}, err
 	}
-	length -= olen
+	length -= olength
 
 	ts := []int{1, 1, 1, 0, 0, 0}
 	precision := TimestampNoPrecision
 	for i := 0; length > 0 && i < 6 && precision < TimestampPrecisionSecond; i++ {
-		val, vlen, err := b.readVarUintLen(length)
+		val, vlength, err := b.readVarUintLen(length)
 		if err != nil {
 			return Timestamp{}, err
 		}
-		length -= vlen
+		length -= vlength
 		ts[i] = int(val)
 
 		// When i is 3, it means we are setting the hour component. A timestamp with an hour
@@ -646,18 +646,18 @@ func (b *bitstream) readDecimal(length uint64) (*Decimal, error) {
 	coef := new(big.Int)
 
 	if length > 0 {
-		val, _, vlen, err := b.readVarIntLen(length)
+		val, _, vlength, err := b.readVarIntLen(length)
 		if err != nil {
 			return nil, err
 		}
 
 		if val > math.MaxInt32 || val < math.MinInt32 {
 			msg := fmt.Sprintf("decimal exponent out of range: %v", val)
-			return nil, &SyntaxError{msg, b.pos - vlen}
+			return nil, &SyntaxError{msg, b.pos - vlength}
 		}
 
 		exp = val
-		length -= vlen
+		length -= vlength
 	}
 
 	if length > 0 {
