@@ -78,8 +78,8 @@ func (s System) NewReader(in io.Reader) Reader {
 	return NewReaderCat(in, s.Catalog)
 }
 
-// NewReaderStr creates a new reader using this system's catalog.
-func (s System) NewReaderStr(in string) Reader {
+// NewReaderString creates a new reader using this system's catalog.
+func (s System) NewReaderString(in string) Reader {
 	return NewReaderCat(strings.NewReader(in), s.Catalog)
 }
 
@@ -95,9 +95,9 @@ func (s System) Unmarshal(data []byte, v interface{}) error {
 	return d.DecodeTo(v)
 }
 
-// UnmarshalStr unmarshals Ion data using this system's catalog.
-func (s System) UnmarshalStr(data string, v interface{}) error {
-	r := s.NewReaderStr(data)
+// UnmarshalString unmarshals Ion data using this system's catalog.
+func (s System) UnmarshalString(data string, v interface{}) error {
+	r := s.NewReaderString(data)
 	d := NewDecoder(r)
 	return d.DecodeTo(v)
 }

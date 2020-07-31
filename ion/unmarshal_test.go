@@ -28,7 +28,7 @@ func TestUnmarshalBool(t *testing.T) {
 	test := func(str string, eval bool) {
 		t.Run(str, func(t *testing.T) {
 			var val bool
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,7 +49,7 @@ func TestUnmarshalBoolPtr(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			var bval bool
 			val := &bval
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -79,7 +79,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt8 := func(str string, eval int8) {
 		t.Run(str, func(t *testing.T) {
 			var val int8
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -97,7 +97,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt16 := func(str string, eval int16) {
 		t.Run(str, func(t *testing.T) {
 			var val int16
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -115,7 +115,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt32 := func(str string, eval int32) {
 		t.Run(str, func(t *testing.T) {
 			var val int32
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -133,7 +133,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt := func(str string, eval int) {
 		t.Run(str, func(t *testing.T) {
 			var val int
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +151,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt64 := func(str string, eval int64) {
 		t.Run(str, func(t *testing.T) {
 			var val int64
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -171,7 +171,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint8 := func(str string, eval uint8) {
 		t.Run(str, func(t *testing.T) {
 			var val uint8
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -188,7 +188,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint16 := func(str string, eval uint16) {
 		t.Run(str, func(t *testing.T) {
 			var val uint16
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -204,7 +204,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint32 := func(str string, eval uint32) {
 		t.Run(str, func(t *testing.T) {
 			var val uint32
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -220,7 +220,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint := func(str string, eval uint) {
 		t.Run(str, func(t *testing.T) {
 			var val uint
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -236,7 +236,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUintptr := func(str string, eval uintptr) {
 		t.Run(str, func(t *testing.T) {
 			var val uintptr
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -252,7 +252,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint64 := func(str string, eval uint64) {
 		t.Run(str, func(t *testing.T) {
 			var val uint64
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -270,7 +270,7 @@ func TestUnmarshalBigInt(t *testing.T) {
 	test := func(str string, eval *big.Int) {
 		t.Run(str, func(t *testing.T) {
 			var val big.Int
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -415,7 +415,7 @@ func TestUnmarshalListSexpBinary(t *testing.T) {
 func TestDecodeFloat(t *testing.T) {
 	test32 := func(str string, eval float32) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val float32
 			err := d.DecodeTo(&val)
@@ -435,7 +435,7 @@ func TestDecodeFloat(t *testing.T) {
 
 	test64 := func(str string, eval float64) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val float64
 			err := d.DecodeTo(&val)
@@ -456,7 +456,7 @@ func TestDecodeFloat(t *testing.T) {
 func TestDecodeDecimal(t *testing.T) {
 	test := func(str string, eval *Decimal) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val *Decimal
 			err := d.DecodeTo(&val)
@@ -477,7 +477,7 @@ func TestDecodeDecimal(t *testing.T) {
 func TestDecodeTimestampTo(t *testing.T) {
 	test := func(str string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val Timestamp
 			err := d.DecodeTo(&val)
@@ -497,7 +497,7 @@ func TestDecodeTimestampTo(t *testing.T) {
 func TestDecodeStringTo(t *testing.T) {
 	test := func(str string, eval string) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val string
 			err := d.DecodeTo(&val)
@@ -519,7 +519,7 @@ func TestDecodeStringTo(t *testing.T) {
 func TestDecodeLobTo(t *testing.T) {
 	testSlice := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val []byte
 			err := d.DecodeTo(&val)
@@ -539,7 +539,7 @@ func TestDecodeLobTo(t *testing.T) {
 
 	testArray := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val [8]byte
 			err := d.DecodeTo(&val)
@@ -559,7 +559,7 @@ func TestDecodeLobTo(t *testing.T) {
 func TestDecodeStructTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -589,7 +589,7 @@ func TestDecodeStructTo(t *testing.T) {
 func TestDecodeListTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -621,7 +621,7 @@ func TestDecodeListTo(t *testing.T) {
 func TestDecode(t *testing.T) {
 	test := func(data string, eval interface{}) {
 		t.Run(data, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(data))
+			d := NewDecoder(NewReaderString(data))
 			val, err := d.Decode()
 			if err != nil {
 				t.Fatal(err)
@@ -723,7 +723,7 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval foo) {
 		t.Run(testName, func(t *testing.T) {
 			var val foo
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -757,7 +757,7 @@ func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval interface{}) {
 		t.Run(testName, func(t *testing.T) {
 			var val foo
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -791,7 +791,7 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval interface{}) {
 		t.Run(testName, func(t *testing.T) {
 			var val topLevelStruct
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}

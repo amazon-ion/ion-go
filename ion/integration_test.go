@@ -403,7 +403,7 @@ func handleEmbeddedDoc(t *testing.T, r Reader) []ionItem {
 		if err != nil {
 			t.Error("Must be string value.")
 		}
-		newReader := NewReaderStr(str)
+		newReader := NewReaderString(str)
 		for newReader.Next() {
 			values = append(values, readCurrentValue(t, newReader))
 		}
