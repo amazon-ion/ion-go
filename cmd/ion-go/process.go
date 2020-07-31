@@ -104,7 +104,12 @@ func (p *processor) run() (deferredErr error) {
 		return err
 	}
 	defer func() {
-		err = outf.Close()
+		closeError := outf.Close()
+		if err == nil {
+			deferredErr = closeError
+		} else {
+			deferredErr = err
+		}
 	}()
 
 	switch p.format {
@@ -119,7 +124,8 @@ func (p *processor) run() (deferredErr error) {
 	case "none":
 		p.out = NewNopWriter()
 	default:
-		return errors.New("unrecognized output format \"" + p.format + "\"")
+		err = errors.New("unrecognized output format \"" + p.format + "\"")
+		return err
 	}
 
 	errf, err := OpenError(p.errf)
