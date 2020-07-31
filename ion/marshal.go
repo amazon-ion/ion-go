@@ -224,7 +224,10 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 		return m.w.WriteNull()
 	}
 
-	m.w.BeginStruct()
+	err := m.w.BeginStruct()
+	if err != nil {
+		return err
+	}
 
 	keys := keysFor(v)
 	if m.opts&EncodeSortMaps != 0 {
@@ -232,7 +235,10 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	}
 
 	for _, key := range keys {
-		m.w.FieldName(key.s)
+		err = m.w.FieldName(key.s)
+		if err != nil {
+			return err
+		}
 		value := v.MapIndex(key.v)
 		if err := m.encodeValue(value, hint); err != nil {
 			return err
@@ -295,9 +301,15 @@ func (m *Encoder) encodeBlob(v reflect.Value, hint Type) error {
 // EncodeArray encodes an array to the output writer as an Ion list (or sexp).
 func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 	if hint == SexpType {
-		m.w.BeginSexp()
+		err := m.w.BeginSexp()
+		if err != nil {
+			return err
+		}
 	} else {
-		m.w.BeginList()
+		err := m.w.BeginList()
+		if err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < v.Len(); i++ {
@@ -352,7 +364,9 @@ FieldLoop:
 			continue
 		}
 
-		m.w.FieldName(f.name)
+		if err := m.w.FieldName(f.name); err != nil {
+			return err
+		}
 		if err := m.encodeValue(fv, f.hint); err != nil {
 			return err
 		}

@@ -84,6 +84,6 @@ func (r *ErrorReport) Append(typ errortype, msg, loc string, idx int) {
 }
 
 // Finish finishes writing this report.
-func (r *ErrorReport) Finish() {
-	r.w.Finish()
+func (r *ErrorReport) Finish() error {
+	return r.w.Finish()
 }

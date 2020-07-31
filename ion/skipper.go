@@ -60,7 +60,10 @@ func (t *tokenizer) SkipDot() (bool, error) {
 		return false, nil
 	}
 
-	t.read()
+	_, err = t.read()
+	if err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
@@ -869,7 +872,10 @@ func (t *tokenizer) skipDoubleColon() (bool, error) {
 	}
 
 	if cs[0] == ':' && cs[1] == ':' {
-		t.skipN(2)
+		err = t.skipN(2)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 

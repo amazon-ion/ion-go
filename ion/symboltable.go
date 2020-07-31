@@ -141,23 +141,43 @@ func (s *sst) FindByID(id uint64) (string, bool) {
 }
 
 func (s *sst) WriteTo(w Writer) error {
-	w.Annotation("$ion_shared_symbol_table")
-	w.BeginStruct()
+	if err := w.Annotation("$ion_shared_symbol_table"); err != nil {
+		return err
+	}
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 	{
-		w.FieldName("name")
-		w.WriteString(s.name)
+		if err := w.FieldName("name"); err != nil {
+			return err
+		}
+		if err := w.WriteString(s.name); err != nil {
+			return err
+		}
 
-		w.FieldName("version")
-		w.WriteInt(int64(s.version))
+		if err := w.FieldName("version"); err != nil {
+			return err
+		}
+		if err := w.WriteInt(int64(s.version)); err != nil {
+			return err
+		}
 
-		w.FieldName("symbols")
-		w.BeginList()
+		if err := w.FieldName("symbols"); err != nil {
+			return err
+		}
+		if err := w.BeginList(); err != nil {
+			return err
+		}
 		{
 			for _, sym := range s.symbols {
-				w.WriteString(sym)
+				if err := w.WriteString(sym); err != nil {
+					return err
+				}
 			}
 		}
-		w.EndList()
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 	return w.EndStruct()
 }
@@ -348,38 +368,72 @@ func (t *lst) WriteTo(w Writer) error {
 		return nil
 	}
 
-	w.Annotation("$ion_symbol_table")
-	w.BeginStruct()
+	if err := w.Annotation("$ion_symbol_table"); err != nil {
+		return err
+	}
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 
 	if len(t.imports) > 1 {
-		w.FieldName("imports")
-		w.BeginList()
+		if err := w.FieldName("imports"); err != nil {
+			return err
+		}
+		if err := w.BeginList(); err != nil {
+			return err
+		}
 		for i := 1; i < len(t.imports); i++ {
 			imp := t.imports[i]
-			w.BeginStruct()
+			if err := w.BeginStruct(); err != nil {
+				return err
+			}
 
-			w.FieldName("name")
-			w.WriteString(imp.Name())
+			if err := w.FieldName("name"); err != nil {
+				return err
+			}
+			if err := w.WriteString(imp.Name()); err != nil {
+				return err
+			}
 
-			w.FieldName("version")
-			w.WriteInt(int64(imp.Version()))
+			if err := w.FieldName("version"); err != nil {
+				return err
+			}
+			if err := w.WriteInt(int64(imp.Version())); err != nil {
+				return err
+			}
 
-			w.FieldName("max_id")
-			w.WriteUint(imp.MaxID())
+			if err := w.FieldName("max_id"); err != nil {
+				return err
+			}
+			if err := w.WriteUint(imp.MaxID()); err != nil {
+				return err
+			}
 
-			w.EndStruct()
+			if err := w.EndStruct(); err != nil {
+				return err
+			}
 		}
-		w.EndList()
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 
 	if len(t.symbols) > 0 {
-		w.FieldName("symbols")
-
-		w.BeginList()
-		for _, sym := range t.symbols {
-			w.WriteString(sym)
+		if err := w.FieldName("symbols"); err != nil {
+			return err
 		}
-		w.EndList()
+
+		if err := w.BeginList(); err != nil {
+			return err
+		}
+		for _, sym := range t.symbols {
+			if err := w.WriteString(sym); err != nil {
+				return err
+			}
+		}
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 
 	return w.EndStruct()
