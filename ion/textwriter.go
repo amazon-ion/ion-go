@@ -193,7 +193,10 @@ func (w *textWriter) WriteBlob(val []byte) error {
 	}
 
 	enc := base64.NewEncoder(base64.StdEncoding, w.out)
-	enc.Write(val)
+	_, err := enc.Write(val)
+	if err != nil {
+		return err
+	}
 	if w.err = enc.Close(); w.err != nil {
 		return w.err
 	}

@@ -180,7 +180,10 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if c2 == ':' {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
 			return t.ok(tokenDoubleColon, false)
 		}
 		return t.ok(tokenColon, false)
@@ -191,7 +194,10 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if c2 == '{' {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
 			return t.ok(tokenOpenDoubleBrace, true)
 		}
 		return t.ok(tokenOpenBrace, true)
@@ -253,7 +259,11 @@ func (t *tokenizer) Next() error {
 		}
 
 		if isDigit(c2) {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
+
 			tt, err := t.scanForNumericType(c2)
 			if err != nil {
 				return err
@@ -449,7 +459,10 @@ func (t *tokenizer) readExponent(w io.ByteWriter) (int, error) {
 	}
 
 	if c == '+' || c == '-' {
-		w.WriteByte(byte(c))
+		err = w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		if c, err = t.read(); err != nil {
 			return 0, err
 		}
@@ -462,7 +475,10 @@ func (t *tokenizer) readDigits(c int, w io.ByteWriter) (int, error) {
 	if !isDigit(c) {
 		return c, nil
 	}
-	w.WriteByte(byte(c))
+	err := w.WriteByte(byte(c))
+	if err != nil {
+		return 0, err
+	}
 
 	return t.readRadixDigits(isDigit, w)
 }
@@ -478,7 +494,10 @@ func (t *tokenizer) readSymbol() (string, error) {
 
 	for isIdentifierPart(c) {
 		ret.WriteByte(byte(c))
-		t.read()
+		_, err = t.read()
+		if err != nil {
+			return "", err
+		}
 		c, err = t.peek()
 		if err != nil {
 			return "", err
@@ -512,7 +531,10 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -538,7 +560,10 @@ func (t *tokenizer) readOperator() (string, error) {
 
 	for isOperatorChar(c) {
 		ret.WriteByte(byte(c))
-		t.read()
+		_, err = t.read()
+		if err != nil {
+			return "", err
+		}
 		c, err = t.peek()
 		if err != nil {
 			return "", err
@@ -573,7 +598,10 @@ func (t *tokenizer) readString() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -624,7 +652,10 @@ func (t *tokenizer) readLongString() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -928,7 +959,10 @@ func (t *tokenizer) readTimestampOffsetOrZ(c int, w io.ByteWriter) (int, error) 
 		return t.readTimestampOffset(c, w)
 	}
 	if c == 'z' || c == 'Z' {
-		w.WriteByte(byte(c))
+		err := w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		return t.read()
 	}
 	return 0, t.invalidChar(c)
@@ -938,16 +972,22 @@ func (t *tokenizer) readTimestampOffset(c int, w io.ByteWriter) (int, error) {
 	if c != '-' && c != '+' {
 		return c, nil
 	}
-	w.WriteByte(byte(c))
+	err := w.WriteByte(byte(c))
+	if err != nil {
+		return 0, err
+	}
 
-	c, err := t.readTimestampDigits(2, w)
+	c, err = t.readTimestampDigits(2, w)
 	if err != nil {
 		return 0, err
 	}
 	if c != ':' {
 		return 0, t.invalidChar(c)
 	}
-	w.WriteByte(':')
+	err = w.WriteByte(':')
+	if err != nil {
+		return 0, err
+	}
 	return t.readTimestampDigits(2, w)
 }
 
@@ -960,7 +1000,10 @@ func (t *tokenizer) readTimestampDigits(n int, w io.ByteWriter) (int, error) {
 		if !isDigit(c) {
 			return 0, t.invalidChar(c)
 		}
-		w.WriteByte(byte(c))
+		err = w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		n--
 	}
 	return t.read()
@@ -1072,7 +1115,10 @@ func (t *tokenizer) IsTripleQuote() (bool, error) {
 	}
 
 	if cs[0] == '\'' && cs[1] == '\'' {
-		t.skipN(2)
+		err = t.skipN(2)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
@@ -1098,12 +1144,18 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 
 	if len(cs) == 3 || isStopChar(cs[3]) {
 		// Cleanly-terminated +-inf.
-		t.skipN(3)
+		err = t.skipN(3)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
 	if cs[3] == '/' && len(cs) > 4 && (cs[4] == '/' || cs[4] == '*') {
-		t.skipN(3)
+		err = t.skipN(3)
+		if err != nil {
+			return false, err
+		}
 		// +-inf followed immediately by a comment works too.
 		return true, nil
 	}
@@ -1288,7 +1340,10 @@ func (t *tokenizer) read() (int, error) {
 		}
 		if len(cs) > 0 && cs[0] == '\n' {
 			// Skip over the '\n' as well.
-			t.in.ReadByte()
+			_, err = t.in.ReadByte()
+			if err != nil {
+				return 0, err
+			}
 		}
 		return '\n', nil
 	}

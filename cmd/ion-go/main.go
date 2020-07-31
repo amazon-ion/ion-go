@@ -38,7 +38,7 @@ func main() {
 		printHelp()
 
 	case "version", "--version", "-v":
-		printVersion()
+		err = printVersion()
 
 	case "process":
 		err = process(os.Args[2:])
@@ -71,26 +71,44 @@ func printHelp() {
 }
 
 // printVersion prints (in ion) the version info for this tool.
-func printVersion() {
+func printVersion() error {
 	w := ion.NewTextWriterOpts(os.Stdout, ion.TextWriterPretty)
 
-	w.BeginStruct()
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 	{
-		w.FieldName("version")
-		w.WriteString(internal.GitCommit)
+		if err := w.FieldName("version"); err != nil {
+			return err
+		}
+		if err := w.WriteString(internal.GitCommit); err != nil {
+			return err
+		}
 
 		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.TimestampPrecisionSecond, ion.TimezoneUTC)
 		if err == nil {
-			w.FieldName("build_time")
-			w.WriteTimestamp(buildtime)
+			if err := w.FieldName("build_time"); err != nil {
+				return err
+			}
+			if err := w.WriteTimestamp(buildtime); err != nil {
+				return err
+			}
 		} else {
-			w.FieldName("build_time")
-			w.WriteString("unknown-buildtime")
+			if err := w.FieldName("build_time"); err != nil {
+				return err
+			}
+			if err := w.WriteString("unknown-buildtime"); err != nil {
+				return err
+			}
 		}
 	}
-	w.EndStruct()
+	if err := w.EndStruct(); err != nil {
+		return err
+	}
 
 	if err := w.Finish(); err != nil {
 		panic(err)
 	}
+
+	return nil
 }

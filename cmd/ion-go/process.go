@@ -98,12 +98,14 @@ func newProcessor(args []string) (*processor, error) {
 	return ret, nil
 }
 
-func (p *processor) run() error {
+func (p *processor) run() (deferredErr error) {
 	outf, err := OpenOutput(p.outf)
 	if err != nil {
 		return err
 	}
-	defer outf.Close()
+	defer func() {
+		err = outf.Close()
+	}()
 
 	switch p.format {
 	case "", "pretty":
@@ -124,21 +126,36 @@ func (p *processor) run() error {
 	if err != nil {
 		return err
 	}
-	defer errf.Close()
+	defer func() {
+		finishError := errf.Close()
+		if err == nil {
+			deferredErr = finishError
+		} else {
+			deferredErr = err
+		}
+	}()
 
 	p.err = NewErrorReport(errf)
-	defer p.err.Finish()
+	defer func() {
+		finishError := p.err.Finish()
+		if err == nil {
+			deferredErr = finishError
+		} else {
+			deferredErr = err
+		}
+	}()
 
 	if len(p.infs) == 0 {
 		p.processStdin()
 		return nil
 	}
 
-	if err := p.processFiles(); err != nil {
+	err = p.processFiles()
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return err
 }
 
 func (p *processor) processStdin() {
@@ -165,12 +182,15 @@ func (p *processor) processFiles() error {
 	return nil
 }
 
-func (p *processor) processFile(in string) error {
+func (p *processor) processFile(in string) (err error) {
 	f, err := OpenInput(in)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+
+	defer func() {
+		err = f.Close()
+	}()
 
 	p.loc = in
 	p.processReader(f)
