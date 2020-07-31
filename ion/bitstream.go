@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -112,7 +127,7 @@ func (b *bitstream) InitBytes(in []byte) {
 	b.in = bufio.NewReader(bytes.NewReader(in))
 }
 
-// Code returns the typecode of the current value.
+// Code returns the type code of the current value.
 func (b *bitstream) Code() bitcode {
 	return b.code
 }
@@ -171,16 +186,16 @@ func (b *bitstream) Next() error {
 	}
 
 	// Parse the tag.
-	code, len := parseTag(c)
+	code, length := parseTag(c)
 
 	// Structs with a length code of 1 are a special case. Their length is always encoded
 	// as a VarUInt and their field names appear in ascending symbol ID order.
-	if code == bitcodeStruct && len == 1 {
-		len, _, err = b.readVarUintLen(b.remaining())
+	if code == bitcodeStruct && length == 1 {
+		length, _, err = b.readVarUintLen(b.remaining())
 		if err != nil {
 			return err
 		}
-		if len == 0 {
+		if length == 0 {
 			// Ordered structs must have at least one symbol/value pair.
 			return &SyntaxError{"ordered structs cannot be empty", b.pos - 1}
 		}
@@ -193,7 +208,7 @@ func (b *bitstream) Next() error {
 	b.state = bssOnValue
 
 	if code == bitcodeAnnotation {
-		switch len {
+		switch length {
 		case 0:
 			// This value is actually a BVM. It's invalid if we're not at the top level.
 			if !b.stack.empty() {
@@ -211,19 +226,19 @@ func (b *bitstream) Next() error {
 
 	// Booleans are a bit special; the 'length' stores the value.
 	if code == bitcodeFalse {
-		switch len {
+		switch length {
 		case 0, 0x0F:
 			break
 		case 1:
 			code = bitcodeTrue
-			len = 0
+			length = 0
 		default:
 			// Other forms are invalid.
 			return &InvalidTagByteError{byte(c), b.pos - 1}
 		}
 	}
 
-	if len == 0x0F {
+	if length == 0x0F {
 		// This value is actually a null.
 		b.code = code
 		b.null = true
@@ -233,23 +248,23 @@ func (b *bitstream) Next() error {
 	pos := b.pos
 	rem := b.remaining()
 
-	// This value's actual len is encoded as a separate varUint.
-	if len == 0x0E {
-		var lenlen uint64
-		len, lenlen, err = b.readVarUintLen(rem)
+	// This value's actual length is encoded as a separate varUint.
+	if length == 0x0E {
+		var lenghtOfRemaining uint64
+		length, lenghtOfRemaining, err = b.readVarUintLen(rem)
 		if err != nil {
 			return err
 		}
-		rem -= lenlen
+		rem -= lenghtOfRemaining
 	}
 
-	if len > rem {
-		msg := fmt.Sprintf("value overruns its container: %v vs %v", len, rem)
+	if length > rem {
+		msg := fmt.Sprintf("value overruns its container: %v vs %v", length, rem)
 		return &SyntaxError{msg, pos - 1}
 	}
 
 	b.code = code
-	b.len = len
+	b.len = length
 	return nil
 }
 
@@ -381,26 +396,26 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
-	alen, lenlen, err := b.readVarUintLen(b.len)
+	lengthValue, lengthOfLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.len-lenlen <= alen {
+	if b.len-lengthOfLength <= lengthValue {
 		// The size of the annotations is larger than the remaining free space inside the
 		// annotation container.
-		return nil, &SyntaxError{"malformed annotation", b.pos - lenlen}
+		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfLength}
 	}
 
-	as := []uint64{}
-	for alen > 0 {
-		id, idlen, err := b.readVarUintLen(alen)
+	var as []uint64
+	for lengthValue > 0 {
+		id, idlen, err := b.readVarUintLen(lengthValue)
 		if err != nil {
 			return nil, err
 		}
 
 		as = append(as, id)
-		alen -= idlen
+		lengthValue -= idlen
 	}
 
 	b.state = bssBeforeValue
@@ -521,20 +536,20 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	length := b.len
 
-	offset, osign, olen, err := b.readVarIntLen(length)
+	offset, osign, olength, err := b.readVarIntLen(length)
 	if err != nil {
 		return Timestamp{}, err
 	}
-	length -= olen
+	length -= olength
 
 	ts := []int{1, 1, 1, 0, 0, 0}
 	precision := TimestampNoPrecision
 	for i := 0; length > 0 && i < 6 && precision < TimestampPrecisionSecond; i++ {
-		val, vlen, err := b.readVarUintLen(length)
+		val, vlength, err := b.readVarUintLen(length)
 		if err != nil {
 			return Timestamp{}, err
 		}
-		length -= vlen
+		length -= vlength
 		ts[i] = int(val)
 
 		// When i is 3, it means we are setting the hour component. A timestamp with an hour
@@ -598,8 +613,8 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
 // This function returns the nanoseconds as an int, overflow as a bool, and an error
 // if there was a problem executing this function.
-func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
-	d, err := b.readDecimal(len)
+func (b *bitstream) readNsecs(length uint64) (int, bool, error) {
+	d, err := b.readDecimal(length)
 	if err != nil {
 		return 0, false, err
 	}
@@ -626,27 +641,27 @@ func (b *bitstream) readNsecs(len uint64) (int, bool, error) {
 
 // ReadDecimal reads a decimal value of the given length: an exponent encoded as a
 // varInt, followed by an integer coefficient taking up the remaining bytes.
-func (b *bitstream) readDecimal(len uint64) (*Decimal, error) {
+func (b *bitstream) readDecimal(length uint64) (*Decimal, error) {
 	exp := int64(0)
 	coef := new(big.Int)
 
-	if len > 0 {
-		val, _, vlen, err := b.readVarIntLen(len)
+	if length > 0 {
+		val, _, vlength, err := b.readVarIntLen(length)
 		if err != nil {
 			return nil, err
 		}
 
 		if val > math.MaxInt32 || val < math.MinInt32 {
 			msg := fmt.Sprintf("decimal exponent out of range: %v", val)
-			return nil, &SyntaxError{msg, b.pos - vlen}
+			return nil, &SyntaxError{msg, b.pos - vlength}
 		}
 
 		exp = val
-		len -= vlen
+		length -= vlength
 	}
 
-	if len > 0 {
-		if err := b.readBigInt(len, coef); err != nil {
+	if length > 0 {
+		if err := b.readBigInt(length, coef); err != nil {
 			return nil, err
 		}
 	}
@@ -714,7 +729,7 @@ func (b *bitstream) ReadBytes() ([]byte, error) {
 			return nil, err
 		}
 	} else {
-		// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.len == 0.
+		// A0 and 90 are special cases, denoting an empty blob and an empty clob respectively, with b.length == 0.
 		bs = []byte{}
 	}
 
@@ -724,7 +739,7 @@ func (b *bitstream) ReadBytes() ([]byte, error) {
 	return bs, nil
 }
 
-// Clear clears the current code and len.
+// Clear clears the current code and length.
 func (b *bitstream) clear() {
 	b.code = bitcodeNone
 	b.null = false
@@ -733,13 +748,13 @@ func (b *bitstream) clear() {
 
 // ReadBigInt reads a fixed-length integer of the given length and stores
 // the value in the given big.Int.
-func (b *bitstream) readBigInt(len uint64, ret *big.Int) error {
-	bs, err := b.readN(len)
+func (b *bitstream) readBigInt(length uint64, ret *big.Int) error {
+	bs, err := b.readN(length)
 	if err != nil {
 		return err
 	}
 
-	neg := (bs[0]&0x80 != 0)
+	neg := bs[0]&0x80 != 0
 	bs[0] &= 0x7F
 	if bs[0] == 0 {
 		bs = bs[1:]
@@ -767,10 +782,10 @@ func (b *bitstream) readVarUintLen(max uint64) (uint64, uint64, error) {
 	}
 
 	val := uint64(0)
-	len := uint64(0)
+	length := uint64(0)
 
 	for {
-		if len >= max {
+		if length >= max {
 			return 0, 0, &SyntaxError{"varuint too large", b.pos}
 		}
 
@@ -781,10 +796,10 @@ func (b *bitstream) readVarUintLen(max uint64) (uint64, uint64, error) {
 
 		val <<= 7
 		val ^= uint64(c & 0x7F)
-		len++
+		length++
 
 		if c&0x80 != 0 {
-			return val, len, nil
+			return val, length, nil
 		}
 	}
 }
@@ -801,10 +816,10 @@ func (b *bitstream) skipVarUintLen(max uint64) (uint64, error) {
 		max = 10
 	}
 
-	len := uint64(0)
+	length := uint64(0)
 	for {
-		if len >= max {
-			return 0, &SyntaxError{"varuint too large", b.pos - len}
+		if length >= max {
+			return 0, &SyntaxError{"varuint too large", b.pos - length}
 		}
 
 		c, err := b.read1()
@@ -812,10 +827,10 @@ func (b *bitstream) skipVarUintLen(max uint64) (uint64, error) {
 			return 0, err
 		}
 
-		len++
+		length++
 
 		if c&0x80 != 0 {
-			return len, nil
+			return length, nil
 		}
 	}
 }
@@ -856,16 +871,16 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, int64, uint64, error) {
 	}
 
 	val := int64(c & 0x3F)
-	len := uint64(1)
+	length := uint64(1)
 
 	// Check if that was the last (only) byte.
 	if c&0x80 != 0 {
-		return val * sign, sign, len, nil
+		return val * sign, sign, length, nil
 	}
 
 	for {
-		if len >= max {
-			return 0, 0, 0, &SyntaxError{"varint too large", b.pos - len}
+		if length >= max {
+			return 0, 0, 0, &SyntaxError{"varint too large", b.pos - length}
 		}
 
 		c, err := b.read1()
@@ -875,10 +890,10 @@ func (b *bitstream) readVarIntLen(max uint64) (int64, int64, uint64, error) {
 
 		val <<= 7
 		val ^= int64(c & 0x7F)
-		len++
+		length++
 
 		if c&0x80 != 0 {
-			return val * sign, sign, len, nil
+			return val * sign, sign, length, nil
 		}
 	}
 }
@@ -909,7 +924,7 @@ var bitcodes = []bitcode{
 	bitcodeAnnotation, // 0xE0
 }
 
-// ParseTag parses a tag byte into a typecode and a length.
+// ParseTag parses a tag byte into a type code and a length.
 func parseTag(c int) (bitcode, uint64) {
 	high := (c >> 4) & 0x0F
 	low := c & 0x0F
@@ -987,7 +1002,7 @@ func (b *bitstream) skip(n uint64) error {
 	return nil
 }
 
-// A bitnode represents a container value, including its typecode and
+// A bitnode represents a container value, including its type code and
 // the offset at which it (supposedly) ends.
 type bitnode struct {
 	code bitcode

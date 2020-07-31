@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -79,11 +94,11 @@ func (w *binaryWriter) WriteInt(val int64) error {
 		mag = uint64(-val)
 	}
 
-	len := uintLen(mag)
-	buflen := len + tagLen(len)
+	length := uintLen(mag)
+	bufLength := length + tagLen(length)
 
-	buf := make([]byte, 0, buflen)
-	buf = appendTag(buf, code, len)
+	buf := make([]byte, 0, bufLength)
+	buf = appendTag(buf, code, length)
 	buf = appendUint(buf, mag)
 
 	return w.writeValue("Writer.WriteInt", buf)
@@ -95,11 +110,11 @@ func (w *binaryWriter) WriteUint(val uint64) error {
 		return w.writeValue("Writer.WriteUint", []byte{0x20})
 	}
 
-	len := uintLen(val)
-	buflen := len + tagLen(len)
+	length := uintLen(val)
+	bufLength := length + tagLen(length)
 
-	buf := make([]byte, 0, buflen)
-	buf = appendTag(buf, 0x20, len)
+	buf := make([]byte, 0, bufLength)
+	buf = appendTag(buf, 0x20, length)
 	buf = appendUint(buf, val)
 
 	return w.writeValue("Writer.WriteUint", buf)
@@ -138,8 +153,8 @@ func (w *binaryWriter) writeBigInt(val *big.Int) error {
 
 	bl := uint64(len(bs))
 	if bl < 64 {
-		buflen := bl + tagLen(bl)
-		buf := make([]byte, 0, buflen)
+		bufLength := bl + tagLen(bl)
+		buf := make([]byte, 0, bufLength)
 
 		buf = appendTag(buf, code, bl)
 		buf = append(buf, bs...)
@@ -193,13 +208,13 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 	}
 
 	// Otherwise, length or representation fields are present and must be considered.
-	vlen := varIntLen(int64(exp))
-	vlen += bigIntLen(coef)
+	vlength := varIntLen(int64(exp))
+	vlength += bigIntLen(coef)
 
-	buflen := vlen + tagLen(vlen)
-	buf := make([]byte, 0, buflen)
+	bufLength := vlength + tagLen(vlength)
+	buf := make([]byte, 0, bufLength)
 
-	buf = appendTag(buf, 0x50, vlen)
+	buf = appendTag(buf, 0x50, vlength)
 	buf = appendVarInt(buf, int64(exp))
 	buf = appendBigInt(buf, coef)
 
@@ -212,12 +227,12 @@ func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	offset /= 60
 	val.dateTime = val.dateTime.In(time.UTC)
 
-	vlen := timestampLen(offset, val)
-	buflen := vlen + tagLen(vlen)
+	vlength := timestampLen(offset, val)
+	bufLength := vlength + tagLen(vlength)
 
-	buf := make([]byte, 0, buflen)
+	buf := make([]byte, 0, bufLength)
 
-	buf = appendTag(buf, 0x60, vlen)
+	buf = appendTag(buf, 0x60, vlength)
 	buf = appendTimestamp(buf, offset, val)
 
 	return w.writeValue("Writer.WriteTimestamp", buf)
@@ -231,12 +246,12 @@ func (w *binaryWriter) WriteSymbol(val string) error {
 		return err
 	}
 
-	vlen := uintLen(uint64(id))
-	buflen := vlen + tagLen(vlen)
-	buf := make([]byte, 0, buflen)
+	vlength := uintLen(id)
+	bufLength := vlength + tagLen(vlength)
+	buf := make([]byte, 0, bufLength)
 
-	buf = appendTag(buf, 0x70, vlen)
-	buf = appendUint(buf, uint64(id))
+	buf = appendTag(buf, 0x70, vlength)
+	buf = appendUint(buf, id)
 
 	return w.writeValue("Writer.WriteSymbol", buf)
 }
@@ -247,11 +262,11 @@ func (w *binaryWriter) WriteString(val string) error {
 		return w.writeValue("Writer.WriteString", []byte{0x80})
 	}
 
-	vlen := uint64(len(val))
-	buflen := vlen + tagLen(vlen)
-	buf := make([]byte, 0, buflen)
+	vlength := uint64(len(val))
+	bufLength := vlength + tagLen(vlength)
+	buf := make([]byte, 0, bufLength)
 
-	buf = appendTag(buf, 0x80, vlen)
+	buf = appendTag(buf, 0x80, vlength)
 	buf = append(buf, val...)
 
 	return w.writeValue("Writer.WriteString", buf)
@@ -292,19 +307,19 @@ func (w *binaryWriter) WriteBlob(val []byte) error {
 }
 
 func (w *binaryWriter) writeLob(code byte, val []byte) error {
-	vlen := uint64(len(val))
+	vlength := uint64(len(val))
 
-	if vlen < 64 {
-		buflen := vlen + tagLen(vlen)
-		buf := make([]byte, 0, buflen)
+	if vlength < 64 {
+		bufLength := vlength + tagLen(vlength)
+		buf := make([]byte, 0, bufLength)
 
-		buf = appendTag(buf, code, vlen)
+		buf = appendTag(buf, code, vlength)
 		buf = append(buf, val...)
 
 		return w.write(buf)
 	}
 
-	if err := w.writeTag(code, vlen); err != nil {
+	if err := w.writeTag(code, vlength); err != nil {
 		return err
 	}
 	return w.write(val)
@@ -425,11 +440,11 @@ func (w *binaryWriter) writeValue(api string, val []byte) error {
 
 // WriteTag writes out a type+length tag. Use me when you've already got the value to
 // be written as a []byte and don't want to copy it.
-func (w *binaryWriter) writeTag(code byte, len uint64) error {
-	tl := tagLen(len)
+func (w *binaryWriter) writeTag(code byte, length uint64) error {
+	tl := tagLen(length)
 
 	tag := make([]byte, 0, tl)
-	tag = appendTag(tag, code, len)
+	tag = appendTag(tag, code, length)
 
 	return w.write(tag)
 }
@@ -490,16 +505,15 @@ func (w *binaryWriter) beginValue(api string) error {
 			idlen += varUintLen(id)
 		}
 
-		buflen := idlen + varUintLen(idlen)
-		buf := make([]byte, 0, buflen)
+		bufLength := idlen + varUintLen(idlen)
+		buf := make([]byte, 0, bufLength)
 
 		buf = appendVarUint(buf, idlen)
 		for _, id := range ids {
 			buf = appendVarUint(buf, id)
 		}
 
-		// TODO: We could theoretically write the actual tag here if we know the
-		// length of the value ahead of time.
+		// https://github.com/amzn/ion-go/issues/120
 		w.bufs.push(&container{code: 0xE0})
 		if err := w.write(buf); err != nil {
 			return err

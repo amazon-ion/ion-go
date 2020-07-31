@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -31,9 +46,9 @@ import (
 // 	w.BeginStruct()
 // 	{
 // 		w.FieldName("id")
-// 		w.WriteString("qu33nb33")
+// 		w.WriteString("foo")
 // 		w.FieldName("name")
-// 		w.WriteString("Beyoncé")
+// 		w.WriteString("bar")
 // 	}
 // 	w.EndStruct()
 //
@@ -58,10 +73,11 @@ type Writer interface {
 	Annotation(val string) error
 
 	// Annotations adds multiple annotations to the next value written.
-	Annotations(vals ...string) error
+	Annotations(values ...string) error
 
 	// WriteNull writes an untyped null value.
 	WriteNull() error
+
 	// WriteNullType writes a null value with a type qualifier, e.g. null.bool.
 	WriteNullType(t Type) error
 
@@ -70,12 +86,16 @@ type Writer interface {
 
 	// WriteInt writes an integer value.
 	WriteInt(val int64) error
+
 	// WriteUint writes an unsigned integer value.
 	WriteUint(val uint64) error
+
 	// WriteBigInt writes a big integer value.
 	WriteBigInt(val *big.Int) error
+
 	// WriteFloat writes a floating-point value.
 	WriteFloat(val float64) error
+
 	// WriteDecimal writes an arbitrary-precision decimal value.
 	WriteDecimal(val *Decimal) error
 
@@ -84,26 +104,31 @@ type Writer interface {
 
 	// WriteSymbol writes a symbol value.
 	WriteSymbol(val string) error
+
 	// WriteString writes a string value.
 	WriteString(val string) error
 
 	// WriteClob writes a clob value.
 	WriteClob(val []byte) error
+
 	// WriteBlob writes a blob value.
 	WriteBlob(val []byte) error
 
 	// BeginList begins writing a list value.
 	BeginList() error
+
 	// EndList finishes writing a list value.
 	EndList() error
 
 	// BeginSexp begins writing an s-expression value.
 	BeginSexp() error
+
 	// EndSexp finishes writing an s-expression value.
 	EndSexp() error
 
 	// BeginStruct begins writing a struct value.
 	BeginStruct() error
+
 	// EndStruct finishes writing a struct value.
 	EndStruct() error
 
@@ -148,9 +173,9 @@ func (w *writer) Annotation(val string) error {
 }
 
 // Annotations adds one or more annotations to the next value written.
-func (w *writer) Annotations(val ...string) error {
+func (w *writer) Annotations(values ...string) error {
 	if w.err == nil {
-		w.annotations = append(w.annotations, val...)
+		w.annotations = append(w.annotations, values...)
 	}
 	return w.err
 }

@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -6,15 +21,15 @@ import (
 
 // uintLen pre-calculates the length, in bytes, of the given uint value.
 func uintLen(v uint64) uint64 {
-	len := uint64(1)
+	length := uint64(1)
 	v >>= 8
 
 	for v > 0 {
-		len++
+		length++
 		v >>= 8
 	}
 
-	return len
+	return length
 }
 
 // appendUint appends a uint value to the given slice. The reader is
@@ -46,15 +61,15 @@ func intLen(n int64) uint64 {
 		mag = uint64(-n)
 	}
 
-	len := uintLen(mag)
+	length := uintLen(mag)
 
 	// If the high bit is a one, we need an extra byte to store the sign bit.
-	hb := mag >> ((len - 1) * 8)
+	hb := mag >> ((length - 1) * 8)
 	if hb&0x80 != 0 {
-		len++
+		length++
 	}
 
-	return len
+	return length
 }
 
 // appendInt appends a (signed) int to the given slice. The reader is
@@ -102,7 +117,7 @@ func bigIntLen(v *big.Int) uint64 {
 	bitl := v.BitLen()
 	bytel := bitl / 8
 
-	// Either bitl is evenly divisibly by 8, in which case we need another
+	// Either bitl is evenly divisible by 8, in which case we need another
 	// byte for the sign bit, or its not in which case we need to round up
 	// (but will then have room for the sign bit).
 	return uint64(bytel) + 1
@@ -137,15 +152,15 @@ func appendBigInt(b []byte, v *big.Int) []byte {
 
 // varUintLen pre-calculates the length, in bytes, of the given varUint value.
 func varUintLen(v uint64) uint64 {
-	len := uint64(1)
+	length := uint64(1)
 	v >>= 7
 
 	for v > 0 {
-		len++
+		length++
 		v >>= 7
 	}
 
-	return len
+	return length
 }
 
 // appendVarUint appends a variable-length-encoded uint to the given slice.
@@ -175,15 +190,15 @@ func varIntLen(v int64) uint64 {
 	}
 
 	// Reserve one extra bit of the first byte for sign.
-	len := uint64(1)
+	length := uint64(1)
 	mag >>= 6
 
 	for mag > 0 {
-		len++
+		length++
 		mag >>= 7
 	}
 
-	return len
+	return length
 }
 
 // appendVarInt appends a variable-length-encoded int to the given slice.
@@ -224,23 +239,23 @@ func appendVarInt(b []byte, v int64) []byte {
 }
 
 // tagLen pre-calculates the length, in bytes, of a tag.
-func tagLen(len uint64) uint64 {
-	if len < 0x0E {
+func tagLen(length uint64) uint64 {
+	if length < 0x0E {
 		return 1
 	}
-	return 1 + varUintLen(len)
+	return 1 + varUintLen(length)
 }
 
 // appendTag appends a code+len tag to the given slice.
-func appendTag(b []byte, code byte, len uint64) []byte {
-	if len < 0x0E {
+func appendTag(b []byte, code byte, length uint64) []byte {
+	if length < 0x0E {
 		// Short form, with length embedded in the code byte.
-		return append(b, code|byte(len))
+		return append(b, code|byte(length))
 	}
 
 	// Long form, with separate length.
 	b = append(b, code|0x0E)
-	return appendVarUint(b, len)
+	return appendVarUint(b, length)
 }
 
 // timestampLen pre-calculates the length, in bytes, of the given timestamp value.

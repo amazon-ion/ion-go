@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -101,7 +116,7 @@ func (d *Decoder) decode() (interface{}, error) {
 		return d.decodeSlice()
 
 	default:
-		panic("wat?")
+		panic("Cannot recognize the IonType")
 	}
 }
 
@@ -153,7 +168,7 @@ func (d *Decoder) decodeSlice() ([]interface{}, error) {
 		return nil, err
 	}
 
-	result := []interface{}{}
+	var result []interface{}
 
 	for d.r.Next() {
 		value, err := d.decode()
@@ -236,7 +251,7 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 		return d.decodeSliceTo(v)
 
 	default:
-		panic("wat?")
+		panic("Cannot recognize the IonType")
 	}
 }
 
@@ -579,7 +594,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		case reflect.String:
 			kv = reflect.ValueOf(*name)
 		default:
-			panic("wat?")
+			panic(fmt.Sprintf("The key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
 		}
 
 		if kv.IsValid() {

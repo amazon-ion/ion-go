@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -12,9 +27,9 @@ import (
 func TestAppendUint(t *testing.T) {
 	test := func(val uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			len := uintLen(val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := uintLen(val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendUint(nil, val)
@@ -33,9 +48,9 @@ func TestAppendUint(t *testing.T) {
 func TestAppendInt(t *testing.T) {
 	test := func(val int64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			len := intLen(val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := intLen(val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendInt(nil, val)
@@ -63,9 +78,9 @@ func TestAppendInt(t *testing.T) {
 func TestAppendBigInt(t *testing.T) {
 	test := func(val *big.Int, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			len := bigIntLen(val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := bigIntLen(val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendBigInt(nil, val)
@@ -89,9 +104,9 @@ func TestAppendBigInt(t *testing.T) {
 func TestAppendVarUint(t *testing.T) {
 	test := func(val uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			len := varUintLen(val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := varUintLen(val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendVarUint(nil, val)
@@ -114,9 +129,9 @@ func TestAppendVarUint(t *testing.T) {
 func TestAppendVarInt(t *testing.T) {
 	test := func(val int64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
-			len := varIntLen(val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := varIntLen(val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendVarInt(nil, val)
@@ -151,9 +166,9 @@ func TestAppendVarInt(t *testing.T) {
 func TestAppendTag(t *testing.T) {
 	test := func(code byte, vlen uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("(%x,%v)", code, vlen), func(t *testing.T) {
-			len := tagLen(vlen)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := tagLen(vlen)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendTag(nil, code, vlen)
@@ -176,9 +191,9 @@ func TestAppendTimestamp(t *testing.T) {
 			offset /= 60
 			val.dateTime = val.dateTime.In(time.UTC)
 
-			len := timestampLen(offset, val)
-			if len != elen {
-				t.Errorf("expected len=%v, got len=%v", elen, len)
+			length := timestampLen(offset, val)
+			if length != elen {
+				t.Errorf("expected length=%v, got length=%v", elen, length)
 			}
 
 			bits := appendTimestamp(nil, offset, val)

@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -674,10 +689,10 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 	return 0, &SyntaxError{fmt.Sprintf("bad escape sequence '\\%c'", c), t.pos - 2}
 }
 
-func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
+func (t *tokenizer) readHexEscapeSeq(length int) (rune, error) {
 	val := rune(0)
 
-	for len > 0 {
+	for length > 0 {
 		c, err := t.read()
 		if err != nil {
 			return 0, err
@@ -689,7 +704,7 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 		}
 
 		val = (val << 4) | rune(d)
-		len--
+		length--
 	}
 
 	return val, nil
@@ -1097,7 +1112,7 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 }
 
 // ScanForNumericType attempts to determine what type of number we
-// have by peeking at a fininte number of characters. We can rule
+// have by peeking at a finite number of characters. We can rule
 // out binary (0b...), hex (0x...), and timestamps (....-) via this
 // method. There are a couple other cases where we *could* distinguish,
 // but it's unclear that it's worth it.

@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -19,7 +34,7 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("ion: ParseDecimal(%v): %v", e.Num, e.Msg)
 }
 
-// TODO: Explicitly track precision?
+// https://github.com/amzn/ion-go/issues/119
 
 // Decimal is an arbitrary-precision decimal value.
 type Decimal struct {
@@ -41,7 +56,7 @@ func NewDecimalInt(n int64) *Decimal {
 }
 
 // MustParseDecimal parses the given string into a decimal object,
-// panicing on error.
+// panicking on error.
 func MustParseDecimal(in string) *Decimal {
 	d, err := ParseDecimal(in)
 	if err != nil {
@@ -179,7 +194,7 @@ func (d *Decimal) ShiftR(shift int) *Decimal {
 	}
 }
 
-// TODO: Div, Exp, etc?
+// https://github.com/amzn/ion-go/issues/118
 
 // Sign returns -1 if the value is less than 0, 0 if it is equal to zero,
 // and +1 if it is greater than zero.

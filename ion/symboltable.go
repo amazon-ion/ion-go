@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -80,7 +95,7 @@ func (s *sst) Symbols() []string {
 }
 
 func (s *sst) MaxID() uint64 {
-	return uint64(s.maxID)
+	return s.maxID
 }
 
 func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
@@ -115,7 +130,7 @@ func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
 
 func (s *sst) FindByName(sym string) (uint64, bool) {
 	id, ok := s.index[sym]
-	return uint64(id), ok
+	return id, ok
 }
 
 func (s *sst) FindByID(id uint64) (string, bool) {
@@ -422,7 +437,7 @@ func (b *symbolTableBuilder) Build() SymbolTable {
 	symbols := append([]string{}, b.symbols...)
 	index := make(map[string]uint64)
 	for s, i := range b.index {
-		index[s] = uint64(i)
+		index[s] = i
 	}
 
 	return &lst{

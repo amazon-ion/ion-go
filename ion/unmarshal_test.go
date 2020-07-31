@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -625,15 +640,15 @@ func TestDecode(t *testing.T) {
 	test("false", false)
 
 	test("null.int", nil)
-	test("0", int(0))
+	test("0", 0)
 	test("2147483647", math.MaxInt32)
 	test("-2147483648", math.MinInt32)
 	test("2147483648", int64(math.MaxInt32)+1)
 	test("-2147483649", int64(math.MinInt32)-1)
 	test("9223372036854775808", new(big.Int).SetUint64(math.MaxInt64+1))
 
-	test("0e0", float64(0.0))
-	test("1e100", float64(1e100))
+	test("0e0", 0.0)
+	test("1e100", 1e100)
 
 	test("0.", MustParseDecimal("0."))
 
@@ -658,12 +673,14 @@ func TestDecode(t *testing.T) {
 	})
 
 	test("null.list", nil)
-	test("[]", []interface{}{})
 	test("[1, two]", []interface{}{1, "two"})
 
 	test("null.sexp", nil)
-	test("()", []interface{}{})
 	test("(1 + two)", []interface{}{1, "+", "two"})
+
+	var result []interface{}
+	test("()", result)
+	test("[]", result)
 }
 
 func TestDecodeLotsOfInts(t *testing.T) {
