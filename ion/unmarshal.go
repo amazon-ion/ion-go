@@ -68,8 +68,8 @@ var (
 //     }
 //     fmt.Println(val) // prints out: {10 [age]}
 //
-//  	Go native type   								Ion Type
-//	--------------------------						---------------
+//  	Go native type                                  Ion Type
+//	--------------------------                       ---------------
 //		nil/interface{}                                 null
 //		bool/interface{}                                bool
 //		Any ints/uints/big.Int/interface{}              int
