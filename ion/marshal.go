@@ -38,6 +38,47 @@ type Marshaler interface {
 }
 
 // MarshalText marshals values to text ion.
+//
+// Different Go types can be passed into MarshalText() to be marshalled to their corresponding Ion types. e.g.,
+//
+//     val, err := MarshalText(9)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(string(val)) // prints out: 9
+//
+//	   type inner struct {
+//		   B int `ion:"b"`
+//	   }
+//	   type root struct {
+//		   A inner `ion:"a"`
+//		   C int `ion:"c"`
+//	   }
+//
+//     v = root{A: inner{B: 6}, C: 7}
+//	   val, err = MarshalText(v)
+//	   if err != nil {
+//         t.Fatal(err)
+//     }
+//	   fmt.Println(string(val)) // prints out: {a:{b:6},c:7}
+//
+//
+// Should the value for marshalling require annotations, it must be wrapped in a
+// Go struct with exactly 2 fields, where the other field of the struct is a slice of
+// string and tagged `ion:",annotations"`, and this field can carry all the desired
+// annotations.
+//
+//     type foo struct {
+//         Value   int
+//         AnyName []string `ion:",annotations"`
+//     }
+//
+//     v := foo{5, []string{"some", "annotations"}}   //some::annotations::5
+//     val, err := MarshalText(v)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//
 func MarshalText(v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
 	w := NewTextWriterOpts(&buf, TextWriterQuietFinish)

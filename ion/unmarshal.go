@@ -31,6 +31,59 @@ var (
 )
 
 // Unmarshal unmarshals Ion data to the given object.
+//
+// User must pass the proper object type to the unmarshalled Ion data.
+// Below is the mapping between Go native type and Ion types. e.g.,
+//
+//     boolBytes := []byte{0xE0, 0x01, 0x00, 0xEA, 0x11}
+//     var boolVal bool
+//     err := Unmarshal(boolBytes, &boolVal)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(boolVal) // prints out: true
+//
+//     err = UnmarshalString("true", &boolVal)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(boolVal) // prints out: true
+//
+//
+// To unmarshal an Ion value with annotations, the object passed to Unmarshal
+// must be a Go struct with exactly two fields, where one field's type
+// is in accordance with the Ion type which needs to be unmarshalled (list
+// of mapping between Go native types and Ion types below); and the other
+// field must be of type []string and tagged as `ion:",annotations"`.
+//
+//     type foo struct {
+//         Value   int    // or interface{}
+//         AnyName []string `ion:",annotations"`
+//     }
+//
+//     var val foo
+//     err := UnmarshalString("age::10", &val)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(val) // prints out: {10 [age]}
+//
+//     Go native type                                  Ion Type
+//   --------------------------                     ---------------
+//     nil/interface{}                                 null
+//     bool/interface{}                                bool
+//     Any ints/uints/big.Int/interface{}              int
+//     float32/float64/interface{}                     float
+//     ion.Decimal/interface{}                         decimal
+//     ion.Timestamp/interface{}                       timestamp
+//     string/interface{}                              symbol
+//     string/interface{}                              string
+//     []byte/[]interface{}{}                          clob
+//     []byte/[]interface{}{}                          blob
+//     []interface{}{}                                 list
+//     []interface{}{}                                 sexp
+//     map[string]interface{}{}/struct/interface{}     struct
+//
 func Unmarshal(data []byte, v interface{}) error {
 	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
 }
