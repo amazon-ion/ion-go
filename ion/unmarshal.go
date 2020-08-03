@@ -33,8 +33,7 @@ var (
 // Unmarshal unmarshals Ion data to the given object.
 //
 // User must pass the proper object type to the unmarshalled Ion data.
-// unmarshalled to is important. Below is the mapping between Go native
-// type and Ion types. e.g.,
+// Below is the mapping between Go native type and Ion types. e.g.,
 //
 //     boolBytes := []byte{0xE0, 0x01, 0x00, 0xEA, 0x11}
 //     var boolVal bool
@@ -71,19 +70,19 @@ var (
 //
 //  	Go native type   								Ion Type
 //	--------------------------						---------------
-//		nil/interface{}									null
-//		bool/interface{}								bool
-//		Any ints/uints/big.Int/interface{}				int
-//		float32/float64/interface{}						float
-//		ion.Decimal/interface{}							decimal
-//		ion.Timestamp/interface{}						timestamp
-//		string/interface{}								symbol
-//		string/interface{}								string
-//		[]byte/[]interface{}{}							clob
-//		[]byte/[]interface{}{}							blob
-//		[]interface{}{}									list
-//		[]interface{}{}									sexp
-//		map[string]interface{}{}/struct/interface{}		struct
+//		nil/interface{}                                 null
+//		bool/interface{}                                bool
+//		Any ints/uints/big.Int/interface{}              int
+//		float32/float64/interface{}                     float
+//		ion.Decimal/interface{}                         decimal
+//		ion.Timestamp/interface{}                       timestamp
+//		string/interface{}                              symbol
+//		string/interface{}                              string
+//		[]byte/[]interface{}{}                          clob
+//		[]byte/[]interface{}{}                          blob
+//		[]interface{}{}                                 list
+//		[]interface{}{}                                 sexp
+//		map[string]interface{}{}/struct/interface{}     struct
 //
 func Unmarshal(data []byte, v interface{}) error {
 	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
