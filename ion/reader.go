@@ -171,8 +171,8 @@ func NewReader(in io.Reader) Reader {
 	return NewReaderCat(in, nil)
 }
 
-// NewReaderStr creates a new reader from a string.
-func NewReaderStr(str string) Reader {
+// NewReaderString creates a new reader from a string.
+func NewReaderString(str string) Reader {
 	return NewReader(strings.NewReader(str))
 }
 

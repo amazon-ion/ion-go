@@ -88,8 +88,8 @@ func Unmarshal(data []byte, v interface{}) error {
 	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
 }
 
-// UnmarshalStr unmarshals Ion data from a string to the given object.
-func UnmarshalStr(data string, v interface{}) error {
+// UnmarshalString unmarshals Ion data from a string to the given object.
+func UnmarshalString(data string, v interface{}) error {
 	return Unmarshal([]byte(data), v)
 }
 
