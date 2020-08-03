@@ -68,21 +68,21 @@ var (
 //     }
 //     fmt.Println(val) // prints out: {10 [age]}
 //
-//      Go native type                                  Ion Type
-//    --------------------------                     ---------------
-//		nil/interface{}                                 null
-//		bool/interface{}                                bool
-//		Any ints/uints/big.Int/interface{}              int
-//		float32/float64/interface{}                     float
-//		ion.Decimal/interface{}                         decimal
-//		ion.Timestamp/interface{}                       timestamp
-//		string/interface{}                              symbol
-//		string/interface{}                              string
-//		[]byte/[]interface{}{}                          clob
-//		[]byte/[]interface{}{}                          blob
-//		[]interface{}{}                                 list
-//		[]interface{}{}                                 sexp
-//		map[string]interface{}{}/struct/interface{}     struct
+//     Go native type                                  Ion Type
+//   --------------------------                     ---------------
+//     nil/interface{}                                 null
+//     bool/interface{}                                bool
+//     Any ints/uints/big.Int/interface{}              int
+//     float32/float64/interface{}                     float
+//     ion.Decimal/interface{}                         decimal
+//     ion.Timestamp/interface{}                       timestamp
+//     string/interface{}                              symbol
+//     string/interface{}                              string
+//     []byte/[]interface{}{}                          clob
+//     []byte/[]interface{}{}                          blob
+//     []interface{}{}                                 list
+//     []interface{}{}                                 sexp
+//     map[string]interface{}{}/struct/interface{}     struct
 //
 func Unmarshal(data []byte, v interface{}) error {
 	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
