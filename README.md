@@ -124,7 +124,7 @@ And to Unmarshal the same data, the following struct can be used:
   var val foo
   err := ion.UnmarshalString("age::20", &val)
   if err != nil {
-    t.Fatal(err)
+    panic(err)
     fmt.Println("Val = ", val) // Val =  {20 [age]}
   }
 ```
