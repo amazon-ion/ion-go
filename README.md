@@ -110,7 +110,7 @@ func main() {
 }
 ```
 
-In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct with two fields,
+In order to Marshal/Unmarshal Ion values with annotation, we use a Go struct with two fields,
 
 1. one field of type `[]string` and tagged  with `ion:",annotation"`.
 2. the other field with appropriate type and optional tag to hold our Ion value. For instance,
