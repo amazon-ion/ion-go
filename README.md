@@ -9,6 +9,17 @@ Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
 This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.
 The Ion team greatly appreciates David's contributions to the Ion community.
 
+
+## Users
+
+Here are some projects that use the Ion Go library
+
+* [Restish](https://rest.sh/): "...a CLI for interacting with REST-ish HTTP APIs with some nice features built-in"
+
+
+We'll be happy to add you to our list, send us a pull request.
+
+
 ## Git Setup
 
 
@@ -99,9 +110,9 @@ func main() {
 }
 ```
 
-In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct with two fields, 
+In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct with two fields,
 
-1. one field of type `[]string` and tagged  with `ion:",annotation"`. 
+1. one field of type `[]string` and tagged  with `ion:",annotation"`.
 2. the other field with appropriate type and optional tag to hold our Ion value. For instance,
 to Marshal `age::20`, it must be in a struct as below:
 ```GO
