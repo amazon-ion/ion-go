@@ -4,6 +4,8 @@
 
 Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
 
+***This package is consider beta. While the API is relatively stable it is still subject to change***
+
 This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.
 The Ion team greatly appreciates David's contributions to the Ion community.
 
@@ -97,10 +99,10 @@ func main() {
 }
 ```
 
-In order to Marshal/Unamrshal Ion values with annotation, we use an Go struct with two fields, 
+In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct with two fields, 
 
 1. one field of type `[]string` and tagged  with `ion:",annotation"`. 
-1. the other field with appropriate type and optional tag to hold our Ion value. For instance,
+2. the other field with appropriate type and optional tag to hold our Ion value. For instance,
 to Marshal `age::20`, it must be in a struct as below:
 ```GO
   type foo struct {
@@ -111,11 +113,11 @@ to Marshal `age::20`, it must be in a struct as below:
   val, err := ion.MarshalText(data)
   if err != nil {
      panic(err)
-  fmt.Println("Ion text: ", string(val)) // Ion text: age::20
   }
+  fmt.Println("Ion text: ", string(val)) // Ion text: age::20
 ```
 
-And to Unmarshal the same data, the following struct can be used:
+And to Unmarshal the same data, we can do as shown below:
 ```Go
   type foo struct {
     Value   interface{}
@@ -125,8 +127,8 @@ And to Unmarshal the same data, the following struct can be used:
   err := ion.UnmarshalString("age::20", &val)
   if err != nil {
     panic(err)
-    fmt.Println("Val = ", val) // Val =  {20 [age]}
   }
+  fmt.Printf("Val = %+v\n", val) // Val = {Value:20 AnyName:[age]}
 ```
 
 
