@@ -351,4 +351,4 @@ func ReadItemsFrom(in io.Reader) ([]Item, error) {
 ```
 ### License
 
-This library is licensed under the MIT License.
+This library is licensed under the Apache 2.0 License.
