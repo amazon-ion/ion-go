@@ -97,8 +97,10 @@ func main() {
 }
 ```
 
-In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct of type []stirng and tag it with
-`ion:",annotation"`. The other field would be what our Ion value can fit in (both in terms of type and size). For instance,
+In order to Marshal/Unamrshal Ion values with annotation, we use an Go struct with two fields, 
+
+1. one field of type `[]string` and tagged  with `ion:",annotation"`. 
+1. the other field with appropriate type and optional tag to hold our Ion value. For instance,
 to Marshal `age::20`, it must be in a struct as below:
 ```GO
   type foo struct {
@@ -106,22 +108,24 @@ to Marshal `age::20`, it must be in a struct as below:
     AnyName []string `ion:",annotations"`
   }
   data := foo{20, []string{"age"}}
-  val, err := MarshalText(data)
+  val, err := ion.MarshalText(data)
   if err != nil {
-     t.Fatal(err)
+     panic(err)
+  fmt.Println("Ion text: ", string(val)) // Ion text: age::20
   }
 ```
 
-And to Unmarshal the same data, follwing struct can be used:
+And to Unmarshal the same data, the following struct can be used:
 ```Go
   type foo struct {
     Value   interface{}
     AnyName []string `ion:",annotations"`
   }
   var val foo
-  err := UnmarshalString("age::20", &val)
+  err := ion.UnmarshalString("age::20", &val)
   if err != nil {
     t.Fatal(err)
+    fmt.Println("Val = ", val) // Val =  {20 [age]}
   }
 ```
 
@@ -159,8 +163,8 @@ func main() {
 ### Reading and Writing
 
 For low-level streaming read and write access, use a `Reader` or `Writer`.
-Following example shows how to create a reader, reading values from that reader,
-and writing them in a writer:
+The following example shows how to create a reader, read values from that reader,
+and write those values out using a writer:
 
 ```Go
 func writeFromReaderToWriter(reader Reader, writer Writer) {
@@ -346,4 +350,3 @@ func ReadItemsFrom(in io.Reader) ([]Item, error) {
 ### License
 
 This library is licensed under the MIT License.
-
