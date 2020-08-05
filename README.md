@@ -2,14 +2,12 @@
 
 [![Build Status](https://github.com/amzn/ion-go/workflows/Go%20Build/badge.svg)](https://github.com/amzn/ion-go/actions?query=workflow%3A%22Go+Build%22)
 
-This package is for parsing and writing text and binary based Ion data.
+Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
 
-***This package is considered experimental, under active early development,  and the API is subject to change.***
+***This package is consider beta. While the API is relatively stable it is still subject to change***
 
-http://amzn.github.io/ion-docs/docs/spec.html
-
-It aims to be efficient by only evaluating values when they are accessed, and retaining the original
-text or binary representation where possible for efficient re-serialization of the same form.
+This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.
+The Ion team greatly appreciates David's contributions to the Ion community.
 
 ## Git Setup
 
@@ -24,8 +22,8 @@ submodule is to run the following command.
 $ git clone --recursive https://github.com/amzn/ion-go.git ion-go
 ```
 
-Alternatively, the submodule may be initialized independently from the clone
-by running the following commands.
+Alternatively, the submodule may be initialized independent of the clone
+by running the following commands:
 
 ```
 $ git submodule init
@@ -101,6 +99,39 @@ func main() {
 }
 ```
 
+In order to Marshal/Unamrshal Ion values with annotation, we use a Go struct with two fields, 
+
+1. one field of type `[]string` and tagged  with `ion:",annotation"`. 
+2. the other field with appropriate type and optional tag to hold our Ion value. For instance,
+to Marshal `age::20`, it must be in a struct as below:
+```GO
+  type foo struct {
+    Value   interface{}
+    AnyName []string `ion:",annotations"`
+  }
+  data := foo{20, []string{"age"}}
+  val, err := ion.MarshalText(data)
+  if err != nil {
+     panic(err)
+  }
+  fmt.Println("Ion text: ", string(val)) // Ion text: age::20
+```
+
+And to Unmarshal the same data, we can do as shown below:
+```Go
+  type foo struct {
+    Value   interface{}
+    AnyName []string `ion:",annotations"`
+  }
+  var val foo
+  err := ion.UnmarshalString("age::20", &val)
+  if err != nil {
+    panic(err)
+  }
+  fmt.Printf("Val = %+v\n", val) // Val = {Value:20 AnyName:[age]}
+```
+
+
 ### Encoding and Decoding
 
 To read or write multiple values at once, use an `Encoder` or `Decoder`:
@@ -134,72 +165,97 @@ func main() {
 ### Reading and Writing
 
 For low-level streaming read and write access, use a `Reader` or `Writer`.
+The following example shows how to create a reader, read values from that reader,
+and write those values out using a writer:
 
 ```Go
-func copy(in ion.Reader, out ion.Writer) {
-  for in.Next() {
-    name := in.FieldName()
-    if name != "" {
-      out.FieldName(name)
-    }
+func writeFromReaderToWriter(reader Reader, writer Writer) {
+	for reader.Next() {
+		name := reader.FieldName()
+		if name != nil {
+			err := writer.FieldName(*name)
+			if err != nil {
+				panic(err)
+			}
+		}
 
-    annos := in.Annotations()
-    if len(annos) > 0 {
-      out.Annotations(annos...)
-    }
+		an := reader.Annotations()
+		if len(an) > 0 {
+			err := writer.Annotations(an...)
+			if err != nil {
+				panic(err)
+			}
+		}
 
-    switch in.Type() {
-    case ion.BoolType:
-      val, err := in.BoolValue()
-      if err != nil {
-        panic(err)
-      }
-      out.WriteBool(val)
+		currentType := reader.Type()
+		if reader.IsNull() {
+			err := writer.WriteNullType(currentType)
+			if err != nil {
+				panic(err)
+			}
+			continue
+		}
 
-    case ion.IntType:
-      val, err := in.Int64Value()
-      if err != nil {
-        panic(err)
-      }
-      out.WriteInt(val)
+		switch currentType {
+		case BoolType:
+			val, err := reader.BoolValue()
+			if err != nil {
+				panic("Something went wrong while reading a Boolean value: " + err.Error())
+			}
+			err = writer.WriteBool(val)
+			if err != nil {
+				panic("Something went wrong while writing a Boolean value: " + err.Error())
+			}
 
-    case ion.StringType:
-      val, err := in.StringValue()
-      if err != nil {
-        panic(err)
-      }
-      out.WriteString(val)
+		case StringType:
+			val, err := reader.StringValue()
+			if err != nil {
+				panic("Something went wrong while reading a String value: " + err.Error())
+			}
+			err = writer.WriteString(val)
+			if err != nil {
+				panic("Something went wrong while writing a String value: " + err.Error())
+			}
 
-    case ion.ListType:
-      in.StepIn()
-      out.BeginList()
-      copy(in, out)
-      in.StepOut()
-      out.EndList()
+		case StructType:
+			err := reader.StepIn()
+			if err != nil {
+				panic(err)
+			}
+			err = writer.BeginStruct()
+			if err != nil {
+				panic(err)
+			}
+			writeFromReaderToWriter(reader, writer)
+			err = reader.StepOut()
+			if err != nil {
+				panic(err)
+			}
+			err = writer.EndStruct()
+			if err != nil {
+				panic(err)
+			}
+        default:
+            panic("This is an example, only taking in Bool, String and Struct")
+		}
+	}
 
-    case ion.StructType:
-      in.StepIn()
-      out.BeginStruct()
-      copy(in, out)
-      in.StepOut()
-      out.EndStruct()
-    }
-  }
-
-  if in.Err() != nil {
-    panic(in.Err())
-  }
+	if reader.Err() != nil {
+		panic(reader.Err().Error())
+	}
 }
 
 func main() {
-  in := ion.NewReader(os.Stdin)
-  out := ion.NewBinaryWriter(os.Stdout)
+	reader := NewReaderString("foo::{name:\"bar\", complete:false}")
+	str := strings.Builder{}
+	writer := NewTextWriter(&str)
 
-  copy(in, out)
-
-  if err := out.Finish(); err != nil {
-    panic(err)
-  }
+	writeFromReaderToWriter(reader, writer)
+	err := writer.Finish()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(str.String())
 }
 ```
 
@@ -293,23 +349,6 @@ func ReadItemsFrom(in io.Reader) ([]Item, error) {
   }
 }
 ```
-## Notes
+### License
 
-* This package only supports text as UTF-8.  It does not support the UTF-16 or UTF-32 forms.
-* The `Float` type is limited to the minimum and maximum values that Go is able to handle with float64.  These values
-  are approximately `1.797693e+308` and `4.940656e-324`.  Values that are too large will round to infinity and
-  values that are too small will round to zero.
-
-## TODO
-
-* Symbol table construction and verification.
-* Define the external interfaces for marshalling and unmarshalling.
-* Serializing Values to the textual and binary forms.
-* Unmarshal into a struct.
-* Profiling.
-* Make the `Decimal` type keep track of precision, so trailing zeros won't be lost when translating from
-  the textual to binary form.
-* Make the `Timestamp` type handle the case of unknown local offsets.
-* Make the `Float` and `Decimal` types recognize negative zero.
-
-
+This library is licensed under the Apache 2.0 License.
