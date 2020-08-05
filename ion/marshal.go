@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -7,7 +22,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // EncoderOpts holds bit-flag options for an Encoder.
@@ -24,6 +38,47 @@ type Marshaler interface {
 }
 
 // MarshalText marshals values to text ion.
+//
+// Different Go types can be passed into MarshalText() to be marshalled to their corresponding Ion types. e.g.,
+//
+//     val, err := MarshalText(9)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(string(val)) // prints out: 9
+//
+//	   type inner struct {
+//		   B int `ion:"b"`
+//	   }
+//	   type root struct {
+//		   A inner `ion:"a"`
+//		   C int `ion:"c"`
+//	   }
+//
+//     v = root{A: inner{B: 6}, C: 7}
+//	   val, err = MarshalText(v)
+//	   if err != nil {
+//         t.Fatal(err)
+//     }
+//	   fmt.Println(string(val)) // prints out: {a:{b:6},c:7}
+//
+//
+// Should the value for marshalling require annotations, it must be wrapped in a
+// Go struct with exactly 2 fields, where the other field of the struct is a slice of
+// string and tagged `ion:",annotations"`, and this field can carry all the desired
+// annotations.
+//
+//     type foo struct {
+//         Value   int
+//         AnyName []string `ion:",annotations"`
+//     }
+//
+//     v := foo{5, []string{"some", "annotations"}}   //some::annotations::5
+//     val, err := MarshalText(v)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//
 func MarshalText(v interface{}) ([]byte, error) {
 	buf := bytes.Buffer{}
 	w := NewTextWriterOpts(&buf, TextWriterQuietFinish)
@@ -179,7 +234,7 @@ func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 		return m.encodePtr(v, hint)
 
 	case reflect.Struct:
-		return m.encodeStruct(v, hint)
+		return m.encodeStruct(v)
 
 	case reflect.Map:
 		return m.encodeMap(v, hint)
@@ -210,7 +265,10 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 		return m.w.WriteNull()
 	}
 
-	m.w.BeginStruct()
+	err := m.w.BeginStruct()
+	if err != nil {
+		return err
+	}
 
 	keys := keysFor(v)
 	if m.opts&EncodeSortMaps != 0 {
@@ -218,7 +276,10 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	}
 
 	for _, key := range keys {
-		m.w.FieldName(key.s)
+		err = m.w.FieldName(key.s)
+		if err != nil {
+			return err
+		}
 		value := v.MapIndex(key.v)
 		if err := m.encodeValue(value, hint); err != nil {
 			return err
@@ -240,7 +301,7 @@ func keysFor(v reflect.Value) []mapkey {
 	res := make([]mapkey, len(keys))
 
 	for i, key := range keys {
-		// TODO: Handle other kinds of keys.
+		// https://github.com/amzn/ion-go/issues/116
 		if key.Kind() != reflect.String {
 			panic("unexpected map key type")
 		}
@@ -281,9 +342,15 @@ func (m *Encoder) encodeBlob(v reflect.Value, hint Type) error {
 // EncodeArray encodes an array to the output writer as an Ion list (or sexp).
 func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 	if hint == SexpType {
-		m.w.BeginSexp()
+		err := m.w.BeginSexp()
+		if err != nil {
+			return err
+		}
 	} else {
-		m.w.BeginList()
+		err := m.w.BeginList()
+		if err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < v.Len(); i++ {
@@ -299,18 +366,25 @@ func (m *Encoder) encodeArray(v reflect.Value, hint Type) error {
 }
 
 // EncodeStruct encodes a struct to the output writer as an Ion struct.
-func (m *Encoder) encodeStruct(v reflect.Value, hint Type) error {
+func (m *Encoder) encodeStruct(v reflect.Value) error {
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if field.annotations {
+			return m.encodeWithAnnotation(v, fields)
+		}
+	}
+
 	t := v.Type()
-	if t == timeType {
-		return m.encodeTime(v)
+	if t == timestampType {
+		return m.encodeTimestamp(v)
 	}
 	if t == decimalType {
 		return m.encodeDecimal(v)
 	}
 
-	fields := fieldsFor(v.Type())
-
-	m.w.BeginStruct()
+	if err := m.w.BeginStruct(); err != nil {
+		return err
+	}
 
 FieldLoop:
 	for i := range fields {
@@ -331,7 +405,9 @@ FieldLoop:
 			continue
 		}
 
-		m.w.FieldName(f.name)
+		if err := m.w.FieldName(f.name); err != nil {
+			return err
+		}
 		if err := m.encodeValue(fv, f.hint); err != nil {
 			return err
 		}
@@ -340,9 +416,9 @@ FieldLoop:
 	return m.w.EndStruct()
 }
 
-// EncodeTime encodes a time.Time to the output writer as an Ion timestamp.
-func (m *Encoder) encodeTime(v reflect.Value) error {
-	t := v.Interface().(time.Time)
+// encodeTimestamp encodes a timestamp to the output writer as an Ion timestamp.
+func (m *Encoder) encodeTimestamp(v reflect.Value) error {
+	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
 }
 
@@ -350,6 +426,30 @@ func (m *Encoder) encodeTime(v reflect.Value) error {
 func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	d := v.Addr().Interface().(*Decimal)
 	return m.w.WriteDecimal(d)
+}
+
+func (m *Encoder) encodeWithAnnotation(v reflect.Value, fields []field) error {
+	original := v
+	for _, field := range fields {
+		if field.annotations {
+			annotations, err := findSubvalue(original, &field)
+			if err != nil {
+				return err
+			}
+			listOfAnnotations, ok := annotations.Interface().([]string)
+			if !ok {
+				return fmt.Errorf("ion: '%v' is provided for annotations, "+
+					"it must be of type []string", annotations.Kind())
+			}
+			err = m.w.Annotations(listOfAnnotations...)
+			if err != nil {
+				return err
+			}
+		} else {
+			v, _ = findSubvalue(original, &field)
+		}
+	}
+	return m.encodeValue(v, NoType)
 }
 
 // EmptyValue returns true if the given value is the empty value for its type.

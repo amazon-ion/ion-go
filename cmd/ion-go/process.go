@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package main
 
 import (
@@ -68,7 +83,7 @@ func newProcessor(args []string) (*processor, error) {
 			}
 			ret.errf = args[i]
 
-		// TODO: Add more flags here.
+		// https://github.com/amzn/ion-go/issues/121
 
 		default:
 			return nil, errors.New("unrecognized option \"" + arg + "\"")
@@ -83,12 +98,19 @@ func newProcessor(args []string) (*processor, error) {
 	return ret, nil
 }
 
-func (p *processor) run() error {
+func (p *processor) run() (deferredErr error) {
 	outf, err := OpenOutput(p.outf)
 	if err != nil {
 		return err
 	}
-	defer outf.Close()
+	defer func() {
+		closeError := outf.Close()
+		if err == nil {
+			deferredErr = closeError
+		} else {
+			deferredErr = err
+		}
+	}()
 
 	switch p.format {
 	case "", "pretty":
@@ -102,28 +124,44 @@ func (p *processor) run() error {
 	case "none":
 		p.out = NewNopWriter()
 	default:
-		return errors.New("unrecognized output format \"" + p.format + "\"")
+		err = errors.New("unrecognized output format \"" + p.format + "\"")
+		return err
 	}
 
 	errf, err := OpenError(p.errf)
 	if err != nil {
 		return err
 	}
-	defer errf.Close()
+	defer func() {
+		finishError := errf.Close()
+		if err == nil {
+			deferredErr = finishError
+		} else {
+			deferredErr = err
+		}
+	}()
 
 	p.err = NewErrorReport(errf)
-	defer p.err.Finish()
+	defer func() {
+		finishError := p.err.Finish()
+		if err == nil {
+			deferredErr = finishError
+		} else {
+			deferredErr = err
+		}
+	}()
 
 	if len(p.infs) == 0 {
 		p.processStdin()
 		return nil
 	}
 
-	if err := p.processFiles(); err != nil {
+	err = p.processFiles()
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return err
 }
 
 func (p *processor) processStdin() {
@@ -150,12 +188,15 @@ func (p *processor) processFiles() error {
 	return nil
 }
 
-func (p *processor) processFile(in string) error {
+func (p *processor) processFile(in string) (err error) {
 	f, err := OpenInput(in)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+
+	defer func() {
+		err = f.Close()
+	}()
 
 	p.loc = in
 	p.processReader(f)
@@ -176,8 +217,8 @@ func (p *processor) process(in ion.Reader) error {
 	for in.Next() {
 		p.idx++
 		name := in.FieldName()
-		if name != "" {
-			if err = p.out.FieldName(name); err != nil {
+		if name != nil {
+			if err = p.out.FieldName(*name); err != nil {
 				return p.error(write, err)
 			}
 		}
@@ -254,7 +295,7 @@ func (p *processor) process(in ion.Reader) error {
 			err = p.out.WriteDecimal(val)
 
 		case ion.TimestampType:
-			val, err := in.TimeValue()
+			val, err := in.TimestampValue()
 			if err != nil {
 				return p.error(read, err)
 			}

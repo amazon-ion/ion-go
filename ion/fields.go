@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -8,11 +23,12 @@ import (
 
 // A field is a reflectively-accessed field of a struct type.
 type field struct {
-	name      string
-	typ       reflect.Type
-	path      []int
-	omitEmpty bool
-	hint      Type
+	name        string
+	typ         reflect.Type
+	path        []int
+	omitEmpty   bool
+	hint        Type
+	annotations bool
 }
 
 func (f *field) setopts(opts string) {
@@ -35,6 +51,8 @@ func (f *field) setopts(opts string) {
 			f.hint = ClobType
 		case "sexp":
 			f.hint = SexpType
+		case "annotations":
+			f.annotations = true
 		}
 	}
 }
@@ -46,7 +64,7 @@ type fielder struct {
 }
 
 // FieldsFor returns the fields of the given struct type.
-// TODO: cache me.
+// https://github.com/amzn/ion-go/issues/117
 func fieldsFor(t reflect.Type) []field {
 	fldr := fielder{index: map[string]bool{}}
 	fldr.inspect(t, nil)

@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -63,8 +78,8 @@ func (s System) NewReader(in io.Reader) Reader {
 	return NewReaderCat(in, s.Catalog)
 }
 
-// NewReaderStr creates a new reader using this system's catalog.
-func (s System) NewReaderStr(in string) Reader {
+// NewReaderString creates a new reader using this system's catalog.
+func (s System) NewReaderString(in string) Reader {
 	return NewReaderCat(strings.NewReader(in), s.Catalog)
 }
 
@@ -80,9 +95,9 @@ func (s System) Unmarshal(data []byte, v interface{}) error {
 	return d.DecodeTo(v)
 }
 
-// UnmarshalStr unmarshals Ion data using this system's catalog.
-func (s System) UnmarshalStr(data string, v interface{}) error {
-	r := s.NewReaderStr(data)
+// UnmarshalString unmarshals Ion data using this system's catalog.
+func (s System) UnmarshalString(data string, v interface{}) error {
+	r := s.NewReaderString(data)
 	d := NewDecoder(r)
 	return d.DecodeTo(v)
 }

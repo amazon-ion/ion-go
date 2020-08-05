@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -153,22 +168,22 @@ func TestWriteBinarySymbol(t *testing.T) {
 func TestWriteBinaryTimestamp(t *testing.T) {
 	eval := []byte{
 		0x67, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80, // 0001-01-01T00:00:00Z
-		0x6E, 0x8E, // 0x0E-bit timestamp
+		0x6D,       // 0x0D-byte timestamp
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
-		0x88,                   // month:  8
-		0x84,                   // day:    4
-		0x88,                   // hour:   8 utc (18 local)
-		0x8F,                   // minute: 15
-		0xAB,                   // second: 43
-		0xC9,                   // exp:    -9
-		0x33, 0x77, 0xDF, 0x70, // nsec:   863494000
+		0x88,             // month:  8
+		0x84,             // day:    4
+		0x88,             // hour:   8 utc (18 local)
+		0x8F,             // minute: 15
+		0xAB,             // second: 43
+		0xC6,             // exp:    6 precision units
+		0x0D, 0x2D, 0x06, // nsec:   863494
 	}
 
-	nowish, _ := time.Parse(time.RFC3339Nano, "2019-08-04T18:15:43.863494+10:00")
+	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteTimestamp(time.Time{})
+		w.WriteTimestamp(NewTimestamp(time.Time{}, TimestampPrecisionNanosecond, TimezoneUTC))
 		w.WriteTimestamp(nowish)
 	})
 }
@@ -200,10 +215,11 @@ func TestWriteBinaryFloats(t *testing.T) {
 		0x40,                                                 // 0
 		0x48, 0x7F, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MaxFloat64
 		0x48, 0xFF, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // -MaxFloat64
-		0x48, 0x7F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // +inf
-		0x48, 0xFF, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // -inf
+		0x44, 0x7F, 0x80, 0x00, 0x00, // +inf (float32)
+		0x44, 0xFF, 0x80, 0x00, 0x00, // -inf (float32)
 		0x48, 0x7F, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // NaN
 	}
+
 	testBinaryWriter(t, eval, func(w Writer) {
 		w.WriteFloat(0)
 		w.WriteFloat(math.MaxFloat64)
@@ -364,7 +380,7 @@ func fmtbytes(bs []byte) string {
 }
 
 func writeBinary(t *testing.T, f func(w Writer)) []byte {
-	bogusSyms := []string{}
+	var bogusSyms []string
 	for i := 0; i < 100; i++ {
 		bogusSyms = append(bogusSyms, fmt.Sprintf("bogus_sym_%v", i))
 	}

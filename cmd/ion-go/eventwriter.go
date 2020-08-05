@@ -1,10 +1,24 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package main
 
 import (
 	"io"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/amzn/ion-go/ion"
 )
@@ -13,8 +27,9 @@ type eventwriter struct {
 	enc *ion.Encoder
 
 	depth       int
-	fieldname   string
+	fieldname   *string
 	annotations []string
+	inStruct    map[int]bool
 }
 
 // NewEventWriter creates an ion.Writer that writes out a sequence
@@ -27,7 +42,7 @@ func NewEventWriter(out io.Writer) ion.Writer {
 }
 
 func (e *eventwriter) FieldName(val string) error {
-	e.fieldname = val
+	e.fieldname = &val
 	return nil
 }
 
@@ -36,8 +51,8 @@ func (e *eventwriter) Annotation(val string) error {
 	return nil
 }
 
-func (e *eventwriter) Annotations(vals ...string) error {
-	e.annotations = append(e.annotations, vals...)
+func (e *eventwriter) Annotations(values ...string) error {
+	e.annotations = append(e.annotations, values...)
 	return nil
 }
 
@@ -105,7 +120,7 @@ func (e *eventwriter) WriteDecimal(val *ion.Decimal) error {
 	})
 }
 
-func (e *eventwriter) WriteTimestamp(val time.Time) error {
+func (e *eventwriter) WriteTimestamp(val ion.Timestamp) error {
 	return e.write(event{
 		EventType: scalar,
 		IonType:   iontype(ion.TimestampType),
@@ -194,10 +209,12 @@ func (e *eventwriter) BeginStruct() error {
 		return err
 	}
 	e.depth++
+	e.inStruct[e.depth] = true
 	return nil
 }
 
 func (e *eventwriter) EndStruct() error {
+	e.inStruct[e.depth] = false
 	e.depth--
 	return e.write(event{
 		EventType: containerEnd,
@@ -210,6 +227,10 @@ func (e *eventwriter) Finish() error {
 		return err
 	}
 	return e.enc.Finish()
+}
+
+func (e *eventwriter) IsInStruct() bool {
+	return e.inStruct[e.depth] == true
 }
 
 func stringify(val interface{}) string {
@@ -246,12 +267,12 @@ func clobify(val []byte) string {
 
 func (e *eventwriter) write(ev event) error {
 	name := e.fieldname
-	e.fieldname = ""
+	e.fieldname = nil
 	annos := e.annotations
 	e.annotations = nil
 
-	if name != "" {
-		ev.FieldName = &token{Text: name}
+	if name != nil {
+		ev.FieldName = &token{Text: *name}
 	}
 
 	if len(annos) > 0 {

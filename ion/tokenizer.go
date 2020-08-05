@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -165,7 +180,10 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if c2 == ':' {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
 			return t.ok(tokenDoubleColon, false)
 		}
 		return t.ok(tokenColon, false)
@@ -176,7 +194,10 @@ func (t *tokenizer) Next() error {
 			return err
 		}
 		if c2 == '{' {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
 			return t.ok(tokenOpenDoubleBrace, true)
 		}
 		return t.ok(tokenOpenBrace, true)
@@ -238,7 +259,11 @@ func (t *tokenizer) Next() error {
 		}
 
 		if isDigit(c2) {
-			t.read()
+			_, err = t.read()
+			if err != nil {
+				return err
+			}
+
 			tt, err := t.scanForNumericType(c2)
 			if err != nil {
 				return err
@@ -434,7 +459,10 @@ func (t *tokenizer) readExponent(w io.ByteWriter) (int, error) {
 	}
 
 	if c == '+' || c == '-' {
-		w.WriteByte(byte(c))
+		err = w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		if c, err = t.read(); err != nil {
 			return 0, err
 		}
@@ -447,7 +475,10 @@ func (t *tokenizer) readDigits(c int, w io.ByteWriter) (int, error) {
 	if !isDigit(c) {
 		return c, nil
 	}
-	w.WriteByte(byte(c))
+	err := w.WriteByte(byte(c))
+	if err != nil {
+		return 0, err
+	}
 
 	return t.readRadixDigits(isDigit, w)
 }
@@ -463,7 +494,10 @@ func (t *tokenizer) readSymbol() (string, error) {
 
 	for isIdentifierPart(c) {
 		ret.WriteByte(byte(c))
-		t.read()
+		_, err = t.read()
+		if err != nil {
+			return "", err
+		}
 		c, err = t.peek()
 		if err != nil {
 			return "", err
@@ -497,7 +531,10 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -523,7 +560,10 @@ func (t *tokenizer) readOperator() (string, error) {
 
 	for isOperatorChar(c) {
 		ret.WriteByte(byte(c))
-		t.read()
+		_, err = t.read()
+		if err != nil {
+			return "", err
+		}
 		c, err = t.peek()
 		if err != nil {
 			return "", err
@@ -558,7 +598,10 @@ func (t *tokenizer) readString() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -609,7 +652,10 @@ func (t *tokenizer) readLongString() (string, error) {
 			}
 
 			if c == '\n' {
-				t.read()
+				_, err = t.read()
+				if err != nil {
+					return "", err
+				}
 				continue
 			}
 
@@ -674,10 +720,10 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 	return 0, &SyntaxError{fmt.Sprintf("bad escape sequence '\\%c'", c), t.pos - 2}
 }
 
-func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
+func (t *tokenizer) readHexEscapeSeq(length int) (rune, error) {
 	val := rune(0)
 
-	for len > 0 {
+	for length > 0 {
 		c, err := t.read()
 		if err != nil {
 			return 0, err
@@ -689,7 +735,7 @@ func (t *tokenizer) readHexEscapeSeq(len int) (rune, error) {
 		}
 
 		val = (val << 4) | rune(d)
-		len--
+		length--
 	}
 
 	return val, nil
@@ -913,7 +959,10 @@ func (t *tokenizer) readTimestampOffsetOrZ(c int, w io.ByteWriter) (int, error) 
 		return t.readTimestampOffset(c, w)
 	}
 	if c == 'z' || c == 'Z' {
-		w.WriteByte(byte(c))
+		err := w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		return t.read()
 	}
 	return 0, t.invalidChar(c)
@@ -923,16 +972,22 @@ func (t *tokenizer) readTimestampOffset(c int, w io.ByteWriter) (int, error) {
 	if c != '-' && c != '+' {
 		return c, nil
 	}
-	w.WriteByte(byte(c))
+	err := w.WriteByte(byte(c))
+	if err != nil {
+		return 0, err
+	}
 
-	c, err := t.readTimestampDigits(2, w)
+	c, err = t.readTimestampDigits(2, w)
 	if err != nil {
 		return 0, err
 	}
 	if c != ':' {
 		return 0, t.invalidChar(c)
 	}
-	w.WriteByte(':')
+	err = w.WriteByte(':')
+	if err != nil {
+		return 0, err
+	}
 	return t.readTimestampDigits(2, w)
 }
 
@@ -945,7 +1000,10 @@ func (t *tokenizer) readTimestampDigits(n int, w io.ByteWriter) (int, error) {
 		if !isDigit(c) {
 			return 0, t.invalidChar(c)
 		}
-		w.WriteByte(byte(c))
+		err = w.WriteByte(byte(c))
+		if err != nil {
+			return 0, err
+		}
 		n--
 	}
 	return t.read()
@@ -1057,7 +1115,10 @@ func (t *tokenizer) IsTripleQuote() (bool, error) {
 	}
 
 	if cs[0] == '\'' && cs[1] == '\'' {
-		t.skipN(2)
+		err = t.skipN(2)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
@@ -1083,12 +1144,18 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 
 	if len(cs) == 3 || isStopChar(cs[3]) {
 		// Cleanly-terminated +-inf.
-		t.skipN(3)
+		err = t.skipN(3)
+		if err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 
 	if cs[3] == '/' && len(cs) > 4 && (cs[4] == '/' || cs[4] == '*') {
-		t.skipN(3)
+		err = t.skipN(3)
+		if err != nil {
+			return false, err
+		}
 		// +-inf followed immediately by a comment works too.
 		return true, nil
 	}
@@ -1097,7 +1164,7 @@ func (t *tokenizer) isInf(c int) (bool, error) {
 }
 
 // ScanForNumericType attempts to determine what type of number we
-// have by peeking at a fininte number of characters. We can rule
+// have by peeking at a finite number of characters. We can rule
 // out binary (0b...), hex (0x...), and timestamps (....-) via this
 // method. There are a couple other cases where we *could* distinguish,
 // but it's unclear that it's worth it.
@@ -1273,7 +1340,10 @@ func (t *tokenizer) read() (int, error) {
 		}
 		if len(cs) > 0 && cs[0] == '\n' {
 			// Skip over the '\n' as well.
-			t.in.ReadByte()
+			_, err = t.in.ReadByte()
+			if err != nil {
+				return 0, err
+			}
 		}
 		return '\n', nil
 	}

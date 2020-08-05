@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -5,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,12 +31,65 @@ var (
 )
 
 // Unmarshal unmarshals Ion data to the given object.
+//
+// User must pass the proper object type to the unmarshalled Ion data.
+// Below is the mapping between Go native type and Ion types. e.g.,
+//
+//     boolBytes := []byte{0xE0, 0x01, 0x00, 0xEA, 0x11}
+//     var boolVal bool
+//     err := Unmarshal(boolBytes, &boolVal)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(boolVal) // prints out: true
+//
+//     err = UnmarshalString("true", &boolVal)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(boolVal) // prints out: true
+//
+//
+// To unmarshal an Ion value with annotations, the object passed to Unmarshal
+// must be a Go struct with exactly two fields, where one field's type
+// is in accordance with the Ion type which needs to be unmarshalled (list
+// of mapping between Go native types and Ion types below); and the other
+// field must be of type []string and tagged as `ion:",annotations"`.
+//
+//     type foo struct {
+//         Value   int    // or interface{}
+//         AnyName []string `ion:",annotations"`
+//     }
+//
+//     var val foo
+//     err := UnmarshalString("age::10", &val)
+//     if err != nil {
+//         t.Fatal(err)
+//     }
+//     fmt.Println(val) // prints out: {10 [age]}
+//
+//     Go native type                                  Ion Type
+//   --------------------------                     ---------------
+//     nil/interface{}                                 null
+//     bool/interface{}                                bool
+//     Any ints/uints/big.Int/interface{}              int
+//     float32/float64/interface{}                     float
+//     ion.Decimal/interface{}                         decimal
+//     ion.Timestamp/interface{}                       timestamp
+//     string/interface{}                              symbol
+//     string/interface{}                              string
+//     []byte/[]interface{}{}                          clob
+//     []byte/[]interface{}{}                          blob
+//     []interface{}{}                                 list
+//     []interface{}{}                                 sexp
+//     map[string]interface{}{}/struct/interface{}     struct
+//
 func Unmarshal(data []byte, v interface{}) error {
 	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
 }
 
-// UnmarshalStr unmarshals Ion data from a string to the given object.
-func UnmarshalStr(data string, v interface{}) error {
+// UnmarshalString unmarshals Ion data from a string to the given object.
+func UnmarshalString(data string, v interface{}) error {
 	return Unmarshal([]byte(data), v)
 }
 
@@ -87,7 +154,7 @@ func (d *Decoder) decode() (interface{}, error) {
 		return d.r.DecimalValue()
 
 	case TimestampType:
-		return d.r.TimeValue()
+		return d.r.TimestampValue()
 
 	case StringType, SymbolType:
 		return d.r.StringValue()
@@ -102,7 +169,7 @@ func (d *Decoder) decode() (interface{}, error) {
 		return d.decodeSlice()
 
 	default:
-		panic("wat?")
+		panic("Cannot recognize the IonType")
 	}
 }
 
@@ -138,7 +205,7 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		result[name] = value
+		result[*name] = value
 	}
 
 	if err := d.r.StepOut(); err != nil {
@@ -154,7 +221,7 @@ func (d *Decoder) decodeSlice() ([]interface{}, error) {
 		return nil, err
 	}
 
-	result := []interface{}{}
+	var result []interface{}
 
 	for d.r.Next() {
 		value, err := d.decode()
@@ -202,6 +269,9 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 	v = indirect(v, isNull)
 	if isNull {
 		v.Set(reflect.Zero(v.Type()))
+		if v.Type().Kind() == reflect.Struct {
+			return d.attachAnnotations(v)
+		}
 		return nil
 	}
 
@@ -234,7 +304,7 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 		return d.decodeSliceTo(v)
 
 	default:
-		panic("wat?")
+		panic("Cannot recognize the IonType")
 	}
 }
 
@@ -250,6 +320,9 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 		v.SetBool(val)
 		return nil
 
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v, reflect.Bool)
+
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
 			v.Set(reflect.ValueOf(val))
@@ -259,9 +332,9 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 	return fmt.Errorf("ion: cannot decode bool to %v", v.Type().String())
 }
 
-var bigIntType = reflect.TypeOf(big.Int{})
-
 func (d *Decoder) decodeIntTo(v reflect.Value) error {
+	intAcceptableKinds := []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, err := d.r.Int64Value()
@@ -309,6 +382,7 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
+		return d.decodeToStructWithAnnotation(v, intAcceptableKinds...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -324,6 +398,7 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeFloatTo(v reflect.Value) error {
+	floatAcceptableKinds := []reflect.Kind{reflect.Float32, reflect.Float64}
 	val, err := d.r.FloatValue()
 	if err != nil {
 		return err
@@ -345,8 +420,9 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 				return err
 			}
 			v.Set(reflect.ValueOf(*dec))
-			return nil
+			return d.attachAnnotations(v)
 		}
+		return d.decodeToStructWithAnnotation(v, floatAcceptableKinds...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -367,8 +443,9 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 	case reflect.Struct:
 		if v.Type() == decimalType {
 			v.Set(reflect.ValueOf(*val))
-			return nil
+			return d.attachAnnotations(v)
 		}
+		return d.decodeToStructWithAnnotation(v, decimalType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -380,17 +457,18 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
-	val, err := d.r.TimeValue()
+	val, err := d.r.TimestampValue()
 	if err != nil {
 		return err
 	}
 
 	switch v.Kind() {
 	case reflect.Struct:
-		if v.Type() == timeType {
+		if v.Type() == timestampType {
 			v.Set(reflect.ValueOf(val))
-			return nil
+			return d.attachAnnotations(v)
 		}
+		return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -412,6 +490,9 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 		v.SetString(val)
 		return nil
 
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v, reflect.String)
+
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
 			v.Set(reflect.ValueOf(val))
@@ -422,6 +503,7 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeLobTo(v reflect.Value) error {
+	lobAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	val, err := d.r.ByteValue()
 	if err != nil {
 		return err
@@ -442,6 +524,9 @@ func (d *Decoder) decodeLobTo(v reflect.Value) error {
 			}
 			return nil
 		}
+
+	case reflect.Struct:
+		return d.decodeToStructWithAnnotation(v, lobAcceptableKind...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -476,13 +561,18 @@ func (d *Decoder) decodeStructTo(v reflect.Value) error {
 func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 	fields := fieldsFor(v.Type())
 
+	err := d.attachAnnotations(v)
+	if err != nil {
+		return err
+	}
+
 	if err := d.r.StepIn(); err != nil {
 		return err
 	}
 
 	for d.r.Next() {
 		name := d.r.FieldName()
-		field := findField(fields, name)
+		field := findField(fields, *name)
 		if field != nil {
 			subv, err := findSubvalue(v, field)
 			if err != nil {
@@ -555,9 +645,9 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		var kv reflect.Value
 		switch t.Key().Kind() {
 		case reflect.String:
-			kv = reflect.ValueOf(name)
+			kv = reflect.ValueOf(*name)
 		default:
-			panic("wat?")
+			panic(fmt.Sprintf("The key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
 		}
 
 		if kv.IsValid() {
@@ -569,6 +659,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeSliceTo(v reflect.Value) error {
+	listSexpAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	k := v.Kind()
 
 	// If all we know is we need an interface{}, decode an []interface{} with
@@ -580,6 +671,10 @@ func (d *Decoder) decodeSliceTo(v reflect.Value) error {
 		}
 		v.Set(reflect.ValueOf(s))
 		return nil
+	}
+
+	if k == reflect.Struct {
+		return d.decodeToStructWithAnnotation(v, listSexpAcceptableKind...)
 	}
 
 	// Only other valid targets are arrays and slices.
@@ -670,4 +765,87 @@ func indirect(v reflect.Value, wantPtr bool) reflect.Value {
 	}
 
 	return v
+}
+
+func (d *Decoder) decodeToStructWithAnnotation(v reflect.Value, valueAcceptableKinds ...reflect.Kind) error {
+	validAnnotatableStruct, err := isValidAnnotatableStruct(v, valueAcceptableKinds)
+	if err != nil {
+		return err
+	}
+	if !validAnnotatableStruct {
+		return fmt.Errorf("ion: cannot decode %v into %v", v, v.Type().String())
+	}
+
+	// populate annotations to the struct
+	if err := d.attachAnnotations(v); err != nil {
+		return err
+	}
+
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if !field.annotations {
+			field := findField(fields, field.name)
+			if field != nil {
+				subValue, err := findSubvalue(v, field)
+				if err != nil {
+					return err
+				}
+
+				if err := d.decodeTo(subValue); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (d *Decoder) attachAnnotations(v reflect.Value) error {
+	fields := fieldsFor(v.Type())
+	for _, field := range fields {
+		if field.annotations {
+			subValue, err := findSubvalue(v, &field)
+			if err != nil {
+				return err
+			}
+			annotations := d.r.Annotations()
+			subValue.Set(reflect.ValueOf(annotations))
+			break
+		}
+	}
+	return nil
+}
+
+// expected struct for decoding Ion values must have only 2 fields: one has `ion:",annotation"`
+// tag, and the other field must be of a type where Ion value can be decoded to.
+func isValidAnnotatableStruct(v reflect.Value, listofkinds []reflect.Kind) (bool, error) {
+	fields := fieldsFor(v.Type())
+	hasAnnotation := false
+	acceptableValueType := false
+	if len(fields) == 2 {
+		for _, field := range fields {
+			subValue, err := findSubvalue(v, &field)
+			if err != nil {
+				return false, err
+			}
+			if field.annotations {
+				hasAnnotation = true
+				continue
+			}
+			if isAcceptableKind(listofkinds, subValue.Type().Kind()) {
+				acceptableValueType = true
+			}
+		}
+	}
+	return hasAnnotation && acceptableValueType, nil
+}
+
+func isAcceptableKind(valueAcceptableKinds []reflect.Kind, valueKind reflect.Kind) bool {
+	for _, kind := range valueAcceptableKinds {
+		if kind == valueKind || reflect.Interface == valueKind {
+			return true
+		}
+	}
+	return false
 }

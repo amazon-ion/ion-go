@@ -37,12 +37,31 @@ type ionItem struct {
 	ionType     Type
 	annotations []string
 	value       []interface{}
+	fieldName   string
 }
 
 func (i *ionItem) equal(o ionItem) bool {
-	return reflect.DeepEqual(i.value, o.value) &&
-		reflect.DeepEqual(i.annotations, o.annotations) &&
-		reflect.DeepEqual(i.ionType, o.ionType)
+	if i.ionType != o.ionType {
+		return false
+	}
+	if !cmpAnnotations(i.annotations, o.annotations) {
+		return false
+	}
+
+	switch i.ionType {
+	case FloatType:
+		return cmpFloats(i.value[0], o.value[0])
+	case DecimalType:
+		return cmpDecimals(i.value[0], o.value[0])
+	case TimestampType:
+		return cmpTimestamps(i.value[0], o.value[0])
+	case ListType, SexpType:
+		return cmpValueSlices(i.value, o.value)
+	case StructType:
+		return cmpStruct(i.value, o.value)
+	default:
+		return reflect.DeepEqual(i.value, o.value)
+	}
 }
 
 var readGoodFilesSkipList = []string{
@@ -53,38 +72,11 @@ var readGoodFilesSkipList = []string{
 }
 
 var binaryRoundTripSkipList = []string{
-	"clobNewlines.ion",
 	"clobWithNonAsciiCharacter.10n",
 	"clobs.ion",
-	"float32.10n",
-	"floatSpecials.ion",
-	"floats.ion",
-	"item1.10n",
-	"leapDay.ion",
-	"leapDayRollover.ion",
-	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"nonNulls.ion",
-	"structWhitespace.ion",
-	"symbolEmpty.ion",
-	"T6-large.10n",
-	"T6-small.10n",
 	"T7-large.10n",
 	"T9.10n",
-	"T10.10n",
-	"testfile25.ion",
-	"testfile33.ion",
-	"testfile35.ion",
-	"timestamp2011-02-20.10n",
-	"timestamp2011-02-20T19_30_59_100-08_00.10n",
-	"timestamp2011-02.10n",
-	"timestamp2011.10n",
-	"timestampFractions.10n",
-	"timestampFractions.ion",
-	"timestampSuperfluousOffset.10n",
-	"timestampWithTerminatingEof.ion",
-	"timestamps.ion",
-	"timestampsLargeFractionalPrecision.ion",
 	"utf16.ion",
 	"utf32.ion",
 	"whitespace.ion",
@@ -92,19 +84,8 @@ var binaryRoundTripSkipList = []string{
 
 var textRoundTripSkipList = []string{
 	"annotations.ion",
-	"clobNewlines.ion",
-	"clobs.ion",
-	"float32.10n",
-	"floatSpecials.ion",
-	"floats.ion",
-	"item1.10n",
-	"leapDay.ion",
-	"leapDayRollover.ion",
-	"lists.ion",
 	"localSymbolTableImportZeroMaxId.ion",
-	"nonNulls.ion",
 	"notVersionMarkers.ion",
-	"structWhitespace.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
@@ -113,24 +94,8 @@ var textRoundTripSkipList = []string{
 	"symbols.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
-	"T6-large.10n",
-	"T6-small.10n",
 	"T7-large.10n",
-	"T9.10n",
-	"T10.10n",
-	"testfile25.ion",
-	"testfile33.ion",
 	"testfile35.ion",
-	"timestamp2011-02-20.10n",
-	"timestamp2011-02-20T19_30_59_100-08_00.10n",
-	"timestamp2011-02.10n",
-	"timestamp2011.10n",
-	"timestampFractions.10n",
-	"timestampFractions.ion",
-	"timestampSuperfluousOffset.10n",
-	"timestampWithTerminatingEof.ion",
-	"timestamps.ion",
-	"timestampsLargeFractionalPrecision.ion",
 	"utf16.ion",
 	"utf32.ion",
 	"whitespace.ion",
@@ -144,13 +109,10 @@ var malformedIonsSkipList = []string{
 	"annotationNested.10n",
 	"annotationSymbolIDUnmapped.10n",
 	"annotationSymbolIDUnmapped.ion",
-	"blobLenTooLarge.10n",
-	"clobLenTooLarge.10n",
 	"clobWithLongLiteralBlockCommentAtEnd.ion",
 	"clobWithLongLiteralCommentsInMiddle.ion",
 	"clobWithNonAsciiCharacter.ion",
 	"clobWithNonAsciiCharacterMultiline.ion",
-	"clobWithNullCharacter.ion",
 	"clobWithValidUtf8ButNonAsciiCharacter.ion",
 	"clob_2.ion",
 	"clob_U0000003F.ion",
@@ -159,11 +121,9 @@ var malformedIonsSkipList = []string{
 	"clob_u0020.ion",
 	"clob_u00FF.ion",
 	"clob_u01FF.ion",
-	"decimalLenTooLarge.10n",
 	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
-	"floatLenTooLarge.10n",
 	"invalidVersionMarker_ion_0_0.ion",
 	"invalidVersionMarker_ion_1234_0.ion",
 	"invalidVersionMarker_ion_1_1.ion",
@@ -180,7 +140,6 @@ var malformedIonsSkipList = []string{
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"sexpOperatorAnnotation.ion",
-	"structOrderedEmpty.10n",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
 	"surrogate_2.ion",
@@ -192,8 +151,6 @@ var malformedIonsSkipList = []string{
 	"surrogate_9.ion",
 	"symbolIDUnmapped.10n",
 	"symbolIDUnmapped.ion",
-	"symbolLenTooLarge.10n",
-	"type_3_length_0.10n",
 }
 
 var equivsSkipList = []string{
@@ -206,13 +163,8 @@ var equivsSkipList = []string{
 	"nonIVMNoOps.ion",
 	"sexps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
-	"structsFieldsDiffOrder.ion",
-	"structsFieldsRepeatedNames.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
-	"timestampSuperfluousOffset.10n",
-	"timestamps.ion",
-	"timestampsLargeFractionalPrecision.ion",
 }
 
 var nonEquivsSkipList = []string{
@@ -221,11 +173,9 @@ var nonEquivsSkipList = []string{
 	"floats.ion",
 	"floatsVsDecimals.ion",
 	"localSymbolTableWithAnnotations.ion",
-	"structs.ion",
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",
-	"timestamps.ion",
 }
 
 func TestLoadGood(t *testing.T) {
@@ -321,7 +271,7 @@ func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
 	reader := NewReader(bytes.NewReader(data))
 	str := strings.Builder{}
 	txtWriter := NewTextWriter(&str)
-	writeToWriterFromReader(t, reader, txtWriter)
+	writeFromReaderToWriter(t, reader, txtWriter)
 	err := txtWriter.Finish()
 	if err != nil {
 		t.Fatal(err)
@@ -334,7 +284,7 @@ func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
 	reader := NewReader(bytes.NewReader(data))
 	buf := bytes.Buffer{}
 	binWriter := NewBinaryWriter(&buf)
-	writeToWriterFromReader(t, reader, binWriter)
+	writeFromReaderToWriter(t, reader, binWriter)
 	err := binWriter.Finish()
 	if err != nil {
 		t.Fatal(err)
@@ -453,7 +403,7 @@ func handleEmbeddedDoc(t *testing.T, r Reader) []ionItem {
 		if err != nil {
 			t.Error("Must be string value.")
 		}
-		newReader := NewReaderStr(str)
+		newReader := NewReaderString(str)
 		for newReader.Next() {
 			values = append(values, readCurrentValue(t, newReader))
 		}
@@ -539,11 +489,11 @@ func isInSkipList(skipList []string, fn string) bool {
 }
 
 // Read all the values in the reader and write them in the writer
-func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
+func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		name := reader.FieldName()
-		if name != "" {
-			err := writer.FieldName(name)
+		if name != nil {
+			err := writer.FieldName(*name)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -563,98 +513,128 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			return
+			continue
 		}
 
 		switch currentType {
 		case BoolType:
 			val, err := reader.BoolValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Boolean value: " + err.Error())
 			}
 			err = writer.WriteBool(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Boolean value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
 			}
 
 		case IntType:
-			val, err := reader.BigIntValue()
+			intSize, err := reader.IntSize()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Int value. " + err.Error())
+				t.Errorf("Something went wrong while retrieving the Int size: " + err.Error())
 			}
-			err = writer.WriteBigInt(val)
-			if err != nil {
-				t.Errorf("Something went wrong when writing Int value. " + err.Error())
+
+			switch intSize {
+			case Int32, Int64:
+				val, err := reader.Int64Value()
+				if err != nil {
+					t.Errorf("Something went wrong while reading an Int value: " + err.Error())
+				}
+
+				err = writer.WriteInt(val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing an Int value: " + err.Error())
+				}
+			case Uint64:
+				val, err := reader.Uint64Value()
+				if err != nil {
+					t.Errorf("Something went wrong while reading a UInt value: " + err.Error())
+				}
+
+				err = writer.WriteUint(val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a UInt value: " + err.Error())
+				}
+			case BigInt:
+				val, err := reader.BigIntValue()
+				if err != nil {
+					t.Errorf("Something went wrong while reading a Big Int value: " + err.Error())
+				}
+				err = writer.WriteBigInt(val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Big Int value: " + err.Error())
+				}
+			default:
+				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
 
 		case FloatType:
 			val, err := reader.FloatValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Float value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Float value: " + err.Error())
 			}
 			err = writer.WriteFloat(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Float value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Float value: " + err.Error())
 			}
 
 		case DecimalType:
 			val, err := reader.DecimalValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Decimal value: " + err.Error())
 			}
 			err = writer.WriteDecimal(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Decimal value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
 			}
 
 		case TimestampType:
-			val, err := reader.TimeValue()
+			val, err := reader.TimestampValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Timestamp value: " + err.Error())
 			}
 			err = writer.WriteTimestamp(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Timestamp value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
 			}
 
 		case SymbolType:
 			val, err := reader.StringValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
 			err = writer.WriteSymbol(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Symbol value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
 			}
 
 		case StringType:
 			val, err := reader.StringValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading String value. " + err.Error())
+				t.Errorf("Something went wrong while reading a String value: " + err.Error())
 			}
 			err = writer.WriteString(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing String value. " + err.Error())
+				t.Errorf("Something went wrong while writing a String value: " + err.Error())
 			}
 
 		case ClobType:
 			val, err := reader.ByteValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Clob value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Clob value: " + err.Error())
 			}
 			err = writer.WriteClob(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Clob value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Clob value: " + err.Error())
 			}
 
 		case BlobType:
 			val, err := reader.ByteValue()
 			if err != nil {
-				t.Errorf("Something went wrong when reading Blob value. " + err.Error())
+				t.Errorf("Something went wrong while reading a Blob value: " + err.Error())
 			}
 			err = writer.WriteBlob(val)
 			if err != nil {
-				t.Errorf("Something went wrong when writing Blob value. " + err.Error())
+				t.Errorf("Something went wrong while writing a Blob value: " + err.Error())
 			}
 
 		case SexpType:
@@ -666,7 +646,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
@@ -685,7 +665,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
@@ -704,7 +684,7 @@ func writeToWriterFromReader(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writeToWriterFromReader(t, reader, writer)
+			writeFromReaderToWriter(t, reader, writer)
 			err = reader.StepOut()
 			if err != nil {
 				t.Fatal(err)
@@ -728,6 +708,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	an := reader.Annotations()
 	if len(an) > 0 {
 		ionItem.annotations = an
+	}
+
+	fn := reader.FieldName()
+	if fn != nil {
+		ionItem.fieldName = *fn
 	}
 
 	currentType := reader.Type()
@@ -772,7 +757,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = DecimalType
 
 	case TimestampType:
-		val, err := reader.TimeValue()
+		val, err := reader.TimestampValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 		}

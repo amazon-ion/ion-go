@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -239,8 +254,10 @@ func TestWriteTextDecimal(t *testing.T) {
 func TestWriteTextTimestamp(t *testing.T) {
 	expected := "1970-01-01T00:00:00.001Z\n1970-01-01T01:23:00+01:23"
 	testTextWriter(t, expected, func(w Writer) {
-		w.WriteTimestamp(time.Unix(0, 1000000).In(time.UTC))
-		w.WriteTimestamp(time.Unix(0, 0).In(time.FixedZone("wtf", 4980)))
+		dateTime := time.Unix(0, 1000000).In(time.UTC)
+		w.WriteTimestamp(NewTimestampWithFractionalSeconds(dateTime, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+		dateTime = time.Unix(0, 0).In(time.FixedZone("foo", 4980))
+		w.WriteTimestamp(NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneLocal))
 	})
 }
 

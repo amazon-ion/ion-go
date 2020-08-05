@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -13,7 +28,7 @@ func TestUnmarshalBool(t *testing.T) {
 	test := func(str string, eval bool) {
 		t.Run(str, func(t *testing.T) {
 			var val bool
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -28,12 +43,13 @@ func TestUnmarshalBool(t *testing.T) {
 	test("true", true)
 	test("false", false)
 }
+
 func TestUnmarshalBoolPtr(t *testing.T) {
 	test := func(str string, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
 			var bval bool
 			val := &bval
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -63,7 +79,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt8 := func(str string, eval int8) {
 		t.Run(str, func(t *testing.T) {
 			var val int8
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -81,7 +97,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt16 := func(str string, eval int16) {
 		t.Run(str, func(t *testing.T) {
 			var val int16
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -99,7 +115,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt32 := func(str string, eval int32) {
 		t.Run(str, func(t *testing.T) {
 			var val int32
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -117,7 +133,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt := func(str string, eval int) {
 		t.Run(str, func(t *testing.T) {
 			var val int
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -135,7 +151,7 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt64 := func(str string, eval int64) {
 		t.Run(str, func(t *testing.T) {
 			var val int64
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,7 +171,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint8 := func(str string, eval uint8) {
 		t.Run(str, func(t *testing.T) {
 			var val uint8
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -172,7 +188,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint16 := func(str string, eval uint16) {
 		t.Run(str, func(t *testing.T) {
 			var val uint16
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -188,7 +204,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint32 := func(str string, eval uint32) {
 		t.Run(str, func(t *testing.T) {
 			var val uint32
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -204,7 +220,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint := func(str string, eval uint) {
 		t.Run(str, func(t *testing.T) {
 			var val uint
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -220,7 +236,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUintptr := func(str string, eval uintptr) {
 		t.Run(str, func(t *testing.T) {
 			var val uintptr
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -236,7 +252,7 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint64 := func(str string, eval uint64) {
 		t.Run(str, func(t *testing.T) {
 			var val uint64
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -254,7 +270,7 @@ func TestUnmarshalBigInt(t *testing.T) {
 	test := func(str string, eval *big.Int) {
 		t.Run(str, func(t *testing.T) {
 			var val big.Int
-			err := UnmarshalStr(str, &val)
+			err := UnmarshalString(str, &val)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -269,10 +285,137 @@ func TestUnmarshalBigInt(t *testing.T) {
 	test("-0xFFFFFFFFFFFFFFFF", new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF)))
 }
 
+func TestUnmarshalBinary(t *testing.T) {
+	test := func(data []byte, val, eval interface{}) {
+		t.Run(reflect.TypeOf(val).String(), func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+			res := false
+			switch thisValue := val.(type) {
+			case *Decimal:
+				thisDecimal := ionDecimal{thisValue}
+				res = thisDecimal.eq(ionDecimal{eval.(*Decimal)})
+			case Timestamp:
+				thisTime := ionTimestamp{thisValue}
+				res = thisTime.eq(ionTimestamp{eval.(Timestamp)})
+			default:
+				res = reflect.DeepEqual(val, eval)
+			}
+			if !res {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	var nullVal string
+	nullBytes := prefixIVM([]byte{0x0F}) // null
+	test(nullBytes, nullVal, nil)
+
+	var boolVal bool
+	boolBytes := prefixIVM([]byte{0x11}) // true
+	test(boolBytes, boolVal, true)
+
+	var intVal int16
+	intBytes := prefixIVM([]byte{0x22, 0x7F, 0xFF}) // 32767
+	test(intBytes, intVal, 32767)
+
+	var uintVal uint16
+	uintBytes := prefixIVM([]byte{0x32, 0x7F, 0xFF}) // -32767
+	test(uintBytes, uintVal, -32767)
+
+	var floatVal float32
+	floatBytes := prefixIVM([]byte{0x44, 0x12, 0x12, 0x12, 0x12}) // 4.609175024471393E-28
+	test(floatBytes, floatVal, 4.609175024471393e-28)
+
+	var decimalVal Decimal
+	decimalBytes := prefixIVM([]byte{0x51, 0xFF}) // 0d-63
+	test(decimalBytes, decimalVal, MustParseDecimal("0d-63"))
+
+	var timestampValue Timestamp
+	timestampBytes := prefixIVM([]byte{0x67, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
+	dateTime := time.Date(1, time.Month(2), 3, 4, 5, 6, 0, time.FixedZone("fixed", 0))
+	test(timestampBytes, timestampValue, NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneUTC))
+
+	var symbolVal string
+	symbolBytes := prefixIVM([]byte{0x71, 0x0A}) // $10
+	test(symbolBytes, symbolVal, "$10")
+
+	var stringVal string
+	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
+	test(stringBytes, stringVal, "abc")
+
+	var clobVal []byte
+	clobBytes := prefixIVM([]byte{0x92, 0x0A, 0x0B})
+	test(clobBytes, clobVal, []byte{10, 11})
+
+	var blobVal []byte
+	blobBytes := prefixIVM([]byte{0xA3, 'a', 'b', 'c'})
+	test(blobBytes, blobVal, []byte{97, 98, 99})
+
+}
+
+func TestUnmarshalStructBinary(t *testing.T) {
+	test := func(data []byte, testName string, val, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	eval := map[string]interface{}{}
+	eval["name"] = 2
+	ionByteValue := prefixIVM([]byte{0xD3, 0x84, 0x21, 0x02}) // {name:2}
+
+	var boolVal interface{}
+	test(ionByteValue, "structToInterface", boolVal, eval) // unmarshal IonStruct to an interface
+
+	test(ionByteValue, "structToMap", map[string]string{}, eval) // unmarshal IonStruct to a map
+
+	ionByteValue = prefixIVM([]byte{0xE7, 0x81, 0x83, 0xD4, 0x87, 0xB2, 0x81, 'A', //$10=A
+		0xD3, 0x8A, 0x21, 0x02}) // {A:2}
+	type foo struct {
+		Foo int `ion:"A"`
+	}
+	test(ionByteValue, "structToStruct", &foo{}, &foo{2}) // unmarshal IonStruct to a Go struct
+}
+
+func TestUnmarshalListSexpBinary(t *testing.T) {
+	test := func(data []byte, testName string, val, eval interface{}) {
+		t.Run("reflect.TypeOf(val).String()", func(t *testing.T) {
+			err := Unmarshal(data, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	ionByteValue := prefixIVM([]byte{0xB6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}) // list : [2, 3, 4]
+
+	test(ionByteValue, "listToInterface", &[]interface{}{}, &[]interface{}{2, 3, 4}) // unmarshal IonList to an interface
+	test(ionByteValue, "listToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonList to Slice of int
+
+	ionByteValue = prefixIVM([]byte{0xC6, 0x21, 0x02, 0x21, 0x03, 0x21, 0x04}) // sexp : (2 3 4)
+
+	test(ionByteValue, "sexpToInterface", &[]interface{}{}, &[]interface{}{2, 3, 4}) // unmarshal IonSexp to an interface
+	test(ionByteValue, "sexpToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonSexp to Slice of int
+}
+
 func TestDecodeFloat(t *testing.T) {
 	test32 := func(str string, eval float32) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val float32
 			err := d.DecodeTo(&val)
@@ -292,7 +435,7 @@ func TestDecodeFloat(t *testing.T) {
 
 	test64 := func(str string, eval float64) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val float64
 			err := d.DecodeTo(&val)
@@ -313,7 +456,7 @@ func TestDecodeFloat(t *testing.T) {
 func TestDecodeDecimal(t *testing.T) {
 	test := func(str string, eval *Decimal) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val *Decimal
 			err := d.DecodeTo(&val)
@@ -331,30 +474,30 @@ func TestDecodeDecimal(t *testing.T) {
 	test("1.20", MustParseDecimal("1.20"))
 }
 
-func TestDecodeTimeTo(t *testing.T) {
-	test := func(str string, eval time.Time) {
+func TestDecodeTimestampTo(t *testing.T) {
+	test := func(str string, eval Timestamp) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
-			var val time.Time
+			var val Timestamp
 			err := d.DecodeTo(&val)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if val != eval {
+			if !val.Equal(eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 		})
 	}
-	test("null", time.Time{})
-	test("2020T", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	test("null", Timestamp{})
+	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 }
 
 func TestDecodeStringTo(t *testing.T) {
 	test := func(str string, eval string) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val string
 			err := d.DecodeTo(&val)
@@ -376,7 +519,7 @@ func TestDecodeStringTo(t *testing.T) {
 func TestDecodeLobTo(t *testing.T) {
 	testSlice := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val []byte
 			err := d.DecodeTo(&val)
@@ -396,7 +539,7 @@ func TestDecodeLobTo(t *testing.T) {
 
 	testArray := func(str string, eval []byte) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 
 			var val [8]byte
 			err := d.DecodeTo(&val)
@@ -416,7 +559,7 @@ func TestDecodeLobTo(t *testing.T) {
 func TestDecodeStructTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -446,7 +589,7 @@ func TestDecodeStructTo(t *testing.T) {
 func TestDecodeListTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(str))
+			d := NewDecoder(NewReaderString(str))
 			err := d.DecodeTo(val)
 			if err != nil {
 				t.Fatal(err)
@@ -478,7 +621,7 @@ func TestDecodeListTo(t *testing.T) {
 func TestDecode(t *testing.T) {
 	test := func(data string, eval interface{}) {
 		t.Run(data, func(t *testing.T) {
-			d := NewDecoder(NewReaderStr(data))
+			d := NewDecoder(NewReaderString(data))
 			val, err := d.Decode()
 			if err != nil {
 				t.Fatal(err)
@@ -497,19 +640,19 @@ func TestDecode(t *testing.T) {
 	test("false", false)
 
 	test("null.int", nil)
-	test("0", int(0))
+	test("0", 0)
 	test("2147483647", math.MaxInt32)
 	test("-2147483648", math.MinInt32)
 	test("2147483648", int64(math.MaxInt32)+1)
 	test("-2147483649", int64(math.MinInt32)-1)
 	test("9223372036854775808", new(big.Int).SetUint64(math.MaxInt64+1))
 
-	test("0e0", float64(0.0))
-	test("1e100", float64(1e100))
+	test("0e0", 0.0)
+	test("1e100", 1e100)
 
 	test("0.", MustParseDecimal("0."))
 
-	test("2020T", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
 	test("hello", "hello")
 	test("\"hello\"", "hello")
@@ -530,12 +673,14 @@ func TestDecode(t *testing.T) {
 	})
 
 	test("null.list", nil)
-	test("[]", []interface{}{})
 	test("[1, two]", []interface{}{1, "two"})
 
 	test("null.sexp", nil)
-	test("()", []interface{}{})
 	test("(1 + two)", []interface{}{1, "+", "two"})
+
+	var result []interface{}
+	test("()", result)
+	test("[]", result)
 }
 
 func TestDecodeLotsOfInts(t *testing.T) {
@@ -567,4 +712,106 @@ func TestDecodeLotsOfInts(t *testing.T) {
 			t.Fatalf("expected %v, got %v", 1570737066801085, val)
 		}
 	}
+}
+
+func TestUnmarshalWithAnnotation(t *testing.T) {
+	type foo struct {
+		Value   interface{}
+		AnyName []string `ion:",annotations"`
+	}
+
+	test := func(str, testName string, eval foo) {
+		t.Run(testName, func(t *testing.T) {
+			var val foo
+			err := UnmarshalString(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("with::multiple::annotations::null", "null", foo{nil, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::true", "bool", foo{true, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2", "int", foo{2, []string{"with", "multiple", "annotations"}})
+	bi := new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF))
+	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", []string{"with", "multiple", "annotations"}})
+	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
+	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::{{/w==}}", "blob", foo{[]byte{255}, []string{"with", "multiple", "annotations"}})
+}
+
+func TestUnmarshalContainersWithAnnotation(t *testing.T) {
+	type foo struct {
+		Value   []int
+		AnyName []string `ion:",annotations"`
+	}
+
+	test := func(str, testName string, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			var val foo
+			err := UnmarshalString(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("with::multiple::annotations::[1, 2, 3]", "list", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::(1 2 3)", "sexp", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
+}
+
+func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
+	type nestedInt struct {
+		Value           int
+		ValueAnnotation []string `ion:",annotations"`
+	}
+
+	type nestedStruct struct {
+		Field2                nestedInt
+		InnerStructAnnotation []string `ion:",annotations"`
+	}
+
+	type topLevelStruct struct {
+		Field1             nestedStruct
+		TopLevelAnnotation []string `ion:",annotations"`
+	}
+
+	test := func(str, testName string, eval interface{}) {
+		t.Run(testName, func(t *testing.T) {
+			var val topLevelStruct
+			err := UnmarshalString(str, &val)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(val, eval) {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	/*
+		foo::{
+		  field1: bar::{
+		    field2: baz::5
+		  }
+		}
+	*/
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []string{"baz"}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []string{"bar"}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []string{"foo"}}
+
+	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
 }

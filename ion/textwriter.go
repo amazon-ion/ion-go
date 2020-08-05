@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -5,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"time"
 )
 
 // TextWriterOpts defines a set of bit flag options for text writers.
@@ -90,8 +104,8 @@ func (w *textWriter) WriteDecimal(val *Decimal) error {
 }
 
 // WriteTimestamp writes a timestamp.
-func (w *textWriter) WriteTimestamp(val time.Time) error {
-	return w.writeValue("Writer.WriteTimestamp", val.Format(time.RFC3339Nano))
+func (w *textWriter) WriteTimestamp(val Timestamp) error {
+	return w.writeValue("Writer.WriteTimestamp", val.String())
 }
 
 // WriteSymbol writes a symbol.
@@ -179,7 +193,10 @@ func (w *textWriter) WriteBlob(val []byte) error {
 	}
 
 	enc := base64.NewEncoder(base64.StdEncoding, w.out)
-	enc.Write(val)
+	_, err := enc.Write(val)
+	if err != nil {
+		return err
+	}
 	if w.err = enc.Close(); w.err != nil {
 		return w.err
 	}
@@ -307,7 +324,7 @@ func (w *textWriter) beginValue(api string) error {
 		}
 	}
 
-	if w.InStruct() {
+	if w.IsInStruct() {
 		if err := w.writeFieldName(api); err != nil {
 			return err
 		}
@@ -353,13 +370,13 @@ func (w *textWriter) writeSeparator() error {
 
 // writeFieldName writes a field name inside a struct.
 func (w *textWriter) writeFieldName(api string) error {
-	if w.fieldName == "" {
+	if w.fieldName == nil {
 		return &UsageError{api, "field name not set"}
 	}
 	name := w.fieldName
-	w.fieldName = ""
+	w.fieldName = nil
 
-	if err := writeSymbol(name, w.out); err != nil {
+	if err := writeSymbol(*name, w.out); err != nil {
 		return err
 	}
 

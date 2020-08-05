@@ -1,10 +1,24 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package main
 
 import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/amzn/ion-go/internal"
 	"github.com/amzn/ion-go/ion"
@@ -24,7 +38,7 @@ func main() {
 		printHelp()
 
 	case "version", "--version", "-v":
-		printVersion()
+		err = printVersion()
 
 	case "process":
 		err = process(os.Args[2:])
@@ -57,26 +71,44 @@ func printHelp() {
 }
 
 // printVersion prints (in ion) the version info for this tool.
-func printVersion() {
+func printVersion() error {
 	w := ion.NewTextWriterOpts(os.Stdout, ion.TextWriterPretty)
 
-	w.BeginStruct()
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 	{
-		w.FieldName("version")
-		w.WriteString(internal.GitCommit)
+		if err := w.FieldName("version"); err != nil {
+			return err
+		}
+		if err := w.WriteString(internal.GitCommit); err != nil {
+			return err
+		}
 
-		buildtime, err := time.Parse(time.RFC3339, internal.BuildTime)
+		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.TimestampPrecisionSecond, ion.TimezoneUTC)
 		if err == nil {
-			w.FieldName("build_time")
-			w.WriteTimestamp(buildtime)
+			if err := w.FieldName("build_time"); err != nil {
+				return err
+			}
+			if err := w.WriteTimestamp(buildtime); err != nil {
+				return err
+			}
 		} else {
-			w.FieldName("build_time")
-			w.WriteString("unknown-buildtime")
+			if err := w.FieldName("build_time"); err != nil {
+				return err
+			}
+			if err := w.WriteString("unknown-buildtime"); err != nil {
+				return err
+			}
 		}
 	}
-	w.EndStruct()
+	if err := w.EndStruct(); err != nil {
+		return err
+	}
 
 	if err := w.Finish(); err != nil {
 		panic(err)
 	}
+
+	return nil
 }

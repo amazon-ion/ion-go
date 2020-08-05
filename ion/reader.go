@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -7,13 +22,12 @@ import (
 	"math"
 	"math/big"
 	"strings"
-	"time"
 )
 
 // A Reader reads a stream of Ion values.
 //
 // The Reader has a logical position within the stream of values, influencing the
-// values returnedd from its methods. Initially, the Reader is positioned before the
+// values returned from its methods. Initially, the Reader is positioned before the
 // first value in the stream. A call to Next advances the Reader to the first value
 // in the stream, with subsequent calls advancing to subsequent values. When a call to
 // Next moves the Reader to the position after the final value in the stream, it returns
@@ -78,14 +92,12 @@ type Reader interface {
 	Type() Type
 
 	// IsNull returns true if the current value is an explicit null. This may be true
-	// even if the Type is not NullType (for example, null.struct has type Struct). Yes,
-	// that's a bit confusing.
+	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
 	// FieldName returns the field name associated with the current value. It returns
-	// the empty string if there is no current value or the current value has no field
-	// name.
-	FieldName() string
+	// nil if there is no current value or the current value has no field name.
+	FieldName() *string
 
 	// Annotations returns the set of annotations associated with the current value.
 	// It returns nil if there is no current value or the current value has no annotations.
@@ -137,9 +149,9 @@ type Reader interface {
 	// makes sense). It returns an error if the current value is not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
-	// TimeValue returns the current value as a timestamp (if that makes sense). It returns
+	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
 	// an error if the current value is not an Ion timestamp.
-	TimeValue() (time.Time, error)
+	TimestampValue() (Timestamp, error)
 
 	// StringValue returns the current value as a string (if that makes sense). It returns
 	// an error if the current value is not an Ion symbol or an Ion string.
@@ -148,6 +160,9 @@ type Reader interface {
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
 	// an error if the current value is not an Ion clob or an Ion blob.
 	ByteValue() ([]byte, error)
+
+	// IsInStruct indicates if the reader is currently positioned in a struct.
+	IsInStruct() bool
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -156,8 +171,8 @@ func NewReader(in io.Reader) Reader {
 	return NewReaderCat(in, nil)
 }
 
-// NewReaderStr creates a new reader from a string.
-func NewReaderStr(str string) Reader {
+// NewReaderString creates a new reader from a string.
+func NewReaderString(str string) Reader {
 	return NewReader(strings.NewReader(str))
 }
 
@@ -184,7 +199,7 @@ type reader struct {
 	eof bool
 	err error
 
-	fieldName   string
+	fieldName   *string
 	annotations []string
 	valueType   Type
 	value       interface{}
@@ -206,7 +221,7 @@ func (r *reader) IsNull() bool {
 }
 
 // FieldName returns the current value's field name.
-func (r *reader) FieldName() string {
+func (r *reader) FieldName() *string {
 	return r.fieldName
 }
 
@@ -346,15 +361,15 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 	return r.value.(*Decimal), nil
 }
 
-// TimeValue returns the current value as a time.
-func (r *reader) TimeValue() (time.Time, error) {
+// TimestampValue returns the current value as a Timestamp.
+func (r *reader) TimestampValue() (Timestamp, error) {
 	if r.valueType != TimestampType {
-		return time.Time{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return Timestamp{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
 	}
 	if r.value == nil {
-		return time.Time{}, nil
+		return Timestamp{}, nil
 	}
-	return r.value.(time.Time), nil
+	return r.value.(Timestamp), nil
 }
 
 // StringValue returns the current value as a string.
@@ -381,8 +396,13 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	r.fieldName = ""
+	r.fieldName = nil
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil
+}
+
+// IsInStruct returns true if we are currently in a struct.
+func (r *reader) IsInStruct() bool {
+	return r.ctx.peek() == ctxInStruct
 }

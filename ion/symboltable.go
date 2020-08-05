@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -80,7 +95,7 @@ func (s *sst) Symbols() []string {
 }
 
 func (s *sst) MaxID() uint64 {
-	return uint64(s.maxID)
+	return s.maxID
 }
 
 func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
@@ -115,7 +130,7 @@ func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
 
 func (s *sst) FindByName(sym string) (uint64, bool) {
 	id, ok := s.index[sym]
-	return uint64(id), ok
+	return id, ok
 }
 
 func (s *sst) FindByID(id uint64) (string, bool) {
@@ -126,23 +141,43 @@ func (s *sst) FindByID(id uint64) (string, bool) {
 }
 
 func (s *sst) WriteTo(w Writer) error {
-	w.Annotation("$ion_shared_symbol_table")
-	w.BeginStruct()
+	if err := w.Annotation("$ion_shared_symbol_table"); err != nil {
+		return err
+	}
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 	{
-		w.FieldName("name")
-		w.WriteString(s.name)
+		if err := w.FieldName("name"); err != nil {
+			return err
+		}
+		if err := w.WriteString(s.name); err != nil {
+			return err
+		}
 
-		w.FieldName("version")
-		w.WriteInt(int64(s.version))
+		if err := w.FieldName("version"); err != nil {
+			return err
+		}
+		if err := w.WriteInt(int64(s.version)); err != nil {
+			return err
+		}
 
-		w.FieldName("symbols")
-		w.BeginList()
+		if err := w.FieldName("symbols"); err != nil {
+			return err
+		}
+		if err := w.BeginList(); err != nil {
+			return err
+		}
 		{
 			for _, sym := range s.symbols {
-				w.WriteString(sym)
+				if err := w.WriteString(sym); err != nil {
+					return err
+				}
 			}
 		}
-		w.EndList()
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 	return w.EndStruct()
 }
@@ -333,38 +368,72 @@ func (t *lst) WriteTo(w Writer) error {
 		return nil
 	}
 
-	w.Annotation("$ion_symbol_table")
-	w.BeginStruct()
+	if err := w.Annotation("$ion_symbol_table"); err != nil {
+		return err
+	}
+	if err := w.BeginStruct(); err != nil {
+		return err
+	}
 
 	if len(t.imports) > 1 {
-		w.FieldName("imports")
-		w.BeginList()
+		if err := w.FieldName("imports"); err != nil {
+			return err
+		}
+		if err := w.BeginList(); err != nil {
+			return err
+		}
 		for i := 1; i < len(t.imports); i++ {
 			imp := t.imports[i]
-			w.BeginStruct()
+			if err := w.BeginStruct(); err != nil {
+				return err
+			}
 
-			w.FieldName("name")
-			w.WriteString(imp.Name())
+			if err := w.FieldName("name"); err != nil {
+				return err
+			}
+			if err := w.WriteString(imp.Name()); err != nil {
+				return err
+			}
 
-			w.FieldName("version")
-			w.WriteInt(int64(imp.Version()))
+			if err := w.FieldName("version"); err != nil {
+				return err
+			}
+			if err := w.WriteInt(int64(imp.Version())); err != nil {
+				return err
+			}
 
-			w.FieldName("max_id")
-			w.WriteUint(imp.MaxID())
+			if err := w.FieldName("max_id"); err != nil {
+				return err
+			}
+			if err := w.WriteUint(imp.MaxID()); err != nil {
+				return err
+			}
 
-			w.EndStruct()
+			if err := w.EndStruct(); err != nil {
+				return err
+			}
 		}
-		w.EndList()
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 
 	if len(t.symbols) > 0 {
-		w.FieldName("symbols")
-
-		w.BeginList()
-		for _, sym := range t.symbols {
-			w.WriteString(sym)
+		if err := w.FieldName("symbols"); err != nil {
+			return err
 		}
-		w.EndList()
+
+		if err := w.BeginList(); err != nil {
+			return err
+		}
+		for _, sym := range t.symbols {
+			if err := w.WriteString(sym); err != nil {
+				return err
+			}
+		}
+		if err := w.EndList(); err != nil {
+			return err
+		}
 	}
 
 	return w.EndStruct()
@@ -422,7 +491,7 @@ func (b *symbolTableBuilder) Build() SymbolTable {
 	symbols := append([]string{}, b.symbols...)
 	index := make(map[string]uint64)
 	for s, i := range b.index {
-		index[s] = uint64(i)
+		index[s] = i
 	}
 
 	return &lst{

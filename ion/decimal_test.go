@@ -1,3 +1,18 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
 import (
@@ -133,7 +148,7 @@ func TestTrunc(t *testing.T) {
 	test := func(a string, eval int64) {
 		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
 			aa := MustParseDecimal(a)
-			val, err := aa.Trunc()
+			val, err := aa.trunc()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -149,6 +164,37 @@ func TestTrunc(t *testing.T) {
 	test("-1.", -1)
 	test("1.01", 1)
 	test("-1.01", -1)
+	test("101", 101)
+	test("1d3", 1000)
+}
+
+func TestRound(t *testing.T) {
+	test := func(a string, eval int64) {
+		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
+			aa := MustParseDecimal(a)
+			val, err := aa.round()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if val != eval {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		})
+	}
+
+	test("0.", 0)
+	test("0.01", 0)
+	test("1.", 1)
+	test("-1.", -1)
+	test("1.01", 1)
+	test("-1.01", -1)
+	test("1.4", 1)
+	test("1.5", 2)
+	test("1.6", 2)
+	test("0.4", 0)
+	test("0.5", 1)
+	test("0.9999999999", 1)
+	test("0.099", 0)
 	test("101", 101)
 	test("1d3", 1000)
 }
