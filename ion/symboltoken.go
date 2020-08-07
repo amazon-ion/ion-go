@@ -40,7 +40,7 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return *st.text == *o.text && st.sid == o.sid
 }
 
-// Create a new SymbolToken struct.
+// NewSymbolToken creates a SymbolToken struct.
 func NewSymbolToken(text *string, sid int64, importLocation *ImportLocation) *SymbolToken {
 	return &SymbolToken{text: text, sid: sid, importLocation: importLocation}
 }

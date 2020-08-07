@@ -41,9 +41,9 @@ var boolEqualsTestData = []struct {
 }
 
 func TestBoolEqualsOperator(t *testing.T) {
-	for i, _ := range boolEqualsTestData {
-		st1 := NewSymbolToken(&boolEqualsTestData[i].text1, boolEqualsTestData[i].sid1, nil)
-		st2 := NewSymbolToken(&boolEqualsTestData[i].text2, boolEqualsTestData[i].sid2, nil)
+	for _, testData := range boolEqualsTestData {
+		st1 := NewSymbolToken(&testData.text1, testData.sid1, nil)
+		st2 := NewSymbolToken(&testData.text2, testData.sid2, nil)
 
 		if !st1.Equal(st2) {
 			t.Errorf("expected %v, got %v", true, false)
@@ -62,9 +62,9 @@ var boolNotEqualsTestData = []struct {
 }
 
 func TestBoolNotEqualsOperator(t *testing.T) {
-	for i, _ := range boolNotEqualsTestData {
-		st1 := NewSymbolToken(&boolNotEqualsTestData[i].text1, boolNotEqualsTestData[i].sid1, nil)
-		st2 := NewSymbolToken(&boolNotEqualsTestData[i].text2, boolNotEqualsTestData[i].sid2, nil)
+	for _, testData := range boolNotEqualsTestData {
+		st1 := NewSymbolToken(&testData.text1, testData.sid1, nil)
+		st2 := NewSymbolToken(&testData.text2, testData.sid2, nil)
 
 		if st1.Equal(st2) {
 			t.Errorf("expected %v, got %v", false, true)

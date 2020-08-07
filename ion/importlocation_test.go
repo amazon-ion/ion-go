@@ -38,9 +38,9 @@ var importLocationBoolEqualsTestData = []struct {
 }
 
 func TestImportLocationBoolEqualsOperator(t *testing.T) {
-	for i, _ := range importLocationBoolEqualsTestData {
-		st1 := NewImportLocation(&importLocationBoolEqualsTestData[i].text1, importLocationBoolEqualsTestData[i].sid1)
-		st2 := NewImportLocation(&importLocationBoolEqualsTestData[i].text2, importLocationBoolEqualsTestData[i].sid2)
+	for _, testData := range importLocationBoolEqualsTestData {
+		st1 := NewImportLocation(&testData.text1, testData.sid1)
+		st2 := NewImportLocation(&testData.text2, testData.sid2)
 
 		if !st1.Equal(st2) {
 			t.Errorf("expected %v, got %v", true, false)
@@ -59,9 +59,9 @@ var importLocationBoolNotEqualsTestData = []struct {
 }
 
 func TestImportLocationBoolNotEqualsOperator(t *testing.T) {
-	for i, _ := range importLocationBoolNotEqualsTestData {
-		st1 := NewImportLocation(&importLocationBoolNotEqualsTestData[i].text1, importLocationBoolNotEqualsTestData[i].sid1)
-		st2 := NewImportLocation(&importLocationBoolNotEqualsTestData[i].text2, importLocationBoolNotEqualsTestData[i].sid2)
+	for _, testData := range importLocationBoolNotEqualsTestData {
+		st1 := NewImportLocation(&testData.text1, testData.sid1)
+		st2 := NewImportLocation(&testData.text2, testData.sid2)
 
 		if st1.Equal(st2) {
 			t.Errorf("expected %v, got %v", false, true)
