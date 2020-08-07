@@ -1,15 +1,32 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package ion
 
+// TODO comment
 type ImportLocation struct {
 	importName *string
 	sid        int64
 }
 
-// Create a new ImportLocation struct.
+// NewImportLocation creates an ImportLocation struct.
 func NewImportLocation(importName *string, sid int64) *ImportLocation {
 	return &ImportLocation{importName, sid}
 }
 
-func (iL *ImportLocation) Equal(o *ImportLocation) bool {
-	return *iL.importName == *o.importName && iL.sid == o.sid
+// TODO comment
+func (il *ImportLocation) Equal(o *ImportLocation) bool {
+	return *il.importName == *o.importName && il.sid == o.sid
 }
