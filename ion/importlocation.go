@@ -17,16 +17,19 @@ package ion
 
 // A ImportLocation represents the import location of a SymbolToken.
 type ImportLocation struct {
-	importName *string
-	sid        int64
-}
-
-// NewImportLocation creates an ImportLocation struct.
-func NewImportLocation(importName *string, sid int64) *ImportLocation {
-	return &ImportLocation{importName, sid}
+	ImportName *string
+	SID        int64
 }
 
 // Equal figures out if two import locations are equal for each component.
 func (il *ImportLocation) Equal(o *ImportLocation) bool {
-	return *il.importName == *o.importName && il.sid == o.sid
+	if il.ImportName == nil || o.ImportName == nil {
+		if il.ImportName == nil && o.ImportName == nil && il.SID == o.SID {
+			return true
+		} else {
+			return false
+		}
+	} else {
+		return *il.ImportName == *o.ImportName && il.SID == o.SID
+	}
 }

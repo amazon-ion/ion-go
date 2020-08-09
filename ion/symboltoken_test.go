@@ -17,56 +17,60 @@ package ion
 
 import "testing"
 
+var text1 = "text1"
+var text2 = "text2"
+var text3 = "text3"
+
 func TestNewSymbolTokenSidAndTextUnknown(t *testing.T) {
-	st := NewSymbolToken(nil, UnknownSid, nil)
-	if st.text != nil {
-		t.Errorf("expected %v, got %v", nil, st.text)
+	st := SymbolToken{Text: nil, SID: UnknownSid}
+	if st.Text != nil {
+		t.Errorf("expected %v, got %v", nil, st.Text)
 	}
-	if st.sid != UnknownSid {
-		t.Errorf("expected %v, got %v", UnknownSid, st.sid)
-	}
-	if st.importLocation != nil {
-		t.Errorf("expected %v, got %v", nil, st.importLocation)
+	if st.SID != UnknownSid {
+		t.Errorf("expected %v, got %v", UnknownSid, st.SID)
 	}
 }
 
 var boolEqualsTestData = []struct {
-	text1 string
+	text1 *string
 	sid1  int64
-	text2 string
+	text2 *string
 	sid2  int64
 }{
-	{"text1", 123, "text1", 123},
-	{"text2", 456, "text2", 456},
+	{nil, 456, nil, 456},
+	{&text1, 123, &text1, 123},
+	{&text2, 456, &text2, 456},
 }
 
 func TestBoolEqualsOperator(t *testing.T) {
 	for _, testData := range boolEqualsTestData {
-		st1 := NewSymbolToken(&testData.text1, testData.sid1, nil)
-		st2 := NewSymbolToken(&testData.text2, testData.sid2, nil)
+		st1 := SymbolToken{Text: testData.text1, SID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, SID: testData.sid2}
 
-		if !st1.Equal(st2) {
+		if !st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", true, false)
 		}
 	}
 }
 
 var boolNotEqualsTestData = []struct {
-	text1 string
+	text1 *string
 	sid1  int64
-	text2 string
+	text2 *string
 	sid2  int64
 }{
-	{"text1", 123, "text1", 456},
-	{"text2", 456, "text3", 456},
+	{nil, 123, nil, 456},
+	{nil, 456, &text1, 456},
+	{&text1, 123, &text1, 456},
+	{&text2, 456, &text3, 456},
 }
 
 func TestBoolNotEqualsOperator(t *testing.T) {
 	for _, testData := range boolNotEqualsTestData {
-		st1 := NewSymbolToken(&testData.text1, testData.sid1, nil)
-		st2 := NewSymbolToken(&testData.text2, testData.sid2, nil)
+		st1 := SymbolToken{Text: testData.text1, SID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, SID: testData.sid2}
 
-		if st1.Equal(st2) {
+		if st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", false, true)
 		}
 	}

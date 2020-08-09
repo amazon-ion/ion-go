@@ -17,53 +17,56 @@ package ion
 
 import "testing"
 
-func TestNewImportLocationSidAndTextUnknown(t *testing.T) {
-	st := NewImportLocation(nil, UnknownSid)
-	if st.importName != nil {
-		t.Errorf("expected %v, got %v", nil, st.importName)
+func TestImportLocationSidAndTextUnknown(t *testing.T) {
+	st := ImportLocation{}
+	if st.ImportName != nil {
+		t.Errorf("expected %v, got %v", nil, st.ImportName)
 	}
-	if st.sid != UnknownSid {
-		t.Errorf("expected %v, got %v", UnknownSid, st.sid)
+	if st.SID != 0 {
+		t.Errorf("expected %v, got %v", 0, st.SID)
 	}
 }
 
 var importLocationBoolEqualsTestData = []struct {
-	text1 string
+	text1 *string
 	sid1  int64
-	text2 string
+	text2 *string
 	sid2  int64
 }{
-	{"text1", 123, "text1", 123},
-	{"text2", 456, "text2", 456},
+	{nil, 456, nil, 456},
+	{&text1, 123, &text1, 123},
+	{&text2, 456, &text2, 456},
 }
 
 func TestImportLocationBoolEqualsOperator(t *testing.T) {
 	for _, testData := range importLocationBoolEqualsTestData {
-		st1 := NewImportLocation(&testData.text1, testData.sid1)
-		st2 := NewImportLocation(&testData.text2, testData.sid2)
+		st1 := ImportLocation{testData.text1, testData.sid1}
+		st2 := ImportLocation{testData.text2, testData.sid2}
 
-		if !st1.Equal(st2) {
+		if !st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", true, false)
 		}
 	}
 }
 
 var importLocationBoolNotEqualsTestData = []struct {
-	text1 string
+	text1 *string
 	sid1  int64
-	text2 string
+	text2 *string
 	sid2  int64
 }{
-	{"text1", 123, "text1", 456},
-	{"text2", 456, "text3", 456},
+	{nil, 123, nil, 456},
+	{nil, 456, &text1, 456},
+	{&text1, 123, &text1, 456},
+	{&text2, 456, &text3, 456},
 }
 
 func TestImportLocationBoolNotEqualsOperator(t *testing.T) {
 	for _, testData := range importLocationBoolNotEqualsTestData {
-		st1 := NewImportLocation(&testData.text1, testData.sid1)
-		st2 := NewImportLocation(&testData.text2, testData.sid2)
+		st1 := ImportLocation{testData.text1, testData.sid1}
+		st2 := ImportLocation{testData.text2, testData.sid2}
 
-		if st1.Equal(st2) {
+		if st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", false, true)
 		}
 	}
