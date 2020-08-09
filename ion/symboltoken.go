@@ -15,7 +15,7 @@
 
 package ion
 
-// The default SID which is unknown.
+// UnknownSid is the default SID, which is unknown.
 var UnknownSid int64 = -1
 
 // A SymbolToken providing both the symbol text and the assigned symbol ID.
