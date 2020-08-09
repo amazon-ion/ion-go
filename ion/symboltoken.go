@@ -15,6 +15,7 @@
 
 package ion
 
+// The default SID which is unknown.
 var UnknownSid int64 = -1
 
 // A SymbolToken providing both the symbol text and the assigned symbol ID.
@@ -26,16 +27,17 @@ type SymbolToken struct {
 	importLocation *ImportLocation
 }
 
-// Gets the ID of this symbol token.
+// Sid returns the ID of this symbol token.
 func (st *SymbolToken) Sid() int64 {
 	return st.sid
 }
 
-// Gets the text of this symbol token.
+// Text returns text of this symbol token.
 func (st *SymbolToken) Text() *string {
 	return st.text
 }
 
+// Equal figures out if two symbol tokens are equal for each component.
 func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return *st.text == *o.text && st.sid == o.sid
 }

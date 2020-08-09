@@ -15,7 +15,7 @@
 
 package ion
 
-// TODO comment
+// A ImportLocation represents the import location of a SymbolToken.
 type ImportLocation struct {
 	importName *string
 	sid        int64
@@ -26,7 +26,7 @@ func NewImportLocation(importName *string, sid int64) *ImportLocation {
 	return &ImportLocation{importName, sid}
 }
 
-// TODO comment
+// Equal figures out if two import locations are equal for each component.
 func (il *ImportLocation) Equal(o *ImportLocation) bool {
 	return *il.importName == *o.importName && il.sid == o.sid
 }
