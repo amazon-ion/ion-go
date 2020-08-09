@@ -32,10 +32,8 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	if st.Text == nil || o.Text == nil {
 		if st.Text == nil && o.Text == nil && st.SID == o.SID {
 			return true
-		} else {
-			return false
 		}
-	} else {
-		return *st.Text == *o.Text && st.SID == o.SID
+		return false
 	}
+	return *st.Text == *o.Text && st.SID == o.SID
 }

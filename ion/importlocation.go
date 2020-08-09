@@ -26,10 +26,8 @@ func (il *ImportLocation) Equal(o *ImportLocation) bool {
 	if il.ImportName == nil || o.ImportName == nil {
 		if il.ImportName == nil && o.ImportName == nil && il.SID == o.SID {
 			return true
-		} else {
-			return false
 		}
-	} else {
-		return *il.ImportName == *o.ImportName && il.SID == o.SID
+		return false
 	}
+	return *il.ImportName == *o.ImportName && il.SID == o.SID
 }
