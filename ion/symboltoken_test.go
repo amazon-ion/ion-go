@@ -15,20 +15,14 @@
 
 package ion
 
-import "testing"
+import (
+	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"testing"
+)
 
-var text1 = "text1"
-var text2 = "text2"
-var text3 = "text3"
-
-func TestNewSymbolTokenSidAndTextUnknown(t *testing.T) {
-	st := SymbolToken{Text: nil, SID: UnknownSid}
-	if st.Text != nil {
-		t.Errorf("expected %v, got %v", nil, st.Text)
-	}
-	if st.SID != UnknownSid {
-		t.Errorf("expected %v, got %v", UnknownSid, st.SID)
-	}
+func newString(value string) *string {
+	return &value
 }
 
 var boolEqualsTestData = []struct {
@@ -38,14 +32,14 @@ var boolEqualsTestData = []struct {
 	sid2  int64
 }{
 	{nil, 456, nil, 456},
-	{&text1, 123, &text1, 123},
-	{&text2, 456, &text2, 456},
+	{newString("text1"), 123, newString("text1"), 123},
+	{newString("text2"), 456, newString("text2"), 456},
 }
 
 func TestBoolEqualsOperator(t *testing.T) {
 	for _, testData := range boolEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, SID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, SID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, localSID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, localSID: testData.sid2}
 
 		if !st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", true, false)
@@ -60,18 +54,119 @@ var boolNotEqualsTestData = []struct {
 	sid2  int64
 }{
 	{nil, 123, nil, 456},
-	{nil, 456, &text1, 456},
-	{&text1, 123, &text1, 456},
-	{&text2, 456, &text3, 456},
+	{nil, 456, newString("text1"), 456},
+	{newString("text1"), 123, newString("text1"), 456},
+	{newString("text2"), 456, newString("text3"), 456},
 }
 
 func TestBoolNotEqualsOperator(t *testing.T) {
 	for _, testData := range boolNotEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, SID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, SID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, localSID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, localSID: testData.sid2}
 
 		if st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", false, true)
 		}
 	}
 }
+
+
+// Make sure SymbolToken conforms to Stringer
+var _ fmt.Stringer = &SymbolToken{}
+
+func TestSymbolToken_String(t *testing.T) {
+	cases := []struct {
+		desc     string
+		token    SymbolToken
+		expected string
+	}{
+		{
+			desc: "Text and SID",
+			token: SymbolToken{
+				Text:     newString("hello"),
+				localSID: 10,
+				Source:   nil,
+			},
+			expected: `{"hello" 10 nil}`,
+		},
+		{
+			desc: "nil Text",
+			token: SymbolToken{
+				Text:     nil,
+				localSID: 11,
+				Source:   nil,
+			},
+			expected: `{nil 11 nil}`,
+		},
+		{
+			desc: "Text and SID with Import",
+			token: SymbolToken{
+				Text:     newString("world"),
+				localSID: 12,
+				Source:   newSource("foobar", 3),
+			},
+			expected: `{"world" 12 {"foobar" 3}}`,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.desc, func(t *testing.T) {
+			if diff := cmp.Diff(c.expected, c.token.String()); diff != "" {
+				t.Errorf("Token String() differs (-expected, +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestNewImportSource(t *testing.T) {
+	is := newSource("table", 1)
+	if is.Table != "table" {
+		t.Errorf("expected %v, got %v", "table", is.Table)
+	}
+	if is.SID != 1 {
+		t.Errorf("expected %v, got %v", 1, is.SID)
+	}
+}
+
+var ImportSourceBoolEqualsTestData = []struct {
+	text1 string
+	sid1  int64
+	text2 string
+	sid2  int64
+}{
+	{"text1", 123, "text1", 123},
+	{"text2", 456, "text2", 456},
+}
+
+func TestImportSourceBoolEqualsOperator(t *testing.T) {
+	for _, testData := range ImportSourceBoolEqualsTestData {
+		is1 := newSource(testData.text1, testData.sid1)
+		is2 := newSource(testData.text2, testData.sid2)
+
+		if !is1.Equal(is2) {
+			t.Errorf("expected %v, got %v", true, false)
+		}
+	}
+}
+
+var ImportSourceBoolNotEqualsTestData = []struct {
+	text1 string
+	sid1  int64
+	text2 string
+	sid2  int64
+}{
+	{"text1", 123, "text1", 456},
+	{"text2", 456, "text3", 456},
+}
+
+func TestImportSourceBoolNotEqualsOperator(t *testing.T) {
+	for _, testData := range ImportSourceBoolNotEqualsTestData {
+		is1 := newSource(testData.text1, testData.sid1)
+		is2 := newSource(testData.text2, testData.sid2)
+
+		if is1.Equal(is2) {
+			t.Errorf("expected %v, got %v", false, true)
+		}
+	}
+}
+
