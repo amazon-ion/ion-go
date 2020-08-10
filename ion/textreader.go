@@ -213,7 +213,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return false, &UnexpectedEOFError{t.tok.Pos() - 1}
 
-	case tokenSymbolOperator, tokenDot:
+	case tokenSymbolOperator, tokenDot, tokenDotSymbol:
 		if t.ctx.peek() != ctxInSexp {
 			// Operators can only appear inside an sexp.
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
@@ -237,7 +237,11 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				if err := t.verifyUnquotedSymbol(val, "annotation"); err != nil {
 					return false, err
 				}
+			} else if tok == tokenSymbolOperator {
+				return false, &SyntaxError{
+					"annotations with operator " + val + " should be enclosed in quotes", t.tok.Pos() - 1}
 			}
+
 			t.annotations = append(t.annotations, val)
 			return false, nil
 		}
