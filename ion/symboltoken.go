@@ -18,7 +18,7 @@ package ion
 import "fmt"
 
 const (
-	// The placeholder for when a symbol token has no symbol ID.
+	// SymbolIDUnknown is placeholder for when a symbol token has no symbol ID.
 	SymbolIDUnknown = -1
 )
 
@@ -44,8 +44,7 @@ func (is *ImportSource) Equal(o *ImportSource) bool {
 	return is.Table == o.Table && is.SID == o.SID
 }
 
-// A symbolic token for Ion.
-// Symbol tokens are the values that annotations, field names, and the textual content of Ion symbol values.
+// SymbolToken are the values that annotations, field names, and the textual content of Ion symbol values.
 // The `nil` value for SymbolToken is $0.
 type SymbolToken struct {
 	// The string text of the token or nil if unknown.

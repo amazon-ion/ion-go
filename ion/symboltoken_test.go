@@ -17,8 +17,9 @@ package ion
 
 import (
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func newString(value string) *string {
@@ -69,7 +70,6 @@ func TestBoolNotEqualsOperator(t *testing.T) {
 		}
 	}
 }
-
 
 // Make sure SymbolToken conforms to Stringer
 var _ fmt.Stringer = &SymbolToken{}
@@ -169,4 +169,3 @@ func TestImportSourceBoolNotEqualsOperator(t *testing.T) {
 		}
 	}
 }
-
