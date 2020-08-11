@@ -356,9 +356,9 @@ func (t *tokenizer) ReadValue(tok token) (string, error) {
 	case tokenSymbolOperator, tokenDot:
 		str, err = t.readOperator()
 	case tokenString:
-		str, err = t.readString()
+		str, err = t.readString(false)
 	case tokenLongString:
-		str, err = t.readLongString()
+		str, err = t.readLongString(false)
 	case tokenBinary:
 		str, err = t.readBinary()
 	case tokenHex:
@@ -574,7 +574,7 @@ func (t *tokenizer) readOperator() (string, error) {
 }
 
 // ReadString reads a quoted string.
-func (t *tokenizer) readString() (string, error) {
+func (t *tokenizer) readString(clob bool) (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -605,7 +605,7 @@ func (t *tokenizer) readString() (string, error) {
 				continue
 			}
 
-			r, err := t.readEscapedChar(false)
+			r, err := t.readEscapedChar(clob)
 			if err != nil {
 				return "", err
 			}
@@ -618,7 +618,7 @@ func (t *tokenizer) readString() (string, error) {
 }
 
 // ReadLongString reads a triple-quoted string.
-func (t *tokenizer) readLongString() (string, error) {
+func (t *tokenizer) readLongString(clob bool) (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -659,7 +659,7 @@ func (t *tokenizer) readLongString() (string, error) {
 				continue
 			}
 
-			r, err := t.readEscapedChar(false)
+			r, err := t.readEscapedChar(clob)
 			if err != nil {
 				return "", err
 			}
@@ -712,6 +712,9 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 		}
 		return t.readHexEscapeSeq(8)
 	case 'u':
+		if clob {
+			return 0, t.invalidChar('u')
+		}
 		return t.readHexEscapeSeq(4)
 	case 'x':
 		return t.readHexEscapeSeq(2)
@@ -1054,7 +1057,7 @@ func (t *tokenizer) ReadBlob() (string, error) {
 }
 
 func (t *tokenizer) ReadShortClob() (string, error) {
-	str, err := t.readString()
+	str, err := t.readString(true)
 	if err != nil {
 		return "", err
 	}
@@ -1079,7 +1082,7 @@ func (t *tokenizer) ReadShortClob() (string, error) {
 }
 
 func (t *tokenizer) ReadLongClob() (string, error) {
-	str, err := t.readLongString()
+	str, err := t.readLongString(true)
 	if err != nil {
 		return "", err
 	}
