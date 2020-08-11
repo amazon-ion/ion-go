@@ -39,8 +39,8 @@ var boolEqualsTestData = []struct {
 
 func TestBoolEqualsOperator(t *testing.T) {
 	for _, testData := range boolEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, localSID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, localSID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2}
 
 		if !st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", true, false)
@@ -62,8 +62,8 @@ var boolNotEqualsTestData = []struct {
 
 func TestBoolNotEqualsOperator(t *testing.T) {
 	for _, testData := range boolNotEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, localSID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, localSID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1}
+		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2}
 
 		if st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", false, true)
@@ -84,7 +84,7 @@ func TestSymbolToken_String(t *testing.T) {
 			desc: "Text and SID",
 			token: SymbolToken{
 				Text:     newString("hello"),
-				localSID: 10,
+				LocalSID: 10,
 				Source:   nil,
 			},
 			expected: `{"hello" 10 nil}`,
@@ -93,7 +93,7 @@ func TestSymbolToken_String(t *testing.T) {
 			desc: "nil Text",
 			token: SymbolToken{
 				Text:     nil,
-				localSID: 11,
+				LocalSID: 11,
 				Source:   nil,
 			},
 			expected: `{nil 11 nil}`,
@@ -102,7 +102,7 @@ func TestSymbolToken_String(t *testing.T) {
 			desc: "Text and SID with Import",
 			token: SymbolToken{
 				Text:     newString("world"),
-				localSID: 12,
+				LocalSID: 12,
 				Source:   newSource("foobar", 3),
 			},
 			expected: `{"world" 12 {"foobar" 3}}`,

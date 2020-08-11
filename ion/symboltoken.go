@@ -50,7 +50,7 @@ type SymbolToken struct {
 	// The string text of the token or nil if unknown.
 	Text *string
 	// Local symbol ID associated with the token.
-	localSID int64
+	LocalSID int64
 	// The shared symbol table location that this token came from, or nil if undefined.
 	Source *ImportSource
 }
@@ -59,7 +59,7 @@ var (
 	// symbolTokenUndefined is the sentinel for invalid tokens.
 	// The `nil` value is actually $0 which is a defined token.
 	symbolTokenUndefined = SymbolToken{
-		localSID: SymbolIDUnknown,
+		LocalSID: SymbolIDUnknown,
 	}
 )
 
@@ -74,16 +74,16 @@ func (st *SymbolToken) String() string {
 		source = fmt.Sprintf("{%q %d}", st.Source.Table, st.Source.SID)
 	}
 
-	return fmt.Sprintf("{%s %d %s}", text, st.localSID, source)
+	return fmt.Sprintf("{%s %d %s}", text, st.LocalSID, source)
 }
 
 // Equal figures out if two symbol tokens are equal for each component.
 func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	if st.Text == nil || o.Text == nil {
-		if st.Text == nil && o.Text == nil && st.localSID == o.localSID {
+		if st.Text == nil && o.Text == nil && st.LocalSID == o.LocalSID {
 			return true
 		}
 		return false
 	}
-	return *st.Text == *o.Text && st.localSID == o.localSID
+	return *st.Text == *o.Text && st.LocalSID == o.LocalSID
 }
