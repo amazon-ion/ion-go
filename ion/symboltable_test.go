@@ -35,7 +35,6 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 2, "def")
 	testFindByID(t, st, 4, "null")
 	testFindByID(t, st, 7, "abcd")
-
 	testFindByID(t, st, 8, "")
 
 	testFindSymbolToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: -1})
