@@ -1,18 +1,3 @@
-/*
- * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
 package ion
 
 import (
@@ -39,6 +24,8 @@ func TestSharedSymbolTable(t *testing.T) {
 	if st.MaxID() != 6 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
+	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: -1})
+	testInternToken(t, st, "abcd", SymbolToken{Text: newString("abcd"), LocalSID: int64(st.MaxID() + 1)})
 
 	testFindByName(t, st, "def", 2)
 	testFindByName(t, st, "null", 4)
@@ -47,9 +34,16 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 0, "")
 	testFindByID(t, st, 2, "def")
 	testFindByID(t, st, 4, "null")
-	testFindByID(t, st, 7, "")
+	testFindByID(t, st, 7, "abcd")
 
-	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
+	testFindByID(t, st, 8, "")
+
+	testFindSymbolToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: -1})
+	testFindSymbolToken(t, st, "def", SymbolToken{Text: newString("def"), LocalSID: -1})
+	testFindSymbolToken(t, st, "foo'bar", SymbolToken{Text: newString("foo'bar"), LocalSID: -1})
+
+
+	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi","abcd"]}`)
 }
 
 func TestLocalSymbolTable(t *testing.T) {
@@ -58,6 +52,9 @@ func TestLocalSymbolTable(t *testing.T) {
 	if st.MaxID() != 11 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
+
+	testInternToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
+	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: int64(st.MaxID() + 1)})
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)
@@ -68,9 +65,14 @@ func TestLocalSymbolTable(t *testing.T) {
 	testFindByID(t, st, 1, "$ion")
 	testFindByID(t, st, 10, "foo")
 	testFindByID(t, st, 11, "bar")
-	testFindByID(t, st, 12, "")
+	testFindByID(t, st, 12, "abc")
+	testFindByID(t, st, 13, "")
 
-	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar"]}`)
+	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
+	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
+	testFindSymbolToken(t, st, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: -1})
+
+	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar","abc"]}`)
 }
 
 func TestLocalSymbolTableWithImports(t *testing.T) {
@@ -89,6 +91,9 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
 
+	testInternToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
+	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: int64(st.MaxID() + 1)})
+
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "$ion_shared_symbol_table", 9)
 	testFindByName(t, st, "foo", 10)
@@ -104,9 +109,15 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 11, "bar")
 	testFindByID(t, st, 12, "foo2")
 	testFindByID(t, st, 13, "bar2")
-	testFindByID(t, st, 14, "")
+	testFindByID(t, st, 14, "abc")
+	testFindByID(t, st, 15, "")
 
-	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
+	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
+	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
+	testFindSymbolToken(t, st, "foo2", SymbolToken{Text: newString("foo2"), LocalSID: -1})
+	testFindSymbolToken(t, st, "bar2", SymbolToken{Text: newString("bar2"), LocalSID: -1})
+
+	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2","abc"]}`)
 }
 
 func TestSymbolTableBuilder(t *testing.T) {
@@ -182,6 +193,29 @@ func testFindByID(t *testing.T, st SymbolTable, id uint64, expected string) {
 			if actual != expected {
 				t.Errorf("expected %v, got %v", expected, actual)
 			}
+		}
+	})
+}
+
+func testFindSymbolToken(t *testing.T, st SymbolTable, sym string, expected SymbolToken) {
+	t.Run("Find("+sym+")", func(t *testing.T) {
+		actual, ok := st.Find(sym)
+
+		if !ok {
+			t.Fatal("unexpectedly not found")
+		}
+		if !actual.Equal(&expected) {
+			t.Errorf("expected %v, got %v", expected, actual)
+		}
+	})
+}
+
+func testInternToken(t *testing.T, st SymbolTable, sym string, expected SymbolToken) {
+	t.Run("InternToken("+sym+")", func(t *testing.T) {
+		actual := st.InternToken(sym)
+
+		if !actual.Equal(&expected) {
+			t.Errorf("expected %v, got %v", expected, actual)
 		}
 	})
 }
