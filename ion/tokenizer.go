@@ -583,7 +583,7 @@ func (t *tokenizer) readString(clob bool) (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF, and new lines are not allowed in short string
-		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) || isClobWithInvalidChar(clob, c) {
 			return "", t.invalidChar(c)
 		}
 
@@ -627,7 +627,7 @@ func (t *tokenizer) readLongString(clob bool) (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF
-		if c == -1 || isProhibitedControlChar(c) {
+		if c == -1 || isProhibitedControlChar(c) || isClobWithInvalidChar(clob, c) {
 			return "", t.invalidChar(c)
 		}
 
@@ -1381,4 +1381,9 @@ func isStringWhitespace(c int) bool {
 func isNewLineChar(c int) bool {
 	return c == 0x0A || //new line
 		c == 0x0D //carriage return
+}
+
+func isClobWithInvalidChar(clob bool, c int) bool {
+	// The string in clob may only contain 7-bit ASCII characters.
+	return clob && c > 0x7f
 }
