@@ -109,8 +109,6 @@ var malformedIonsSkipList = []string{
 	"annotationNested.10n",
 	"annotationSymbolIDUnmapped.10n",
 	"annotationSymbolIDUnmapped.ion",
-	"clobWithLongLiteralBlockCommentAtEnd.ion",
-	"clobWithLongLiteralCommentsInMiddle.ion",
 	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",

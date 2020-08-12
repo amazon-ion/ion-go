@@ -634,7 +634,8 @@ func (t *tokenizer) readLongString(clob bool) (string, error) {
 		switch c {
 		case '\'':
 			startPosition := t.pos
-			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
+			handler := getLongStringCommentsHandler(t, clob)
+			ok, err := t.skipEndOfLongString(handler)
 			if err != nil {
 				return "", err
 			}
@@ -1386,4 +1387,11 @@ func isNewLineChar(c int) bool {
 func isClobWithInvalidChar(clob bool, c int) bool {
 	// The string in clob may only contain 7-bit ASCII characters.
 	return clob && c > 0x7f
+}
+
+func getLongStringCommentsHandler(t *tokenizer, clob bool) commentHandler {
+	if clob {
+		return t.ensureNoCommentsHandler
+	}
+	return t.skipCommentsHandler
 }
