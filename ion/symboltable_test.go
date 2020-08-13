@@ -39,6 +39,7 @@ func TestSharedSymbolTable(t *testing.T) {
 	if st.MaxID() != 6 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
+
 	testFindByName(t, st, "def", 2)
 	testFindByName(t, st, "null", 4)
 	testFindByName(t, st, "bogus", 0)
@@ -105,7 +106,7 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 13, "bar2")
 	testFindByID(t, st, 14, "")
 
-	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2","abc"]}`)
+	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
 }
 
 func TestSymbolTableBuilder(t *testing.T) {
