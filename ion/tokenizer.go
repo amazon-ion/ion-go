@@ -1389,7 +1389,7 @@ func isNewLineChar(c int) bool {
 
 // isASCII returns true if c is a 7-bit ASCII character.
 func isASCII(c int) bool {
-	return c > 0x7f
+	return c < 0x80
 }
 
 func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
