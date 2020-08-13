@@ -229,6 +229,10 @@ func (t *tokenizer) Next() error {
 			t.unread(c)
 			return t.ok(tokenSymbolOperator, true)
 		}
+		if c2 == ' ' || isIdentifierPart(c2) {
+			t.unread(c)
+		}
+
 		return t.ok(tokenDot, false)
 
 	case c == '\'':
