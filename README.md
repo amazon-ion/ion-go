@@ -4,7 +4,7 @@
 
 Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
 
-***This package is considered beta. While the API is relatively stable it is still subject to change***
+***This package is consider beta. While the API is relatively stable it is still subject to change***
 
 This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.
 The Ion team greatly appreciates David's contributions to the Ion community.
