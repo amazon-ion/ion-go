@@ -213,7 +213,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		return false, &UnexpectedEOFError{t.tok.Pos() - 1}
 
-	case tokenSymbolOperator, tokenDot, tokenDotSymbol:
+	case tokenSymbolOperator, tokenDot:
 		if t.ctx.peek() != ctxInSexp {
 			// Operators can only appear inside an sexp.
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}

@@ -45,7 +45,6 @@ const (
 	tokenLongString // '''[^']+'''
 
 	tokenDot         // .
-	tokenDotSymbol   // . (In s-expressions . is treated as a symbol)
 	tokenComma       // ,
 	tokenColon       // :
 	tokenDoubleColon // ::
@@ -90,7 +89,7 @@ func (t token) String() string {
 	case tokenLongString:
 		return "<long-string>"
 
-	case tokenDot, tokenDotSymbol:
+	case tokenDot:
 		return "."
 	case tokenComma:
 		return ","
@@ -232,7 +231,6 @@ func (t *tokenizer) Next() error {
 		}
 		if c2 == ' ' || isIdentifierPart(c2) {
 			t.unread(c)
-			return t.ok(tokenDotSymbol, true)
 		}
 
 		return t.ok(tokenDot, false)
@@ -361,8 +359,6 @@ func (t *tokenizer) ReadValue(tok token) (string, error) {
 		str, err = t.readQuotedSymbol()
 	case tokenSymbolOperator, tokenDot:
 		str, err = t.readOperator()
-	case tokenDotSymbol:
-		str, err = t.readDotSymbol()
 	case tokenString:
 		str, err = t.readString()
 	case tokenLongString:
@@ -513,21 +509,6 @@ func (t *tokenizer) readSymbol() (string, error) {
 	}
 
 	return ret.String(), nil
-}
-
-// ReadDotSymbol reads a dot symbol value.
-func (t *tokenizer) readDotSymbol() (string, error) {
-	c, err := t.read()
-	if err != nil {
-		return "", err
-	}
-
-	if c != '.' {
-		t.unread(c)
-		return "", nil
-	}
-
-	return ".", nil
 }
 
 // ReadQuotedSymbol reads a quoted symbol.
