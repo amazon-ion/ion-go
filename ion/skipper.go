@@ -807,7 +807,7 @@ func stopForCommentsHandler() (bool, error) {
 // ensureNoCommentsHandler is a commentHandler that returns an
 // error if any comments are found, else no error is returned.
 func (t *tokenizer) ensureNoCommentsHandler() (bool, error) {
-	return false, &UnexpectedTokenError{"No Comments are allowed", t.Pos() - 1}
+	return false, &UnexpectedTokenError{"comments are not allowed within a clob", t.Pos() - 1}
 }
 
 // SkipCommentsHandler is a commentHandler that skips over any
