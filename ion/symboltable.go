@@ -28,8 +28,7 @@ type SymbolTable interface {
 	Symbols() []string
 	// MaxID returns the maximum ID this symbol table defines.
 	MaxID() uint64
-	// Find finds the the SymbolToken by its name.
-	Find(symbol string) (SymbolToken, bool)
+
 	// FindByName finds the ID of a symbol by its name.
 	FindByName(symbol string) (uint64, bool)
 	// FindByID finds the name of a symbol given its ID.
@@ -38,8 +37,6 @@ type SymbolTable interface {
 	WriteTo(w Writer) error
 	// String returns an ion text representation of the symbol table.
 	String() string
-	// InternToken adds a new symbol to this symbol table, or finds an existing definition of it.
-	InternToken(symbol string) SymbolToken
 }
 
 // A SharedSymbolTable is distributed out-of-band and referenced from
@@ -129,33 +126,6 @@ func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
 		index:   index,
 		maxID:   maxID,
 	}
-}
-
-func (s *sst) InternToken(sym string) SymbolToken {
-	tok, ok := s.Find(sym)
-	if ok {
-		return tok
-	}
-
-	s.maxID += 1
-	s.symbols = append(s.symbols, sym)
-	s.index[sym] = s.MaxID()
-
-	return SymbolToken{&sym, int64(s.MaxID()), newSource(s.Name(), int64(s.MaxID()))}
-}
-
-func (s *sst) Find(sym string) (SymbolToken, bool) {
-	id, ok := s.FindByName(sym)
-	if !ok {
-		return symbolTokenUndefined, false
-	}
-
-	text, ok := s.FindByID(id)
-	if !ok {
-		return symbolTokenUndefined, false
-	}
-
-	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}, true
 }
 
 func (s *sst) FindByName(sym string) (uint64, bool) {
@@ -273,14 +243,6 @@ func (s *bogusSST) Adjust(maxID uint64) SharedSymbolTable {
 	}
 }
 
-func (s *bogusSST) InternToken(sym string) SymbolToken {
-	return symbolTokenUndefined
-}
-
-func (s *bogusSST) Find(sym string) (SymbolToken, bool) {
-	return symbolTokenUndefined, false
-}
-
 func (s *bogusSST) FindByName(sym string) (uint64, bool) {
 	return 0, false
 }
@@ -354,35 +316,6 @@ func (t *lst) Symbols() []string {
 
 func (t *lst) MaxID() uint64 {
 	return t.maxImportID + uint64(len(t.symbols))
-}
-
-func (t *lst) InternToken(sym string) SymbolToken {
-	tok, ok := t.Find(sym)
-	if ok {
-		return tok
-	}
-
-	t.symbols = append(t.symbols, sym)
-	t.index[sym] = t.MaxID()
-	return SymbolToken{Text: &sym, LocalSID: int64(t.MaxID())}
-}
-
-func (t *lst) Find(s string) (SymbolToken, bool) {
-	// Check import
-	for _, imp := range t.imports {
-		symbolToken, ok := imp.Find(s)
-		if ok {
-			return symbolToken, true
-		}
-	}
-
-	// Check local
-	_, ok := t.index[s]
-	if ok {
-		return SymbolToken{Text: &s, LocalSID: SymbolIDUnknown}, true
-	}
-
-	return symbolTokenUndefined, false
 }
 
 func (t *lst) FindByName(s string) (uint64, bool) {
