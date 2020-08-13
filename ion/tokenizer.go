@@ -616,7 +616,7 @@ func (t *tokenizer) readString(isClob bool) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			ret.WriteRune(r)
+			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
@@ -671,7 +671,7 @@ func (t *tokenizer) readLongString(isClob bool) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			ret.WriteRune(r)
+			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
@@ -1401,4 +1401,12 @@ func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
 		return t.ensureNoCommentsHandler
 	}
 	return t.skipCommentsHandler
+}
+
+func writeCharToStringBuilder(c rune, sb *strings.Builder, isClob bool) {
+	if isClob {
+		sb.WriteByte(byte(c))
+	} else {
+		sb.WriteRune(c)
+	}
 }

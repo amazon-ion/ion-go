@@ -72,8 +72,6 @@ var readGoodFilesSkipList = []string{
 }
 
 var binaryRoundTripSkipList = []string{
-	"clobWithNonAsciiCharacter.10n",
-	"clobs.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"T7-large.10n",
 	"T9.10n",
