@@ -239,7 +239,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				}
 			} else if tok == tokenSymbolOperator {
 				return false, &SyntaxError{
-					"Annotations that include a '" + val + "' must be enclosed in quotes.", t.tok.Pos() - 1}
+					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
 
 			t.annotations = append(t.annotations, val)
