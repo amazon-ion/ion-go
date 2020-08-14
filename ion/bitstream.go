@@ -468,7 +468,7 @@ func (b *bitstream) ReadInt() (interface{}, error) {
 
 	// Zero is always stored as positive; negative zero is illegal.
 	if isZero && b.code == bitcodeNegInt {
-		return 0, &SyntaxError{"Integer zero cannot be negative", b.pos - b.len}
+		return 0, &SyntaxError{"integer zero cannot be negative", b.pos - b.len}
 	}
 
 	b.state = b.stateAfterValue()
@@ -556,7 +556,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 		// component must also have a minute component. Hence, length cannot be zero at this point.
 		if i == 3 {
 			if length == 0 {
-				return Timestamp{}, &SyntaxError{"Invalid timestamp - Hour cannot be present without minute", b.pos}
+				return Timestamp{}, &SyntaxError{"invalid timestamp - Hour cannot be present without minute", b.pos}
 			}
 		} else {
 			// Update precision as we read the timestamp.
@@ -712,7 +712,7 @@ func (b *bitstream) ReadString() (string, error) {
 	if utf8.Valid(bs) {
 		return string(bs), nil
 	}
-	return "", &UnexpectedTokenError{"String value contains non-UTF-8 runes", b.pos}
+	return "", &UnexpectedTokenError{"string value contains non-UTF-8 runes", b.pos}
 }
 
 // ReadBytes reads a blob or clob value.
