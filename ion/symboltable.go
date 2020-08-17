@@ -22,19 +22,25 @@ import (
 // A SymbolTable maps binary-representation symbol IDs to
 // text-representation strings and vice versa.
 type SymbolTable interface {
+
 	// Imports returns the symbol tables this table imports.
 	Imports() []SharedSymbolTable
+
 	// Symbols returns the symbols this symbol table defines.
 	Symbols() []string
+
 	// MaxID returns the maximum ID this symbol table defines.
 	MaxID() uint64
 
 	// FindByName finds the ID of a symbol by its name.
 	FindByName(symbol string) (uint64, bool)
+
 	// FindByID finds the name of a symbol given its ID.
 	FindByID(id uint64) (string, bool)
+
 	// WriteTo serializes the symbol table to an ion.Writer.
 	WriteTo(w Writer) error
+
 	// String returns an ion text representation of the symbol table.
 	String() string
 }
@@ -46,8 +52,10 @@ type SharedSymbolTable interface {
 
 	// Name returns the name of this shared symbol table.
 	Name() string
+
 	// Version returns the version of this shared symbol table.
 	Version() int
+
 	// Adjust returns a new shared symbol table limited or extended to the given max ID.
 	Adjust(maxID uint64) SharedSymbolTable
 }
