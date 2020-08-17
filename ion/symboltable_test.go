@@ -39,8 +39,6 @@ func TestSharedSymbolTable(t *testing.T) {
 	if st.MaxID() != 6 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
-	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: -1})
-	testInternToken(t, st, "abcd", SymbolToken{Text: newString("abcd"), LocalSID: int64(st.MaxID() + 1)})
 
 	testFindByName(t, st, "def", 2)
 	testFindByName(t, st, "null", 4)
@@ -49,15 +47,13 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 0, "")
 	testFindByID(t, st, 2, "def")
 	testFindByID(t, st, 4, "null")
-	testFindByID(t, st, 7, "abcd")
-	testFindByID(t, st, 8, "")
+	testFindByID(t, st, 7, "")
 
-	testFindSymbolToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: -1})
 	testFindSymbolToken(t, st, "def", SymbolToken{Text: newString("def"), LocalSID: -1})
 	testFindSymbolToken(t, st, "foo'bar", SymbolToken{Text: newString("foo'bar"), LocalSID: -1})
 
 
-	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi","abcd"]}`)
+	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
 }
 
 func TestLocalSymbolTable(t *testing.T) {
@@ -66,9 +62,6 @@ func TestLocalSymbolTable(t *testing.T) {
 	if st.MaxID() != 11 {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
-
-	testInternToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
-	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: int64(st.MaxID() + 1)})
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)
@@ -79,14 +72,13 @@ func TestLocalSymbolTable(t *testing.T) {
 	testFindByID(t, st, 1, "$ion")
 	testFindByID(t, st, 10, "foo")
 	testFindByID(t, st, 11, "bar")
-	testFindByID(t, st, 12, "abc")
-	testFindByID(t, st, 13, "")
+	testFindByID(t, st, 12, "")
 
 	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
 	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
 	testFindSymbolToken(t, st, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: -1})
 
-	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar","abc"]}`)
+	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar"]}`)
 }
 
 func TestLocalSymbolTableWithImports(t *testing.T) {
@@ -105,9 +97,6 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 		t.Errorf("wrong maxid: %v", st.MaxID())
 	}
 
-	testInternToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
-	testInternToken(t, st, "abc", SymbolToken{Text: newString("abc"), LocalSID: int64(st.MaxID() + 1)})
-
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "$ion_shared_symbol_table", 9)
 	testFindByName(t, st, "foo", 10)
@@ -123,15 +112,14 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 11, "bar")
 	testFindByID(t, st, 12, "foo2")
 	testFindByID(t, st, 13, "bar2")
-	testFindByID(t, st, 14, "abc")
-	testFindByID(t, st, 15, "")
+	testFindByID(t, st, 14, "")
 
 	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
 	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
 	testFindSymbolToken(t, st, "foo2", SymbolToken{Text: newString("foo2"), LocalSID: -1})
 	testFindSymbolToken(t, st, "bar2", SymbolToken{Text: newString("bar2"), LocalSID: -1})
 
-	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2","abc"]}`)
+	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
 }
 
 func TestSymbolTableBuilder(t *testing.T) {
@@ -213,20 +201,11 @@ func testFindByID(t *testing.T, st SymbolTable, id uint64, expected string) {
 
 func testFindSymbolToken(t *testing.T, st SymbolTable, sym string, expected SymbolToken) {
 	t.Run("Find("+sym+")", func(t *testing.T) {
-		actual, ok := st.Find(sym)
+		actual := st.Find(sym)
 
-		if !ok {
+		if actual == nil {
 			t.Fatal("unexpectedly not found")
 		}
-		if !actual.Equal(&expected) {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
-	})
-}
-
-func testInternToken(t *testing.T, st SymbolTable, sym string, expected SymbolToken) {
-	t.Run("InternToken("+sym+")", func(t *testing.T) {
-		actual := st.InternToken(sym)
 
 		if !actual.Equal(&expected) {
 			t.Errorf("expected %v, got %v", expected, actual)
