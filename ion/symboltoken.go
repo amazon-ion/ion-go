@@ -29,7 +29,7 @@ type ImportSource struct {
 	Table string
 
 	// The ID of the interned symbol text within the shared SymbolTable.
-	// This must be greater than 1.
+	// This must be greater or equal to 1.
 	SID int64
 }
 
