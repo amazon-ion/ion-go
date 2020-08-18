@@ -1403,6 +1403,10 @@ func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
 	return t.skipCommentsHandler
 }
 
+// If isClob is false, we write the UTF-8 encoding of rune, into the string builder.
+// But when isClob is true, we have a text clob. In this case, we write the bytes of
+// current rune. Clob cannot hold non 7-bit ASCII characters and to avoid truncating
+// a rune beyond 127, we store the bytes in the string builder.
 func writeCharToStringBuilder(c rune, sb *strings.Builder, isClob bool) {
 	if isClob {
 		sb.WriteByte(byte(c))
