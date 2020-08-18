@@ -79,13 +79,20 @@ func (st *SymbolToken) String() string {
 	return fmt.Sprintf("{%s %d %s}", text, st.LocalSID, source)
 }
 
-// Equal figures out if two symbol tokens are equal for each component.
+// Equal figures out if two symbol tokens are equivalent.
 func (st *SymbolToken) Equal(o *SymbolToken) bool {
-	if st.Text == nil || o.Text == nil {
-		if st.Text == nil && o.Text == nil && st.LocalSID == o.LocalSID {
+	if st.Text == nil && o.Text == nil {
+		if st.Source == nil && o.Source == nil {
 			return true
+		}
+		if st.Source != nil && o.Source != nil {
+			return st.Source.Equal(o.Source)
 		}
 		return false
 	}
-	return *st.Text == *o.Text && st.LocalSID == o.LocalSID
+
+	if st.Text != nil && o.Text != nil {
+		return *st.Text == *o.Text
+	}
+	return false
 }

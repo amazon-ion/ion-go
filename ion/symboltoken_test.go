@@ -27,20 +27,27 @@ func newString(value string) *string {
 }
 
 var boolEqualsTestData = []struct {
-	text1 *string
-	sid1  int64
-	text2 *string
-	sid2  int64
+	text1   *string
+	sid1    int64
+	source1 *ImportSource
+	text2   *string
+	sid2    int64
+	source2 *ImportSource
 }{
-	{nil, 456, nil, 456},
-	{newString("text1"), 123, newString("text1"), 123},
-	{newString("text2"), 456, newString("text2"), 456},
+	{nil, 123, nil,
+		nil, 123, nil},
+	{nil, 123, newSource("table", 1),
+		nil, 123, newSource("table", 1)},
+	{newString("text1"), 123, nil,
+		newString("text1"), 123, nil},
+	{newString("text2"), 123, newSource("table", 1),
+		newString("text2"), 123, newSource("table", 1)},
 }
 
 func TestBoolEqualsOperator(t *testing.T) {
 	for _, testData := range boolEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1, Source: testData.source1}
+		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2, Source: testData.source2}
 
 		if !st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", true, false)
@@ -49,21 +56,29 @@ func TestBoolEqualsOperator(t *testing.T) {
 }
 
 var boolNotEqualsTestData = []struct {
-	text1 *string
-	sid1  int64
-	text2 *string
-	sid2  int64
+	text1   *string
+	sid1    int64
+	source1 *ImportSource
+	text2   *string
+	sid2    int64
+	source2 *ImportSource
 }{
-	{nil, 123, nil, 456},
-	{nil, 456, newString("text1"), 456},
-	{newString("text1"), 123, newString("text1"), 456},
-	{newString("text2"), 456, newString("text3"), 456},
+	{nil, 123, newSource("table", 1),
+		nil, 123, nil},
+	{nil, 123, nil,
+		newString("text1"), 123, nil},
+	{nil, 123, newSource("table", 1),
+		nil, 123, newSource("table2", 1)},
+	{nil, 123, newSource("table", 1),
+		nil, 123, newSource("table", 2)},
+	{newString("text2"), 123, nil,
+		newString("text3"), 123, nil},
 }
 
 func TestBoolNotEqualsOperator(t *testing.T) {
 	for _, testData := range boolNotEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1}
-		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2}
+		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1, Source: testData.source1}
+		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2, Source: testData.source2}
 
 		if st1.Equal(&st2) {
 			t.Errorf("expected %v, got %v", false, true)
