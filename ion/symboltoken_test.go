@@ -184,3 +184,53 @@ func TestImportSourceBoolNotEqualsOperator(t *testing.T) {
 		}
 	}
 }
+
+func TestNewSymbolTokenThatAlreadyExistInSymbolTable(t *testing.T) {
+	expectedSymbolToken := SymbolToken{Text: newString("$ion"), LocalSID: SymbolIDUnknown}
+
+	actualSymbolToken := NewSymbolToken(V1SystemSymbolTable, "$ion")
+
+	if !actualSymbolToken.Equal(&expectedSymbolToken) {
+		t.Errorf("expected %v, got %v", expectedSymbolToken, actualSymbolToken)
+	}
+}
+
+func TestNewSymbolTokenThatDoesNotExistInSymbolTable(t *testing.T) {
+	expectedSymbolToken := SymbolToken{Text: newString("newToken"), LocalSID: SymbolIDUnknown}
+
+	actualSymbolToken := NewSymbolToken(V1SystemSymbolTable, "newToken")
+
+	if !actualSymbolToken.Equal(&expectedSymbolToken) {
+		t.Errorf("expected %v, got %v", expectedSymbolToken, actualSymbolToken)
+	}
+}
+
+func TestNewSymbolTokensThatAlreadyExistInSymbolTable(t *testing.T) {
+	expectedSymbolTokens := []SymbolToken{
+		{Text: newString("$ion"), LocalSID: SymbolIDUnknown},
+		{Text: newString("$ion_1_0"), LocalSID: SymbolIDUnknown}}
+
+	actualSymbolTokens := NewSymbolTokens(V1SystemSymbolTable, []string{"$ion", "$ion_1_0"})
+
+	for index, actualSymbolToken := range actualSymbolTokens {
+		if !actualSymbolToken.Equal(&expectedSymbolTokens[index]) {
+			t.Errorf("expected %v, got %v", &expectedSymbolTokens[index], actualSymbolToken)
+
+		}
+	}
+}
+
+func TestNewSymbolTokensThatDoNotExistInSymbolTable(t *testing.T) {
+	expectedSymbolTokens := []SymbolToken{
+		{Text: newString("newToken1"), LocalSID: SymbolIDUnknown},
+		{Text: newString("newToken2"), LocalSID: SymbolIDUnknown}}
+
+	actualSymbolTokens := NewSymbolTokens(V1SystemSymbolTable, []string{"newToken1", "newToken2"})
+
+	for index, actualSymbolToken := range actualSymbolTokens {
+		if !actualSymbolToken.Equal(&expectedSymbolTokens[index]) {
+			t.Errorf("expected %v, got %v", &expectedSymbolTokens[index], actualSymbolToken)
+
+		}
+	}
+}

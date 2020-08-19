@@ -96,3 +96,23 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	}
 	return false
 }
+
+// NewSymbolToken will check and return a symbol token if it exists in a symbol table,
+// otherwise return a new symbol token.
+func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {
+	token := symbolTable.Find(text)
+	if token == nil {
+		token = &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+	}
+	return *token
+}
+
+// NewSymbolTokens will check and return a list of symbol tokens if they exists in a symbol table,
+// otherwise return a list of new symbol tokens.
+func NewSymbolTokens(symbolTable SymbolTable, textVals []string) []SymbolToken {
+	var tokens []SymbolToken
+	for _, text := range textVals {
+		tokens = append(tokens, NewSymbolToken(symbolTable, text))
+	}
+	return tokens
+}

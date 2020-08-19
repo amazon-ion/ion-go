@@ -52,7 +52,6 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindSymbolToken(t, st, "def", SymbolToken{Text: newString("def"), LocalSID: -1})
 	testFindSymbolToken(t, st, "foo'bar", SymbolToken{Text: newString("foo'bar"), LocalSID: -1})
 
-
 	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
 }
 
