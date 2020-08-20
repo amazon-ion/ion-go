@@ -28,7 +28,7 @@ type SymbolTable interface {
 	Symbols() []string
 	// MaxID returns the maximum ID this symbol table defines.
 	MaxID() uint64
-	// Find finds the the SymbolToken by its name.
+	// Find finds the SymbolToken by its name.
 	Find(symbol string) *SymbolToken
 	// FindByName finds the ID of a symbol by its name.
 	FindByName(symbol string) (uint64, bool)

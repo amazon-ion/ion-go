@@ -26,62 +26,39 @@ func newString(value string) *string {
 	return &value
 }
 
-var boolEqualsTestData = []struct {
+var symbolTokenEqualsTestData = []struct {
 	text1   *string
 	sid1    int64
 	source1 *ImportSource
 	text2   *string
 	sid2    int64
 	source2 *ImportSource
+	equals  bool
 }{
-	{nil, 123, nil,
-		nil, 123, nil},
-	{nil, 123, newSource("table", 1),
-		nil, 123, newSource("table", 1)},
-	{newString("text1"), 123, nil,
-		newString("text1"), 123, nil},
-	{newString("text2"), 123, newSource("table", 1),
-		newString("text2"), 123, newSource("table", 1)},
+	{nil, 123, nil, nil, 123, nil, true},
+	{nil, 123, newSource("table", 1), nil, 456, newSource("table", 1), true},
+	{newString("text1"), 123, nil, newString("text1"), 123, nil, true},
+	{newString("text2"), 123, newSource("table", 1), newString("text2"), 456, newSource("table", 1), true},
+	{nil, 123, newSource("table", 1), nil, 123, nil, false},
+	{nil, 123, nil, newString("text1"), 456, nil, false},
+	{nil, 123, newSource("table", 1), nil, 123, newSource("table2", 1), false},
+	{nil, 123, newSource("table", 1), nil, 456, newSource("table", 2), false},
+	{newString("text2"), 123, nil, newString("text3"), 123, nil, false},
 }
 
-func TestBoolEqualsOperator(t *testing.T) {
-	for _, testData := range boolEqualsTestData {
+func TestSymbolTokenEqualsOperator(t *testing.T) {
+	for _, testData := range symbolTokenEqualsTestData {
 		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1, Source: testData.source1}
 		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2, Source: testData.source2}
 
-		if !st1.Equal(&st2) {
-			t.Errorf("expected %v, got %v", true, false)
-		}
-	}
-}
-
-var boolNotEqualsTestData = []struct {
-	text1   *string
-	sid1    int64
-	source1 *ImportSource
-	text2   *string
-	sid2    int64
-	source2 *ImportSource
-}{
-	{nil, 123, newSource("table", 1),
-		nil, 123, nil},
-	{nil, 123, nil,
-		newString("text1"), 123, nil},
-	{nil, 123, newSource("table", 1),
-		nil, 123, newSource("table2", 1)},
-	{nil, 123, newSource("table", 1),
-		nil, 123, newSource("table", 2)},
-	{newString("text2"), 123, nil,
-		newString("text3"), 123, nil},
-}
-
-func TestBoolNotEqualsOperator(t *testing.T) {
-	for _, testData := range boolNotEqualsTestData {
-		st1 := SymbolToken{Text: testData.text1, LocalSID: testData.sid1, Source: testData.source1}
-		st2 := SymbolToken{Text: testData.text2, LocalSID: testData.sid2, Source: testData.source2}
-
-		if st1.Equal(&st2) {
-			t.Errorf("expected %v, got %v", false, true)
+		if testData.equals {
+			if !st1.Equal(&st2) {
+				t.Errorf("expected %v, got %v", true, false)
+			}
+		} else {
+			if st1.Equal(&st2) {
+				t.Errorf("expected %v, got %v", true, false)
+			}
 		}
 	}
 }
@@ -143,44 +120,32 @@ func TestNewImportSource(t *testing.T) {
 	}
 }
 
-var ImportSourceBoolEqualsTestData = []struct {
-	text1 string
-	sid1  int64
-	text2 string
-	sid2  int64
+var importSourceEqualsTestData = []struct {
+	text1  string
+	sid1   int64
+	text2  string
+	sid2   int64
+	equals bool
 }{
-	{"text1", 123, "text1", 123},
-	{"text2", 456, "text2", 456},
+	{"text1", 123, "text1", 123, true},
+	{"text2", 456, "text2", 456, true},
+	{"text1", 123, "text1", 456, false},
+	{"text2", 456, "text3", 456, false},
 }
 
-func TestImportSourceBoolEqualsOperator(t *testing.T) {
-	for _, testData := range ImportSourceBoolEqualsTestData {
+func TestImportSourceEqualsOperator(t *testing.T) {
+	for _, testData := range importSourceEqualsTestData {
 		is1 := newSource(testData.text1, testData.sid1)
 		is2 := newSource(testData.text2, testData.sid2)
 
-		if !is1.Equal(is2) {
-			t.Errorf("expected %v, got %v", true, false)
-		}
-	}
-}
-
-var ImportSourceBoolNotEqualsTestData = []struct {
-	text1 string
-	sid1  int64
-	text2 string
-	sid2  int64
-}{
-	{"text1", 123, "text1", 456},
-	{"text2", 456, "text3", 456},
-}
-
-func TestImportSourceBoolNotEqualsOperator(t *testing.T) {
-	for _, testData := range ImportSourceBoolNotEqualsTestData {
-		is1 := newSource(testData.text1, testData.sid1)
-		is2 := newSource(testData.text2, testData.sid2)
-
-		if is1.Equal(is2) {
-			t.Errorf("expected %v, got %v", false, true)
+		if testData.equals {
+			if !is1.Equal(is2) {
+				t.Errorf("expected %v, got %v", true, false)
+			}
+		} else {
+			if is1.Equal(is2) {
+				t.Errorf("expected %v, got %v", false, true)
+			}
 		}
 	}
 }

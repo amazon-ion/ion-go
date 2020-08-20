@@ -46,8 +46,8 @@ func (is *ImportSource) Equal(o *ImportSource) bool {
 	return is.Table == o.Table && is.SID == o.SID
 }
 
-// SymbolToken are the values that annotations, field names, and the textual content of Ion symbol values.
-// The `nil` value for SymbolToken is $0.
+// SymbolToken is the representation for annotations, field names, and the textual content of Ion symbol values.
+// The `nil` value for SymbolToken is the SID `$0`.
 type SymbolToken struct {
 	// The string text of the token or nil if unknown.
 	Text *string
@@ -59,7 +59,7 @@ type SymbolToken struct {
 
 var (
 	// symbolTokenUndefined is the sentinel for invalid tokens.
-	// The `nil` value is actually $0 which is a defined token.
+	// The `nil` value is actually SID `$0` which is a defined token.
 	symbolTokenUndefined = SymbolToken{
 		LocalSID: SymbolIDUnknown,
 	}
