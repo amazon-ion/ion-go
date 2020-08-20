@@ -492,17 +492,19 @@ func (w *binaryWriter) beginValue(api string) error {
 	}
 
 	if len(as) > 0 {
-		ids := make([]uint64, len(as))
+		var ids []uint64
 		idlen := uint64(0)
 
-		for i, a := range as {
-			id, err := w.resolve(api, a)
-			if err != nil {
-				return err
-			}
+		for _, a := range as {
+			if a.Text != nil {
+				id, err := w.resolve(api, *a.Text)
+				if err != nil {
+					return err
+				}
 
-			ids[i] = id
-			idlen += varUintLen(id)
+				ids = append(ids, id)
+				idlen += varUintLen(id)
+			}
 		}
 
 		bufLength := idlen + varUintLen(idlen)

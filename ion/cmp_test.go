@@ -51,8 +51,28 @@ func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	return false
 }
 
-func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
-	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
+func cmpAnnotations(thisItem, otherItem ionItem) bool {
+	// Annotation sets are considered equal if the first annotation for each is $ion_symbol_table.
+	// eg. $ion_symbol_table::foo and $ion_symbol_table::bar::baz are considered equal.
+
+	// If the first annotation is $ion_symbol_table, then we want the annotation comparison logic to also apply to
+	// all the inner structs within the ion item.
+	if !thisItem.isLocalSymbolTableStruct &&
+		len(thisItem.annotations) > 0 && thisItem.annotations[0] == "$ion_symbol_table" {
+		thisItem.setIsLocalSymbolTableStruct(true)
+	}
+
+	if !otherItem.isLocalSymbolTableStruct &&
+		len(otherItem.annotations) > 0 && otherItem.annotations[0] == "$ion_symbol_table" {
+		otherItem.setIsLocalSymbolTableStruct(true)
+	}
+
+	if thisItem.isLocalSymbolTableStruct != otherItem.isLocalSymbolTableStruct {
+		return false
+	}
+
+	// We only do a strict comparison between annotations when we are not within a local symbol table struct
+	return thisItem.isLocalSymbolTableStruct || reflect.DeepEqual(thisItem.annotations, otherItem.annotations)
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {

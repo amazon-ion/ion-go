@@ -221,8 +221,8 @@ func (r *binaryReader) next() (bool, error) {
 	panic(fmt.Sprintf("invalid bitcode %v", code))
 }
 
-func isIonSymbolTable(as []string) bool {
-	return len(as) > 0 && as[0] == "$ion_symbol_table"
+func isIonSymbolTable(as []SymbolToken) bool {
+	return len(as) > 0 && as[0].Text != nil && *as[0].Text == "$ion_symbol_table"
 }
 
 // ReadBVM reads a BVM, validates it, and resets the local symbol table.
@@ -443,9 +443,10 @@ func (r *binaryReader) readAnnotations() error {
 		return err
 	}
 
-	as := make([]string, len(ids))
+	as := make([]SymbolToken, len(ids))
 	for i, id := range ids {
-		as[i] = r.resolve(id)
+		name := r.resolve(id)
+		as[i] = SymbolToken{Text: &name, LocalSID: SymbolIDUnknown}
 	}
 
 	r.annotations = as

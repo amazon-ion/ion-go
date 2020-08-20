@@ -15,7 +15,10 @@
 
 package ion
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 const (
 	// SymbolIDUnknown is placeholder for when a symbol token has no symbol ID.
@@ -97,14 +100,34 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
+func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) string {
+	// If we have a symbol name of the form '$n' for some integer n,
+	// then we want to use the corresponding system symbol name.
+	if len(symbolName) > 1 && symbolName[0] == '$' {
+		if id, err := strconv.Atoi(symbolName[1:]); err == nil {
+			if systemSymbolName, ok := symbolTable.FindByID(uint64(id)); ok {
+				return systemSymbolName
+			}
+		}
+	}
+
+	return ""
+}
+
 // NewSymbolToken will check and return a symbol token if it exists in a symbol table,
 // otherwise return a new symbol token.
 func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {
-	token := symbolTable.Find(text)
-	if token == nil {
-		token = &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+	systemSymbolName := getSystemSymbolMapping(symbolTable, text)
+	if systemSymbolName != "" {
+		return SymbolToken{Text: &systemSymbolName, LocalSID: SymbolIDUnknown}
 	}
-	return *token
+
+	token := symbolTable.Find(text)
+	if token != nil {
+		return *token
+	}
+
+	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 
 // NewSymbolTokens will check and return a list of symbol tokens if they exists in a symbol table,
@@ -114,5 +137,6 @@ func NewSymbolTokens(symbolTable SymbolTable, textVals []string) []SymbolToken {
 	for _, text := range textVals {
 		tokens = append(tokens, NewSymbolToken(symbolTable, text))
 	}
+
 	return tokens
 }

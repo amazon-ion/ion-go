@@ -34,17 +34,19 @@ const nonEquivsPath = "../ion-tests/iontestdata/good/non-equivs"
 type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
-	ionType     Type
-	annotations []string
-	value       []interface{}
-	fieldName   string
+	ionType                  Type
+	annotations              []string
+	value                    []interface{}
+	fieldName                string
+	isLocalSymbolTableStruct bool
 }
 
 func (i *ionItem) equal(o ionItem) bool {
 	if i.ionType != o.ionType {
 		return false
 	}
-	if !cmpAnnotations(i.annotations, o.annotations) {
+
+	if !cmpAnnotations(*i, o) {
 		return false
 	}
 
@@ -62,6 +64,17 @@ func (i *ionItem) equal(o ionItem) bool {
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
+}
+
+func (i *ionItem) setIsLocalSymbolTableStruct(val bool) {
+	for j := 0; j < len(i.value); j++ {
+		if ionItemVal, ok := i.value[j].(ionItem); ok {
+			ionItemVal.setIsLocalSymbolTableStruct(val)
+			i.value[j] = ionItemVal
+		}
+	}
+
+	i.isLocalSymbolTableStruct = val
 }
 
 var readGoodFilesSkipList = []string{
@@ -83,7 +96,6 @@ var binaryRoundTripSkipList = []string{
 }
 
 var textRoundTripSkipList = []string{
-	"annotations.ion",
 	"localSymbolTableImportZeroMaxId.ion",
 	"notVersionMarkers.ion",
 	"subfieldVarUInt.ion",
@@ -93,7 +105,6 @@ var textRoundTripSkipList = []string{
 	"symbolEmpty.ion",
 	"symbols.ion",
 	"systemSymbols.ion",
-	"systemSymbolsAsAnnotations.ion",
 	"T7-large.10n",
 	"testfile35.ion",
 	"utf16.ion",
@@ -141,23 +152,19 @@ var malformedIonsSkipList = []string{
 }
 
 var equivsSkipList = []string{
-	"annotatedIvms.ion",
 	"localSymbolTableAppend.ion",
 	"localSymbolTableNullSlots.ion",
-	"localSymbolTableWithAnnotations.ion",
 	"localSymbolTables.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"systemSymbols.ion",
-	"systemSymbolsAsAnnotations.ion",
 }
 
 var nonEquivsSkipList = []string{
 	"decimals.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
-	"localSymbolTableWithAnnotations.ion",
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",

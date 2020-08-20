@@ -200,7 +200,7 @@ type reader struct {
 	err error
 
 	fieldName   *string
-	annotations []string
+	annotations []SymbolToken
 	valueType   Type
 	value       interface{}
 }
@@ -227,7 +227,19 @@ func (r *reader) FieldName() *string {
 
 // Annotations returns the current value's annotations.
 func (r *reader) Annotations() []string {
-	return r.annotations
+	var annotations []string
+	for _, an := range r.annotations {
+		if an.Text != nil {
+			systemSymbolName := getSystemSymbolMapping(V1SystemSymbolTable, *an.Text)
+			if systemSymbolName != "" {
+				annotations = append(annotations, systemSymbolName)
+			} else {
+				annotations = append(annotations, *an.Text)
+			}
+		}
+	}
+
+	return annotations
 }
 
 // BoolValue returns the current value as a bool.

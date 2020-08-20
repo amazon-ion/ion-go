@@ -394,11 +394,13 @@ func (w *textWriter) writeAnnotations() error {
 	w.annotations = nil
 
 	for _, a := range as {
-		if err := writeSymbol(a, w.out); err != nil {
-			return err
-		}
-		if err := writeRawString("::", w.out); err != nil {
-			return err
+		if a.Text != nil {
+			if err := writeSymbol(*a.Text, w.out); err != nil {
+				return err
+			}
+			if err := writeRawString("::", w.out); err != nil {
+				return err
+			}
 		}
 	}
 
