@@ -1,8 +1,12 @@
 # Amazon Ion Go
 
 [![Build Status](https://github.com/amzn/ion-go/workflows/Go%20Build/badge.svg)](https://github.com/amzn/ion-go/actions?query=workflow%3A%22Go+Build%22)
+[![license](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/amzn/ion-go/blob/master/LICENSE)
+[![docs](https://img.shields.io/badge/docs-api-green.svg)](https://pkg.go.dev/github.com/amzn/ion-go?tab=doc)
 
 Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
+
+[Ion Cookbook](https://amzn.github.io/ion-docs/guides/cookbook.html) demonstrates code samples for some simple Amazon Ion use cases.
 
 ***This package is considered beta. While the API is relatively stable it is still subject to change***
 
