@@ -6,6 +6,8 @@
 
 Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
 
+[Ion Cookbook](https://amzn.github.io/ion-docs/guides/cookbook.html) demonstrates code samples for some simple Amazon Ion use cases.
+
 ***This package is considered beta. While the API is relatively stable it is still subject to change***
 
 This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.

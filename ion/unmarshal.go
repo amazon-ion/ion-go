@@ -169,7 +169,7 @@ func (d *Decoder) decode() (interface{}, error) {
 		return d.decodeSlice()
 
 	default:
-		panic("Cannot recognize the IonType")
+		panic("cannot recognize the IonType")
 	}
 }
 
@@ -304,7 +304,7 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 		return d.decodeSliceTo(v)
 
 	default:
-		panic("Cannot recognize the IonType")
+		panic("cannot recognize the IonType")
 	}
 }
 
@@ -647,7 +647,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		case reflect.String:
 			kv = reflect.ValueOf(*name)
 		default:
-			panic(fmt.Sprintf("The key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
+			panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
 		}
 
 		if kv.IsValid() {

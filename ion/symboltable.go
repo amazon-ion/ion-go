@@ -28,7 +28,8 @@ type SymbolTable interface {
 	Symbols() []string
 	// MaxID returns the maximum ID this symbol table defines.
 	MaxID() uint64
-
+	// Find finds the SymbolToken by its name.
+	Find(symbol string) *SymbolToken
 	// FindByName finds the ID of a symbol by its name.
 	FindByName(symbol string) (uint64, bool)
 	// FindByID finds the name of a symbol given its ID.
@@ -126,6 +127,20 @@ func (s *sst) Adjust(maxID uint64) SharedSymbolTable {
 		index:   index,
 		maxID:   maxID,
 	}
+}
+
+func (s *sst) Find(sym string) *SymbolToken {
+	id, ok := s.FindByName(sym)
+	if !ok {
+		return nil
+	}
+
+	text, ok := s.FindByID(id)
+	if !ok {
+		return nil
+	}
+
+	return &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 
 func (s *sst) FindByName(sym string) (uint64, bool) {
@@ -243,6 +258,10 @@ func (s *bogusSST) Adjust(maxID uint64) SharedSymbolTable {
 	}
 }
 
+func (s *bogusSST) Find(sym string) *SymbolToken {
+	return nil
+}
+
 func (s *bogusSST) FindByName(sym string) (uint64, bool) {
 	return 0, false
 }
@@ -316,6 +335,24 @@ func (t *lst) Symbols() []string {
 
 func (t *lst) MaxID() uint64 {
 	return t.maxImportID + uint64(len(t.symbols))
+}
+
+func (t *lst) Find(s string) *SymbolToken {
+	// Check import
+	for _, imp := range t.imports {
+		symbolToken := imp.Find(s)
+		if symbolToken != nil {
+			return symbolToken
+		}
+	}
+
+	// Check local
+	_, ok := t.index[s]
+	if ok {
+		return &SymbolToken{Text: &s, LocalSID: SymbolIDUnknown}
+	}
+
+	return nil
 }
 
 func (t *lst) FindByName(s string) (uint64, bool) {
