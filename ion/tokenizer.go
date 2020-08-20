@@ -616,7 +616,7 @@ func (t *tokenizer) readString(isClob bool) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			ret.WriteRune(r)
+			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
@@ -671,7 +671,7 @@ func (t *tokenizer) readLongString(isClob bool) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			ret.WriteRune(r)
+			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
@@ -1401,4 +1401,17 @@ func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
 		return t.ensureNoCommentsHandler
 	}
 	return t.skipCommentsHandler
+}
+
+// If `isClob` is false, we write the UTF-8 encoding of `c` into the string builder. When
+// `writeCharToStringBuilder` returns, `sb` will contain a valid string.
+// If `isClob` is true, `c` is a single byte of an unknown encoding. We will write that byte to
+// the string builder as-is. When `writeCharToStringBuilder` returns, the contents of `sb`
+// must be treated as a byte array of unknown encoding.
+func writeCharToStringBuilder(c rune, sb *strings.Builder, isClob bool) {
+	if isClob {
+		sb.WriteByte(byte(c))
+	} else {
+		sb.WriteRune(c)
+	}
 }
