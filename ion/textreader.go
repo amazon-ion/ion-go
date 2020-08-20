@@ -237,7 +237,11 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				if err := t.verifyUnquotedSymbol(val, "annotation"); err != nil {
 					return false, err
 				}
+			} else if tok == tokenSymbolOperator {
+				return false, &SyntaxError{
+					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
+
 			t.annotations = append(t.annotations, val)
 			return false, nil
 		}

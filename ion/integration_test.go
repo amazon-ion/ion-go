@@ -109,18 +109,6 @@ var malformedIonsSkipList = []string{
 	"annotationNested.10n",
 	"annotationSymbolIDUnmapped.10n",
 	"annotationSymbolIDUnmapped.ion",
-	"clobWithLongLiteralBlockCommentAtEnd.ion",
-	"clobWithLongLiteralCommentsInMiddle.ion",
-	"clobWithNonAsciiCharacter.ion",
-	"clobWithNonAsciiCharacterMultiline.ion",
-	"clobWithValidUtf8ButNonAsciiCharacter.ion",
-	"clob_2.ion",
-	"clob_U0000003F.ion",
-	"clob_U00000080.ion",
-	"clob_U0000013F.ion",
-	"clob_u0020.ion",
-	"clob_u00FF.ion",
-	"clob_u01FF.ion",
 	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
@@ -139,7 +127,6 @@ var malformedIonsSkipList = []string{
 	"nopPadTooShort.10n",
 	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
-	"sexpOperatorAnnotation.ion",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
 	"surrogate_2.ion",
@@ -161,7 +148,6 @@ var equivsSkipList = []string{
 	"localSymbolTables.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
-	"sexps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
@@ -169,7 +155,6 @@ var equivsSkipList = []string{
 
 var nonEquivsSkipList = []string{
 	"decimals.ion",
-	"documents.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
 	"localSymbolTableWithAnnotations.ion",
@@ -366,7 +351,7 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 		switch ionType {
 		case StructType, ListType, SexpType:
 			fmt.Printf("Checking values of top level %s #%d ...\n", ionType.String(), topLevelCounter)
-			var values []ionItem
+			var values [][]ionItem
 			err := r.StepIn()
 			if err != nil {
 				t.Fatal(err)
@@ -375,7 +360,7 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 				values = handleEmbeddedDoc(t, r)
 			} else {
 				for r.Next() {
-					values = append(values, readCurrentValue(t, r))
+					values = append(values, []ionItem{readCurrentValue(t, r)})
 				}
 			}
 			equivalencyAssertion(t, values, eq)
@@ -396,17 +381,19 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 }
 
 // Handle equivalency tests with embedded_documents annotation
-func handleEmbeddedDoc(t *testing.T, r Reader) []ionItem {
-	var values []ionItem
+func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
+	var values [][]ionItem
 	for r.Next() {
 		str, err := r.StringValue()
 		if err != nil {
 			t.Error("Must be string value.")
 		}
 		newReader := NewReaderString(str)
+		var ionItems []ionItem
 		for newReader.Next() {
-			values = append(values, readCurrentValue(t, newReader))
+			ionItems = append(ionItems, readCurrentValue(t, newReader))
 		}
+		values = append(values, ionItems)
 	}
 	return values
 }
@@ -420,23 +407,21 @@ func isEmbeddedDoc(an []string) bool {
 	return false
 }
 
-func equivalencyAssertion(t *testing.T, values []ionItem, eq bool) {
+func equivalencyAssertion(t *testing.T, values [][]ionItem, eq bool) {
 	// Nested for loops to evaluate each ionItem value with all the other values in the list/struct/sexp
 	for i := 0; i < len(values); i++ {
 		for j := i + 1; j < len(values); j++ {
 			if i == j {
 				continue
 			}
-			if eq {
-				if !values[i].equal(values[j]) {
-					t.Errorf("Equivalency test failed. All values should be interpreted as "+
-						"equal for:\nrow %d = %v\nrow %d = %v", i, values[i].value, j, values[j].value)
-				}
-			} else {
-				if values[i].equal(values[j]) {
-					t.Errorf("Non-Equivalency test failed. Values should not be interpreted as "+
-						"equal for:\nrow %d = %v\nrow %d = %v", i, values[i].value, j, values[j].value)
-				}
+
+			res, idx := compareIonItemSlices(values[i], values[j])
+			if eq && !res {
+				t.Errorf("Equivalency test failed. All values should be interpreted as "+
+					"equal for:\nrow %d = %v\nrow %d = %v", i, values[i][idx].value, j, values[j][idx].value)
+			} else if !eq && res {
+				t.Errorf("Non-Equivalency test failed. Values should not be interpreted as "+
+					"equal for:\nrow %d = %v\nrow %d = %v", i, values[i][idx].value, j, values[j][idx].value)
 			}
 		}
 	}
@@ -839,4 +824,19 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		}
 	}
 	return ionItem
+}
+
+func compareIonItemSlices(this, that []ionItem) (bool, int) {
+	if len(this) != len(that) {
+		return false, 0
+	}
+
+	idx := 0
+	for i := 0; i < len(this); i++ {
+		idx = i
+		if !this[i].equal(that[i]) {
+			return false, idx
+		}
+	}
+	return true, idx
 }

@@ -59,6 +59,9 @@ const (
 	tokenCloseDoubleBrace // }}
 )
 
+const clobText = true
+const nonClobText = false
+
 func (t token) String() string {
 	switch t {
 	case tokenError:
@@ -229,6 +232,10 @@ func (t *tokenizer) Next() error {
 			t.unread(c)
 			return t.ok(tokenSymbolOperator, true)
 		}
+		if c2 == ' ' || isIdentifierPart(c2) {
+			t.unread(c)
+		}
+
 		return t.ok(tokenDot, false)
 
 	case c == '\'':
@@ -356,9 +363,9 @@ func (t *tokenizer) ReadValue(tok token) (string, error) {
 	case tokenSymbolOperator, tokenDot:
 		str, err = t.readOperator()
 	case tokenString:
-		str, err = t.readString()
+		str, err = t.readString(nonClobText)
 	case tokenLongString:
-		str, err = t.readLongString()
+		str, err = t.readLongString(nonClobText)
 	case tokenBinary:
 		str, err = t.readBinary()
 	case tokenHex:
@@ -538,7 +545,7 @@ func (t *tokenizer) readQuotedSymbol() (string, error) {
 				continue
 			}
 
-			r, err := t.readEscapedChar(false)
+			r, err := t.readEscapedChar(nonClobText)
 			if err != nil {
 				return "", err
 			}
@@ -574,7 +581,7 @@ func (t *tokenizer) readOperator() (string, error) {
 }
 
 // ReadString reads a quoted string.
-func (t *tokenizer) readString() (string, error) {
+func (t *tokenizer) readString(isClob bool) (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -583,7 +590,7 @@ func (t *tokenizer) readString() (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF, and new lines are not allowed in short string
-		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) || (isClob && !isASCII(c)) {
 			return "", t.invalidChar(c)
 		}
 
@@ -605,7 +612,7 @@ func (t *tokenizer) readString() (string, error) {
 				continue
 			}
 
-			r, err := t.readEscapedChar(false)
+			r, err := t.readEscapedChar(isClob)
 			if err != nil {
 				return "", err
 			}
@@ -618,7 +625,7 @@ func (t *tokenizer) readString() (string, error) {
 }
 
 // ReadLongString reads a triple-quoted string.
-func (t *tokenizer) readLongString() (string, error) {
+func (t *tokenizer) readLongString(isClob bool) (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -627,14 +634,15 @@ func (t *tokenizer) readLongString() (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF
-		if c == -1 || isProhibitedControlChar(c) {
+		if c == -1 || isProhibitedControlChar(c) || (isClob && !isASCII(c)) {
 			return "", t.invalidChar(c)
 		}
 
 		switch c {
 		case '\'':
 			startPosition := t.pos
-			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
+			handler := getLongStringCommentsHandler(t, isClob)
+			ok, err := t.skipEndOfLongString(handler)
 			if err != nil {
 				return "", err
 			}
@@ -659,7 +667,7 @@ func (t *tokenizer) readLongString() (string, error) {
 				continue
 			}
 
-			r, err := t.readEscapedChar(false)
+			r, err := t.readEscapedChar(isClob)
 			if err != nil {
 				return "", err
 			}
@@ -672,7 +680,7 @@ func (t *tokenizer) readLongString() (string, error) {
 }
 
 // ReadEscapedChar reads an escaped character.
-func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
+func (t *tokenizer) readEscapedChar(isClob bool) (rune, error) {
 	// We just read the '\', grab the next char.
 	c, err := t.read()
 	if err != nil {
@@ -707,11 +715,14 @@ func (t *tokenizer) readEscapedChar(clob bool) (rune, error) {
 	case '\\':
 		return '\\', nil
 	case 'U':
-		if clob {
+		if isClob {
 			return 0, t.invalidChar('U')
 		}
 		return t.readHexEscapeSeq(8)
 	case 'u':
+		if isClob {
+			return 0, t.invalidChar('u')
+		}
 		return t.readHexEscapeSeq(4)
 	case 'x':
 		return t.readHexEscapeSeq(2)
@@ -1054,7 +1065,7 @@ func (t *tokenizer) ReadBlob() (string, error) {
 }
 
 func (t *tokenizer) ReadShortClob() (string, error) {
-	str, err := t.readString()
+	str, err := t.readString(clobText)
 	if err != nil {
 		return "", err
 	}
@@ -1079,7 +1090,7 @@ func (t *tokenizer) ReadShortClob() (string, error) {
 }
 
 func (t *tokenizer) ReadLongClob() (string, error) {
-	str, err := t.readLongString()
+	str, err := t.readLongString(clobText)
 	if err != nil {
 		return "", err
 	}
@@ -1378,4 +1389,16 @@ func isStringWhitespace(c int) bool {
 func isNewLineChar(c int) bool {
 	return c == 0x0A || //new line
 		c == 0x0D //carriage return
+}
+
+// isASCII returns true if c is a 7-bit ASCII character.
+func isASCII(c int) bool {
+	return c < 0x80
+}
+
+func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
+	if isClob {
+		return t.ensureNoCommentsHandler
+	}
+	return t.skipCommentsHandler
 }

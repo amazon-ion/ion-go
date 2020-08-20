@@ -651,7 +651,7 @@ func (t *tokenizer) skipContainer(term int) (int, error) {
 // char.
 func (t *tokenizer) skipContainerHelper(term int) error {
 	if term != ']' && term != ')' && term != '}' {
-		panic(fmt.Sprintf("Unexpected character: %v. Expected one of the closing container characters: ] } )", string(term)))
+		panic(fmt.Sprintf("unexpected character: %v. Expected one of the closing container characters: ] } )", string(term)))
 	}
 
 	for {
@@ -802,6 +802,12 @@ func (t *tokenizer) skipWhitespaceWith(handler commentHandler) (int, bool, error
 // expect a '/' to be an actual '/', not a comment.
 func stopForCommentsHandler() (bool, error) {
 	return false, nil
+}
+
+// ensureNoCommentsHandler is a commentHandler that returns an
+// error if any comments are found, else no error is returned.
+func (t *tokenizer) ensureNoCommentsHandler() (bool, error) {
+	return false, &UnexpectedTokenError{"comments are not allowed within a clob", t.Pos() - 1}
 }
 
 // SkipCommentsHandler is a commentHandler that skips over any
