@@ -406,6 +406,12 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		// annotation container.
 		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfLength}
 	}
+	if lengthValue == 0 {
+		// Annotation wrapper with an annot_length subfield value of zero is illegal.
+		// At least one annotation must exist.
+		return nil, &SyntaxError{"malformed annotation - at least one annotation must exist",
+			b.pos - lengthOfLength}
+	}
 
 	var as []uint64
 	for lengthValue > 0 {

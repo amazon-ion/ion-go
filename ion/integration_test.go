@@ -107,7 +107,6 @@ var malformedIonsSkipList = []string{
 	"annotationNested.10n",
 	"annotationSymbolIDUnmapped.10n",
 	"annotationSymbolIDUnmapped.ion",
-	"emptyAnnotatedInt.10n",
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
 	"invalidVersionMarker_ion_0_0.ion",
