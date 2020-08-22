@@ -69,8 +69,18 @@ func (r *binaryReader) next() (bool, error) {
 	}
 
 	code := r.bits.Code()
+	if r.bits.anLen > 0 && code == bitcodeAnnotation {
+		// An annotation wrapper which contains another annotation wrapper as its value is illegal
+		// the idea is to use r.bits.anLen as an indicator whether values of annotations are done or not
+		return false, &SyntaxError{"annotation cannot be value of another annotation", r.bits.Pos()}
+	}
 	switch code {
 	case bitcodeEOF:
+		// when a value is finished reading, we can check if now the current position of the cursor
+		// is where we set it in bitstream#readAnnotations
+		if r.bits.anLen == r.bits.pos {
+			r.bits.anLen = 0
+		}
 		r.eof = true
 		return true, nil
 

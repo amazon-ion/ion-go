@@ -112,9 +112,10 @@ type bitstream struct {
 	state bss
 	stack bitstack
 
-	code bitcode
-	null bool
-	len  uint64
+	code  bitcode
+	null  bool
+	len   uint64
+	anLen uint64
 }
 
 // Init initializes this stream with the given bufio.Reader.
@@ -163,6 +164,10 @@ func (b *bitstream) Next() error {
 		if b.pos == cur.end {
 			b.code = bitcodeEOF
 			return nil
+		}
+		// Might replace the same check in binaryReader; combined with the same check on line 1059
+		if b.anLen > 0 && b.anLen == b.pos {
+			b.anLen = 0
 		}
 	}
 
@@ -396,10 +401,14 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
+	// lengthValue = how many bits should be read for next value
+	// lengthOfLength = how many bytes was the above itself (how many bytes is already consumed)
 	lengthValue, lengthOfLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
 	}
+	b.anLen = b.pos + b.len - 1
+	remainingAnnotationLength := b.len - lengthOfLength - lengthValue
 
 	if b.len-lengthOfLength <= lengthValue {
 		// The size of the annotations is larger than the remaining free space inside the
@@ -418,10 +427,66 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		lengthValue -= idlen
 	}
 
+	// SymbolTable.go#V1SystemSymbolTable to see what 1, 2, 3 and 9 symbols are
+	foo := len(as) > 0 && (as[0] == 3 || as[0] == 2 || as[0] == 1 || as[0] == 9)
+
+	if !foo {
+		nextToken, err := b.in.Peek(int(remainingAnnotationLength)) // Peek looks at the next bytes without consuming them
+		if err != nil {
+			return nil, err
+		}
+
+		err = checkLengthOfAnnotationValue(nextToken, remainingAnnotationLength)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		b.anLen = 0
+	}
+
 	b.state = bssBeforeValue
 	b.clear()
 
 	return as, nil
+}
+
+// now we know what comes next (data) and also know how many more bytes annotations provides to be 'complete' (size).
+// Based on the length we get from "data", we can validate if these two lengths are equal.
+func checkLengthOfAnnotationValue(data []byte, size uint64) error {
+	_, length := parseTag(int(data[0]))
+	if length == 15 { // anything with length 15 is null e.g. 0x5F is null.decimal; so it needs only one byte
+		if size == 1 {
+			return nil
+		}
+	}
+	// This whole logic for the case where we cannot conclude the size with the first byte we read: e.g. 0x53 means a decimal which needs 3 bytes to show its value, but if we have a string which needs 17 bytes to show its contents, it goes to this code path
+	lengthMoreThanOneByte := false
+	if length == 0x0E || int(data[0]) == 209 { // 209 is a special case for ordered structs. Ordereded structs ALWAYS have their length is the byte after
+		lengthMoreThanOneByte = true
+		counter := 1
+		for {
+			c := int(data[counter])
+			val := uint64(0)
+			val <<= 7
+			val ^= uint64(c & 0x7F)
+
+			if c&0x80 != 0 {
+				length = val
+				break
+			}
+			counter++
+		}
+	}
+
+	if lengthMoreThanOneByte {
+		length++
+	}
+
+	// remaining bytes we need to show a value for the annotation should be exactly the same as what is declared in the annotations
+	if length+1 != size {
+		return &SyntaxError{"annotation declared length is not", 8}
+	}
+	return nil
 }
 
 // ReadInt reads an integer value.
@@ -976,6 +1041,11 @@ func (b *bitstream) read1() (int, error) {
 func (b *bitstream) read() (int, error) {
 	c, err := b.in.ReadByte()
 	b.pos++
+
+	// Might replace the same check in binaryReader; combined with the same check on line 168
+	//if b.anLen > 0 && b.anLen == b.pos {
+	//	b.anLen = 0
+	//}
 
 	if err == io.EOF {
 		return -1, nil

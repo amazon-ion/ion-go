@@ -100,14 +100,14 @@ var textRoundTripSkipList = []string{
 }
 
 var malformedIonsSkipList = []string{
-	"annotationLengthTooLongContainer.10n",
-	"annotationLengthTooLongScalar.10n",
-	"annotationLengthTooShortContainer.10n",
-	"annotationLengthTooShortScalar.10n",
-	"annotationNested.10n",
-	"annotationSymbolIDUnmapped.10n",
-	"annotationSymbolIDUnmapped.ion",
-	"emptyAnnotatedInt.10n",
+	//"annotationLengthTooLongContainer.10n",
+	//"annotationLengthTooLongScalar.10n",
+	//"annotationLengthTooShortContainer.10n",
+	//"annotationLengthTooShortScalar.10n",
+	//"annotationNested.10n",
+	"annotationSymbolIDUnmapped.10n", // Needs symbol table
+	"annotationSymbolIDUnmapped.ion", // needs symbol table
+	"emptyAnnotatedInt.10n",          // fixed in PR #147
 	"fieldNameSymbolIDUnmapped.10n",
 	"fieldNameSymbolIDUnmapped.ion",
 	"invalidVersionMarker_ion_0_0.ion",
