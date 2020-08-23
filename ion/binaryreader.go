@@ -31,7 +31,8 @@ type binaryReader struct {
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r := &binaryReader{
-		cat: cat,
+		cat:    cat,
+		reader: reader{fieldNameSid: SymbolIDUnknown},
 	}
 	r.bits.Init(in)
 	return r
@@ -153,7 +154,7 @@ func (r *binaryReader) next() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			r.value = r.resolve(id)
+			r.value = id
 		}
 		return true, nil
 
@@ -286,7 +287,8 @@ func (r *binaryReader) readLocalSymbolTable() error {
 
 // ReadImports reads the imports field of a local symbol table.
 func (r *binaryReader) readImports() ([]SharedSymbolTable, error) {
-	if r.valueType == SymbolType && r.value == "$ion_symbol_table" {
+	// Symbol is $ion_symbol_table
+	if r.valueType == SymbolType && r.value == uint64(3) {
 		// Special case that imports the current local symbol table.
 		if r.lst == nil || r.lst == V1SystemSymbolTable {
 			return nil, nil
@@ -431,8 +433,13 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	fn := r.resolve(id)
-	r.fieldName = &fn
+	s, ok := r.lst.FindByID(id)
+	if !ok {
+		r.fieldName = nil
+	} else {
+		r.fieldName = &s
+	}
+	r.fieldNameSid = int64(id)
 	return nil
 }
 
@@ -500,4 +507,57 @@ func (r *binaryReader) StepOut() error {
 	r.eof = false
 
 	return nil
+}
+
+// FieldName returns the current value's field name.
+func (r *binaryReader) FieldName() *string {
+	return r.fieldName
+}
+
+// StringValue returns the current value as a string.
+func (r *binaryReader) StringValue() (string, error) {
+	if r.valueType != StringType && r.valueType != SymbolType {
+		return "", &UsageError{"Reader.StringValue", "value is not a string"}
+	}
+	if r.value == nil {
+		return "", nil
+	}
+
+	id, ok := r.value.(uint64)
+	if !ok {
+		return r.value.(string), nil
+	}
+	return r.resolve(id), nil
+}
+
+//FieldNameSymbol returns the current field name as a symbol token.
+func (r *binaryReader) FieldNameSymbol() (SymbolToken, error) {
+	if r.fieldNameSid == SymbolIDUnknown {
+		return symbolTokenUndefined, nil
+	}
+
+	text, ok := r.lst.FindByID(uint64(r.fieldNameSid))
+	if !ok {
+		return SymbolToken{LocalSID: r.fieldNameSid}, nil
+	}
+
+	return SymbolToken{Text: &text, LocalSID: r.fieldNameSid}, nil
+}
+
+// SymbolValue returns the current value as a symbol token.
+func (r *binaryReader) SymbolValue() (SymbolToken, error) {
+	if r.valueType != SymbolType {
+		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
+	}
+
+	if r.value == nil {
+		return symbolTokenUndefined, nil
+	}
+
+	text, ok := r.lst.FindByID(r.value.(uint64))
+	if !ok {
+		return SymbolToken{LocalSID: (int64)(r.value.(uint64))}, nil
+	}
+
+	return SymbolToken{Text: &text, LocalSID: (int64)(r.value.(uint64))}, nil
 }

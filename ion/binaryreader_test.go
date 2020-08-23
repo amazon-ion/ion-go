@@ -16,12 +16,162 @@
 package ion
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"math/big"
 	"testing"
 	"time"
 )
+
+func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
+	table1 := NewSharedSymbolTable("table1", 1, []string{"s1", "s2"})
+	table2 := NewSharedSymbolTable("table2", 1, []string{"s3", "s4"})
+	catalog := NewCatalog(table1, table2)
+
+	buf := bytes.Buffer{}
+	bw := NewBinaryWriter(&buf, table1, table2)
+	err := bw.BeginStruct()
+	if err != nil {
+		t.Fatal("unable to write struct")
+	}
+	err = bw.FieldName("s1")
+	if err != nil {
+		t.Fatal("unable to write field name")
+	}
+	err = bw.WriteSymbol("s2")
+	if err != nil {
+		t.Fatal("unable to write string")
+	}
+	err = bw.FieldName("s3")
+	if err != nil {
+		t.Fatal("unable to write field name")
+	}
+	err = bw.WriteSymbol("s4")
+	if err != nil {
+		t.Fatal("unable to write string")
+	}
+	err = bw.EndStruct()
+	if err != nil {
+		t.Fatal("unable to end struct")
+	}
+	err = bw.Finish()
+	if err != nil {
+		t.Fatal("unable to create finish")
+	}
+
+	r := NewReaderBytes(buf.Bytes())
+	r.Next()
+	err = r.StepIn()
+	if err != nil {
+		t.Fatal("unable to step in")
+	}
+
+	r.Next()
+	currentType := r.Type()
+	if currentType != SymbolType {
+		t.Fatal("current type is not symbol.")
+	}
+	fns, err := r.FieldNameSymbol()
+	if err != nil {
+		t.Fatal("unable to get field name symbol")
+	}
+	if fns.Text != nil {
+		t.Fatal("field name symbol text is incorrect")
+	}
+	if fns.LocalSID != int64(10) {
+		t.Fatal("field name symbol sid is incorrect")
+	}
+
+	name := r.FieldName()
+	if name != nil {
+		t.Fatal("field name was not nil")
+	}
+
+	st, err := r.SymbolValue()
+	if err != nil {
+		t.Fatal("symbol value is incorrect")
+	}
+	if st.LocalSID != int64(11) {
+		t.Fatal("symbol value sid is incorrect")
+	}
+
+	r.Next()
+	currentType = r.Type()
+	if currentType != SymbolType {
+		t.Fatal("current type is not symbol.")
+	}
+
+	fns, err = r.FieldNameSymbol()
+	if err != nil {
+		t.Fatal("unable to get field name symbol")
+	}
+	if fns.Text != nil {
+		t.Fatal("field name symbol text is incorrect")
+	}
+	if fns.LocalSID != int64(12) {
+		t.Fatal("field name symbol sid is incorrect")
+	}
+
+	name = r.FieldName()
+	if name != nil {
+		t.Fatal("field name was not nil")
+	}
+
+	st, err = r.SymbolValue()
+	if err != nil {
+		t.Fatal("symbol token is incorrect")
+	}
+	if st.LocalSID != int64(13) {
+		t.Fatal("symbol token sid is incorrect")
+	}
+
+	//make sure that a reader with the correct imports can read it
+	r2 := NewReaderCat(bytes.NewReader(buf.Bytes()), catalog)
+	r2.Next()
+	err = r2.StepIn()
+	if err != nil {
+		t.Fatal("unable to step in")
+	}
+
+	r2.Next()
+	currentType = r2.Type()
+	if currentType != SymbolType {
+		t.Fatal("current type is not symbol")
+	}
+
+	fn := r2.FieldName()
+	if *fn != "s1" {
+		t.Fatal("current field name is incorrect")
+	}
+
+	st, err = r2.SymbolValue()
+	if err != nil {
+		t.Fatal("symbol token is incorrect")
+	}
+	if *st.Text != "s2" {
+		t.Fatal("symbol token text is incorrect")
+	}
+
+	r2.Next()
+	currentType = r2.Type()
+	if currentType != SymbolType {
+		t.Fatal("current type is not symbol")
+	}
+
+	fn = r2.FieldName()
+	if *fn != "s3" {
+		t.Fatal("current field name is incorrect")
+	}
+
+	st, err = r2.SymbolValue()
+	if err != nil {
+		t.Fatal("symbol token is incorrect")
+	}
+	if *st.Text != "s4" {
+		t.Fatal("symbol token text is incorrect")
+	}
+}
 
 func TestReadBadBVMs(t *testing.T) {
 	t.Run("E00200E9", func(t *testing.T) {

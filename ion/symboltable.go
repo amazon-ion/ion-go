@@ -382,7 +382,6 @@ func (t *lst) FindByID(id uint64) (string, bool) {
 	if idx < uint64(len(t.symbols)) {
 		return t.symbols[idx], true
 	}
-
 	return "", false
 }
 

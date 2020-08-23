@@ -163,6 +163,14 @@ type Reader interface {
 
 	// IsInStruct indicates if the reader is currently positioned in a struct.
 	IsInStruct() bool
+
+	// FieldNameSymbol returns the field name associated with the current value as a SymbolToken.
+	// It returns an error if the current value has no field name.
+	FieldNameSymbol() (SymbolToken, error)
+
+	// SymbolValue returns the SymbolToken associated with the current value. It returns an
+	// error if the current value is not an Ion symbol.
+	SymbolValue() (SymbolToken, error)
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -199,10 +207,11 @@ type reader struct {
 	eof bool
 	err error
 
-	fieldName   *string
-	annotations []string
-	valueType   Type
-	value       interface{}
+	fieldName    *string
+	fieldNameSid int64
+	annotations  []string
+	valueType    Type
+	value        interface{}
 }
 
 // Err returns the current error.
@@ -370,17 +379,6 @@ func (r *reader) TimestampValue() (Timestamp, error) {
 		return Timestamp{}, nil
 	}
 	return r.value.(Timestamp), nil
-}
-
-// StringValue returns the current value as a string.
-func (r *reader) StringValue() (string, error) {
-	if r.valueType != StringType && r.valueType != SymbolType {
-		return "", &UsageError{"Reader.StringValue", "value is not a string"}
-	}
-	if r.value == nil {
-		return "", nil
-	}
-	return r.value.(string), nil
 }
 
 // ByteValue returns the current value as a byte slice.

@@ -675,3 +675,22 @@ func (t *textReader) explode(err error) {
 	t.state = trsDone
 	t.err = err
 }
+
+// StringValue returns the current value as a string.
+func (t *textReader) StringValue() (string, error) {
+	if t.valueType != StringType && t.valueType != SymbolType {
+		return "", &UsageError{"Reader.StringValue", "value is not a string"}
+	}
+	if t.value == nil {
+		return "", nil
+	}
+	return t.value.(string), nil
+}
+
+func (t *textReader) FieldNameSymbol() (SymbolToken, error) {
+	panic("implement me")
+}
+
+func (t *textReader) SymbolValue() (SymbolToken, error) {
+	panic("implement me")
+}
