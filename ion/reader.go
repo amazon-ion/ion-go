@@ -171,6 +171,9 @@ type Reader interface {
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
 	// error if the current value is not an Ion symbol.
 	SymbolValue() (SymbolToken, error)
+
+	// Clear clears the current value from the reader.
+	clear()
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -198,7 +201,7 @@ func NewReaderCat(in io.Reader, cat Catalog) Reader {
 		return newBinaryReaderBuf(br, cat)
 	}
 
-	return newTextReaderBuf(br)
+	return newTextReaderBuf(br, cat)
 }
 
 // A reader holds common implementation stuff to both the text and binary readers.
@@ -208,7 +211,7 @@ type reader struct {
 	err error
 
 	fieldName    *string
-	fieldNameSid int64
+	fieldnameSID int64
 	annotations  []string
 	valueType    Type
 	value        interface{}

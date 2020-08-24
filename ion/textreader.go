@@ -57,21 +57,25 @@ type textReader struct {
 
 	tok   tokenizer
 	state trs
+	lst   SymbolTable
+	cat   Catalog
 }
 
-func newTextReaderBuf(in *bufio.Reader) Reader {
+func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	return &textReader{
+		reader: reader{fieldnameSID: SymbolIDUnknown},
+		cat:    cat,
 		tok: tokenizer{
 			in: in,
 		},
 		state: trsBeforeTypeAnnotations,
+		lst:   V1SystemSymbolTable,
 	}
 }
 
 // SymbolTable returns the current symbol table.
 func (t *textReader) SymbolTable() SymbolTable {
-	// https://github.com/amzn/ion-go/issues/114
-	return nil
+	return t.lst
 }
 
 // Next moves the reader to the next value.
@@ -192,6 +196,11 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		}
 
 		t.fieldName = &val
+		id, ok := t.lst.FindByName(val)
+		if ok {
+			t.fieldnameSID = int64(id)
+		}
+
 		t.state = trsBeforeTypeAnnotations
 
 		return false, nil
@@ -285,6 +294,16 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.state = trsBeforeContainer
 		t.valueType = StructType
 		t.value = StructType
+
+		if isIonSymbolTable(t.Annotations()) {
+			st, err := readLocalSymbolTable(t, t.cat)
+			if err == nil {
+				t.lst = st
+				return false, nil
+			}
+			return false, err
+		}
+
 		return true, nil
 
 	case tokenOpenBracket:
@@ -387,6 +406,23 @@ func (t *textReader) verifyUnquotedSymbol(val string, ctx string) error {
 		return &SyntaxError{fmt.Sprintf("unquoted keyword '%v' as %v", val, ctx), t.tok.Pos() - 1}
 	}
 	return nil
+}
+
+// IsSid checks if the text is a symbol identifier.
+func isSid(text string) bool {
+	if string(text[0]) == "$" {
+		if len(text) > 1 {
+			for i := 1; i < len(text); i++ {
+				// check if value is a digit.
+				_, err := strconv.Atoi(string(text[i]))
+				if err != nil {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // OnSymbol handles finding a symbol-token value.
@@ -687,10 +723,52 @@ func (t *textReader) StringValue() (string, error) {
 	return t.value.(string), nil
 }
 
-func (t *textReader) FieldNameSymbol() (SymbolToken, error) {
-	panic("implement me")
+// SymbolValue returns the current value as a symbol token.
+func (t *textReader) SymbolValue() (SymbolToken, error) {
+	if t.valueType != SymbolType {
+		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
+	}
+
+	text := t.value.(string)
+
+	// Check if string value is a SID, e.g. $1
+	if isSid(text) {
+		id, err := strconv.Atoi(text[1:])
+		if err != nil {
+			return symbolTokenUndefined, err
+		}
+		SID := uint64(id)
+
+		text, ok := t.SymbolTable().FindByID(SID)
+		if !ok && (SID > t.SymbolTable().MaxID() || id < 0) {
+			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", id)
+		}
+		if !ok {
+			return SymbolToken{Text: nil, LocalSID: int64(SID)}, nil
+		}
+		return SymbolToken{Text: &text, LocalSID: int64(SID)}, nil
+	}
+
+	id, ok := t.lst.FindByName(text)
+	sid := int64(id)
+	if !ok {
+		sid = SymbolIDUnknown
+	}
+	return SymbolToken{Text: &text, LocalSID: sid}, nil
 }
 
-func (t *textReader) SymbolValue() (SymbolToken, error) {
-	panic("implement me")
+// FieldNameSymbol returns the current field name as a symbol token.
+func (t *textReader) FieldNameSymbol() (SymbolToken, error) {
+	if t.fieldName == nil {
+		if t.fieldnameSID < 0 || t.fieldnameSID > int64(t.SymbolTable().MaxID()) {
+			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", t.fieldnameSID)
+		}
+		fieldName, ok := t.SymbolTable().FindByID(uint64(t.fieldnameSID))
+		if !ok {
+			t.fieldName = nil
+		} else {
+			t.fieldName = &fieldName
+		}
+	}
+	return SymbolToken{Text: t.fieldName, LocalSID: t.fieldnameSID}, nil
 }

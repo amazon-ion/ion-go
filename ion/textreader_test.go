@@ -23,6 +23,14 @@ import (
 	"time"
 )
 
+const textFilePath = "testdata/text/"
+
+func TestReadTextSingleSymbol(t *testing.T) {
+	fileBytes := loadFile(t, textFilePath+"single_symbol.ion")
+	r := NewReader(bytes.NewReader(fileBytes))
+	assertSingleSymbolTest(t, r)
+}
+
 func TestIgnoreValues(t *testing.T) {
 	r := NewReaderString("(skip ++ me / please) {skip: me, please: 0}\n[skip, me, please]\nfoo")
 
@@ -731,6 +739,20 @@ func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string) 
 	if val != eval {
 		t.Errorf("expected %v, got %v", eval, val)
 	}
+
+	symbolVal, err := r.SymbolValue()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isSid(val) {
+		if symbolVal.Text != nil {
+			t.Errorf("expected %v, got %v", nil, *symbolVal.Text)
+		}
+	} else {
+		if *symbolVal.Text != eval {
+			t.Errorf("expected %v, got %v", eval, *symbolVal.Text)
+		}
+	}
 }
 
 func _bool(t *testing.T, r Reader, eval bool) {
@@ -842,5 +864,39 @@ func _eof(t *testing.T, r Reader) {
 	}
 	if r.Err() != nil {
 		t.Fatal(r.Err())
+	}
+}
+
+func assertZeroSymbolTest(t *testing.T, r Reader) {
+	r.Next()
+	val, _ := r.SymbolValue()
+	if val.Text != nil {
+		t.Errorf("symbol token name returned is not nil")
+	}
+	if val.LocalSID != 0 {
+		t.Errorf("symbol token ID returned is not 0")
+	}
+}
+
+func assertSingleSymbolTest(t *testing.T, r Reader) {
+	r.Next()
+	r.StepIn()
+	r.Next()
+
+	if r.Type() != SymbolType {
+		t.Errorf("type returned non-symbol type")
+	}
+
+	if *r.FieldName() != "single_symbol" {
+		t.Errorf("field name returned is incorrect")
+	}
+
+	val, err := r.SymbolValue()
+	if err != nil {
+		t.Errorf("symbol value failed")
+	}
+
+	if *val.Text != "something" {
+		t.Errorf("symbol token name is incorrect")
 	}
 }

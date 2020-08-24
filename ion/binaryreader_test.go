@@ -24,6 +24,14 @@ import (
 	"time"
 )
 
+const binaryFilePath = "testdata/binary/"
+
+func TestReadBinarySingleSymbol(t *testing.T) {
+	fileBytes := loadFile(t, binaryFilePath+"single_symbol.bindat")
+	r := NewReader(bytes.NewReader(fileBytes))
+	assertSingleSymbolTest(t, r)
+}
+
 func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
 	table1 := NewSharedSymbolTable("table1", 1, []string{"s1", "s2"})
 	table2 := NewSharedSymbolTable("table2", 1, []string{"s3", "s4"})
@@ -79,7 +87,7 @@ func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
 	if fns.Text != nil {
 		t.Fatal("field name symbol text is incorrect")
 	}
-	if fns.LocalSID != int64(10) {
+	if fns.LocalSID != 10 {
 		t.Fatal("field name symbol sid is incorrect")
 	}
 
