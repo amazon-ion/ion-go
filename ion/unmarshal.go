@@ -200,12 +200,14 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	for d.r.Next() {
-		name := d.r.FieldName()
-		value, err := d.decode()
-		if err != nil {
-			return nil, err
+		if d.r.FieldName() != nil {
+			name := d.r.FieldName()
+			value, err := d.decode()
+			if err != nil {
+				return nil, err
+			}
+			result[*name] = value
 		}
-		result[*name] = value
 	}
 
 	if err := d.r.StepOut(); err != nil {

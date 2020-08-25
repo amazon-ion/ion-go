@@ -122,7 +122,7 @@ func TestLocalSymbolTableAppendNonUnique(t *testing.T) {
 	r.Next()
 	r.Next()
 	st := r.SymbolTable()
-	systemMaxID := getSystemMaxId(st)
+	systemMaxID := getSystemMaxID(st)
 
 	checkSymbol(t, "foo", systemMaxID+1, st)
 	checkSymbol(t, "foo", systemMaxID+2, st)
@@ -147,14 +147,14 @@ func TestLocalSymbolTableAppendOutOfBounds(t *testing.T) {
 	r.Next()
 	r.Next()
 	st := r.SymbolTable()
-	systemMaxID := getSystemMaxId(st)
+	systemMaxID := getSystemMaxID(st)
 
 	checkSymbol(t, "foo", systemMaxID+1, st)
 	checkSymbol(t, "foo", systemMaxID+2, st)
 	checkUnknownSymbolID(t, systemMaxID+3, st)
 }
 
-func getSystemMaxId(st SymbolTable) uint64 {
+func getSystemMaxID(st SymbolTable) uint64 {
 	imports := st.Imports()
 	systemTable := imports[0]
 	return systemTable.MaxID()

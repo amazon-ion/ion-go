@@ -474,9 +474,9 @@ func isInSkipList(skipList []string, fn string) bool {
 // Read all the values in the reader and write them in the writer
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
-		name := reader.FieldName()
-		if name != nil {
-			err := writer.FieldName(*name)
+		fns, err := reader.FieldNameSymbol()
+		if err == nil && reader.IsInStruct() {
+			err = writer.FieldNameSymbol(fns)
 			if err != nil {
 				t.Fatal(err)
 			}

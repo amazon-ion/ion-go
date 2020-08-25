@@ -139,6 +139,7 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.state = trsBeforeFieldName
 		case ctxInList:
 			t.state = trsBeforeTypeAnnotations
+
 		default:
 			panic(fmt.Sprintf("unexpected context: %v", t.ctx.peek()))
 		}
@@ -195,16 +196,22 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
-		t.fieldName = &val
-		id, ok := t.lst.FindByName(val)
-		if ok {
+		if isSid(val) {
+			id, err := strconv.Atoi(val[1:])
+			if err != nil {
+				return false, err
+			}
+			t.fieldName = nil
 			t.fieldnameSID = int64(id)
+		} else {
+			t.fieldName = &val
+			id, ok := t.lst.FindByName(val)
+			if ok {
+				t.fieldnameSID = int64(id)
+			}
 		}
-
 		t.state = trsBeforeTypeAnnotations
-
 		return false, nil
-
 	default:
 		return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 	}
@@ -356,7 +363,6 @@ func (t *textReader) StepIn() error {
 	} else {
 		t.state = trsBeforeTypeAnnotations
 	}
-
 	t.clear()
 
 	t.tok.SetFinished()
@@ -410,16 +416,18 @@ func (t *textReader) verifyUnquotedSymbol(val string, ctx string) error {
 
 // IsSid checks if the text is a symbol identifier.
 func isSid(text string) bool {
-	if string(text[0]) == "$" {
-		if len(text) > 1 {
-			for i := 1; i < len(text); i++ {
-				// check if value is a digit.
-				_, err := strconv.Atoi(string(text[i]))
-				if err != nil {
-					return false
+	if len(text) > 0 {
+		if string(text[0]) == "$" {
+			if len(text) > 1 {
+				for i := 1; i < len(text); i++ {
+					// check if value is a digit.
+					_, err := strconv.Atoi(string(text[i]))
+					if err != nil {
+						return false
+					}
 				}
+				return true
 			}
-			return true
 		}
 	}
 	return false
