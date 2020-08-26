@@ -196,7 +196,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
-		if isSid(val) {
+		if isSymbolRef(val) {
 			id, err := strconv.Atoi(val[1:])
 			if err != nil {
 				return false, err
@@ -302,7 +302,8 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.valueType = StructType
 		t.value = StructType
 
-		if isIonSymbolTable(t.Annotations()) {
+		ctx := t.ctx.peek()
+		if ctx == ctxAtTopLevel && isIonSymbolTable(t.Annotations()) {
 			st, err := readLocalSymbolTable(t, t.cat)
 			if err == nil {
 				t.lst = st
@@ -412,25 +413,6 @@ func (t *textReader) verifyUnquotedSymbol(val string, ctx string) error {
 		return &SyntaxError{fmt.Sprintf("unquoted keyword '%v' as %v", val, ctx), t.tok.Pos() - 1}
 	}
 	return nil
-}
-
-// IsSid checks if the text is a symbol identifier.
-func isSid(text string) bool {
-	if len(text) > 0 {
-		if string(text[0]) == "$" {
-			if len(text) > 1 {
-				for i := 1; i < len(text); i++ {
-					// Check if value is a digit.
-					_, err := strconv.Atoi(string(text[i]))
-					if err != nil {
-						return false
-					}
-				}
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // OnSymbol handles finding a symbol-token value.
@@ -740,7 +722,7 @@ func (t *textReader) SymbolValue() (SymbolToken, error) {
 	text := t.value.(string)
 
 	// Check if string value is a SID, e.g. $1
-	if isSid(text) {
+	if isSymbolRef(text) {
 		id, err := strconv.Atoi(text[1:])
 		if err != nil {
 			return symbolTokenUndefined, err

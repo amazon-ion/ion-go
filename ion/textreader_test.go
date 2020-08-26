@@ -744,7 +744,7 @@ func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if isSid(val) {
+	if isSymbolRef(val) {
 		if symbolVal.Text != nil {
 			t.Errorf("expected %v, got %v", nil, *symbolVal.Text)
 		}
