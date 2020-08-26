@@ -41,6 +41,11 @@ func NewEventWriter(out io.Writer) ion.Writer {
 	return &eventwriter{enc: ion.NewEncoder(w)}
 }
 
+func (e *eventwriter) FieldNameSymbol(val ion.SymbolToken) error {
+	e.fieldname = val.Text
+	return nil
+}
+
 func (e *eventwriter) FieldName(val string) error {
 	e.fieldname = &val
 	return nil
