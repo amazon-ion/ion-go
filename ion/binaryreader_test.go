@@ -78,7 +78,7 @@ func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
 	r.Next()
 	currentType := r.Type()
 	if currentType != SymbolType {
-		t.Fatal("current type is not symbol.")
+		t.Fatal("current type is not symbol")
 	}
 	fns, err := r.FieldNameSymbol()
 	if err != nil {
@@ -107,7 +107,7 @@ func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
 	r.Next()
 	currentType = r.Type()
 	if currentType != SymbolType {
-		t.Fatal("current type is not symbol.")
+		t.Fatal("current type is not symbol")
 	}
 
 	fns, err = r.FieldNameSymbol()
@@ -134,7 +134,7 @@ func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
 		t.Fatal("symbol token sid is incorrect")
 	}
 
-	//make sure that a reader with the correct imports can read it
+	// Make sure that a reader with the correct imports can read it.
 	r2 := NewReaderCat(bytes.NewReader(buf.Bytes()), catalog)
 	r2.Next()
 	err = r2.StepIn()

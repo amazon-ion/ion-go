@@ -420,7 +420,7 @@ func isSid(text string) bool {
 		if string(text[0]) == "$" {
 			if len(text) > 1 {
 				for i := 1; i < len(text); i++ {
-					// check if value is a digit.
+					// Check if value is a digit.
 					_, err := strconv.Atoi(string(text[i]))
 					if err != nil {
 						return false
