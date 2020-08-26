@@ -72,7 +72,6 @@ var readGoodFilesSkipList = []string{
 }
 
 var binaryRoundTripSkipList = []string{
-	"localSymbolTableImportZeroMaxId.ion",
 	"T7-large.10n",
 	"T9.10n",
 	"utf16.ion",
@@ -82,18 +81,15 @@ var binaryRoundTripSkipList = []string{
 
 var textRoundTripSkipList = []string{
 	"annotations.ion",
-	"localSymbolTableImportZeroMaxId.ion",
 	"notVersionMarkers.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
 	"subfieldVarUInt32bit.ion",
-	"symbolEmpty.ion",
 	"symbols.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
 	"T7-large.10n",
-	"testfile35.ion",
 	"utf16.ion",
 	"utf32.ion",
 	"whitespace.ion",
@@ -115,12 +111,7 @@ var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_1_1.ion",
 	"invalidVersionMarker_ion_2_0.ion",
 	"localSymbolTableImportNegativeMaxId.ion",
-	"localSymbolTableImportNonIntegerMaxId.ion",
 	"localSymbolTableImportNullMaxId.ion",
-	"localSymbolTableWithMultipleImportsFields.ion",
-	"localSymbolTableWithMultipleSymbolsAndImportsFields.ion",
-	"localSymbolTableWithMultipleSymbolsFields.10n",
-	"localSymbolTableWithMultipleSymbolsFields.ion",
 	"minLongWithLenTooSmall.10n",
 	"nopPadTooShort.10n",
 	"nopPadWithAnnotations.10n",
