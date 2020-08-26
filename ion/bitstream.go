@@ -112,9 +112,10 @@ type bitstream struct {
 	state bss
 	stack bitstack
 
-	code bitcode
-	null bool
-	len  uint64
+	code               bitcode
+	null               bool
+	len                uint64
+	posAfterAnnotation uint64
 }
 
 // Init initializes this stream with the given bufio.Reader.
@@ -208,6 +209,11 @@ func (b *bitstream) Next() error {
 	b.state = bssOnValue
 
 	if code == bitcodeAnnotation {
+		// We cannot have an annotation within another annotation.
+		if b.pos <= b.posAfterAnnotation && b.stack.empty() {
+			return &SyntaxError{"annotation cannot be the enclosed value of another annotation", b.pos}
+		}
+
 		switch length {
 		case 0:
 			// This value is actually a BVM. It's invalid if we're not at the top level.
@@ -396,32 +402,98 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
-	lengthValue, lengthOfLength, err := b.readVarUintLen(b.len)
+	b.posAfterAnnotation = b.pos + b.len
+
+	annotFieldLength, lengthOfAnnotFieldLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.len-lengthOfLength <= lengthValue {
+	if annotFieldLength == 0 {
+		// An annotation with zero length is illegal because at least one annotation must be present.
+		return nil, &SyntaxError{"malformed annotation: at least one annotation must be specified",
+			b.pos - lengthOfAnnotFieldLength}
+	}
+
+	remainingAnnotationLength := b.len - lengthOfAnnotFieldLength - annotFieldLength
+	if remainingAnnotationLength <= 0 {
 		// The size of the annotations is larger than the remaining free space inside the
 		// annotation container.
-		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfLength}
+		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfAnnotFieldLength}
 	}
 
 	var as []uint64
-	for lengthValue > 0 {
-		id, idlen, err := b.readVarUintLen(lengthValue)
+	for annotFieldLength > 0 {
+		id, idlen, err := b.readVarUintLen(annotFieldLength)
 		if err != nil {
 			return nil, err
 		}
 
 		as = append(as, id)
-		lengthValue -= idlen
+		annotFieldLength -= idlen
+	}
+
+	// Peek looks at the next bytes without consuming them.
+	annotatedData, err := b.in.Peek(int(remainingAnnotationLength))
+	if err != nil {
+		return nil, err
+	}
+
+	// Confirm that annotatedData has a length consistent with remainingAnnotationLength.
+	err = checkLengthOfAnnotatedValue(annotatedData, remainingAnnotationLength, b.pos-1)
+	if err != nil {
+		return nil, err
 	}
 
 	b.state = bssBeforeValue
 	b.clear()
 
 	return as, nil
+}
+
+func checkLengthOfAnnotatedValue(annotatedData []byte, remainingLength uint64, offset uint64) error {
+	code, length := parseTag(int(annotatedData[0]))
+	if length == 15 {
+		// Anything with length 15 is null and should only require one byte.
+		if remainingLength != 1 {
+			return &InvalidTagByteError{byte(annotatedData[0]), offset}
+		}
+		return nil
+	}
+
+	// Adjust remainingLength because we just processed the first byte of annotatedData.
+	remainingLength--
+
+	// If the above length is 14 or we have an ordered struct (indicated by struct with length 1),
+	// then we need to process additional bytes to figure out the full length.
+	if length == 0x0E || (code == bitcodeStruct && length == 1) {
+		val := uint64(0)
+		counter := uint64(1)
+
+		for {
+			c := int(annotatedData[counter])
+			val <<= 7
+			val ^= uint64(c & 0x7F)
+
+			if (c & 0x80) != 0 {
+				length = val
+				break
+			}
+			counter++
+		}
+
+		// Adjust remainingLength for each byte processed.
+		remainingLength -= counter
+	}
+
+	// Confirm that the computed length is consistent with the expected remaining length.
+	if length != remainingLength {
+		msg := fmt.Sprintf("Annotation length of %d is inconsistent with enclosed annotated value's length of %d",
+			remainingLength, length)
+		return &SyntaxError{msg, offset}
+	}
+
+	return nil
 }
 
 // ReadInt reads an integer value.
