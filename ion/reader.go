@@ -210,11 +210,10 @@ type reader struct {
 	eof bool
 	err error
 
-	fieldName    *string
-	fieldnameSID int64
-	annotations  []string
-	valueType    Type
-	value        interface{}
+	fieldNameSymbol SymbolToken
+	annotations     []string
+	valueType       Type
+	value           interface{}
 }
 
 // Err returns the current error.
@@ -234,7 +233,7 @@ func (r *reader) IsNull() bool {
 
 // FieldName returns the current value's field name.
 func (r *reader) FieldName() *string {
-	return r.fieldName
+	return r.fieldNameSymbol.Text
 }
 
 // Annotations returns the current value's annotations.
@@ -397,7 +396,7 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) Clear() {
-	r.fieldName = nil
+	r.fieldNameSymbol.Text = nil
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil

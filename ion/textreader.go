@@ -63,7 +63,7 @@ type textReader struct {
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	return &textReader{
-		reader: reader{fieldnameSID: SymbolIDUnknown},
+		reader: reader{fieldNameSymbol: symbolTokenUndefined},
 		cat:    cat,
 		tok: tokenizer{
 			in: in,
@@ -201,13 +201,13 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			t.fieldName = nil
-			t.fieldnameSID = int64(id)
+			t.fieldNameSymbol.Text = nil
+			t.fieldNameSymbol.LocalSID = int64(id)
 		} else {
-			t.fieldName = &val
+			t.fieldNameSymbol.Text = &val
 			id, ok := t.lst.FindByName(val)
 			if ok {
-				t.fieldnameSID = int64(id)
+				t.fieldNameSymbol.LocalSID = int64(id)
 			}
 		}
 		t.state = trsBeforeTypeAnnotations
@@ -767,16 +767,16 @@ func (t *textReader) SymbolValue() (SymbolToken, error) {
 
 // FieldNameSymbol returns the current field name as a symbol token.
 func (t *textReader) FieldNameSymbol() (SymbolToken, error) {
-	if t.fieldName == nil {
-		if t.fieldnameSID < 0 || t.fieldnameSID > int64(t.SymbolTable().MaxID()) {
-			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", t.fieldnameSID)
+	if t.fieldNameSymbol.Text == nil {
+		if t.fieldNameSymbol.LocalSID < 0 || t.fieldNameSymbol.LocalSID > int64(t.SymbolTable().MaxID()) {
+			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", t.fieldNameSymbol.LocalSID)
 		}
-		fieldName, ok := t.SymbolTable().FindByID(uint64(t.fieldnameSID))
+		fieldName, ok := t.SymbolTable().FindByID(uint64(t.fieldNameSymbol.LocalSID))
 		if !ok {
-			t.fieldName = nil
+			t.fieldNameSymbol.Text = nil
 		} else {
-			t.fieldName = &fieldName
+			t.fieldNameSymbol.Text = &fieldName
 		}
 	}
-	return SymbolToken{Text: t.fieldName, LocalSID: t.fieldnameSID}, nil
+	return t.fieldNameSymbol, nil
 }
