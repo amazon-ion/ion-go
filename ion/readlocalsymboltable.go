@@ -5,7 +5,7 @@ import "fmt"
 // ReadLocalSymbolTable reads and installs a new local symbol table.
 func readLocalSymbolTable(r Reader, cat Catalog) (SymbolTable, error) {
 	if r.IsNull() {
-		r.clear()
+		r.Clear()
 		return V1SystemSymbolTable, nil
 	}
 

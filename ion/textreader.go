@@ -91,7 +91,7 @@ func (t *textReader) Next() bool {
 		return false
 	}
 
-	t.clear()
+	t.Clear()
 
 	// Loop until we've consumed enough tokens to know what the next value is.
 	for {
@@ -363,7 +363,7 @@ func (t *textReader) StepIn() error {
 	} else {
 		t.state = trsBeforeTypeAnnotations
 	}
-	t.clear()
+	t.Clear()
 
 	t.tok.SetFinished()
 	return nil
@@ -398,7 +398,7 @@ func (t *textReader) StepOut() error {
 
 	t.ctx.pop()
 	t.state = t.stateAfterValue()
-	t.clear()
+	t.Clear()
 	t.eof = false
 
 	return nil

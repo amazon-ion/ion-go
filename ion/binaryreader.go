@@ -49,7 +49,7 @@ func (r *binaryReader) Next() bool {
 		return false
 	}
 
-	r.clear()
+	r.Clear()
 
 	done := false
 	for !done {
@@ -154,7 +154,13 @@ func (r *binaryReader) next() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			r.value = id
+
+			text, ok := r.SymbolTable().FindByID(id)
+			if !ok {
+				r.value = SymbolToken{LocalSID: (int64)(id)}
+			} else {
+				r.value = SymbolToken{Text: &text, LocalSID: (int64)(id)}
+			}
 		}
 		return true, nil
 
@@ -311,7 +317,7 @@ func (r *binaryReader) StepIn() error {
 	}
 
 	r.ctx.push(containerTypeToCtx(r.valueType))
-	r.clear()
+	r.Clear()
 	r.bits.StepIn()
 
 	return nil
@@ -330,7 +336,7 @@ func (r *binaryReader) StepOut() error {
 		return err
 	}
 
-	r.clear()
+	r.Clear()
 	r.ctx.pop()
 	r.eof = false
 
@@ -342,16 +348,13 @@ func (r *binaryReader) StringValue() (string, error) {
 	if r.valueType != StringType && r.valueType != SymbolType {
 		return "", &UsageError{"Reader.StringValue", "value is not a string"}
 	}
-	if r.value == nil {
-		return "", nil
-	}
 
-	// check if value is symbol(in the form of SID) or string.
-	id, ok := r.value.(uint64)
+	// check if value is symbol or string.
+	st, ok := r.value.(SymbolToken)
 	if !ok {
 		return r.value.(string), nil
 	}
-	return r.resolve(id), nil
+	return r.resolve(uint64(st.LocalSID)), nil
 }
 
 // FieldNameSymbol returns the current field name as a symbol token.
@@ -374,15 +377,5 @@ func (r *binaryReader) SymbolValue() (SymbolToken, error) {
 		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
 	}
 
-	if r.value == nil {
-		return symbolTokenUndefined, nil
-	}
-
-	sid := r.value.(uint64)
-	text, ok := r.SymbolTable().FindByID(sid)
-	if !ok {
-		return SymbolToken{LocalSID: (int64)(sid)}, nil
-	}
-
-	return SymbolToken{Text: &text, LocalSID: (int64)(sid)}, nil
+	return r.value.(SymbolToken), nil
 }

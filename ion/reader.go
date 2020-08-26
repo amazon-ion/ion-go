@@ -173,7 +173,7 @@ type Reader interface {
 	SymbolValue() (SymbolToken, error)
 
 	// Clear clears the current value from the reader.
-	clear()
+	Clear()
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -396,7 +396,7 @@ func (r *reader) ByteValue() ([]byte, error) {
 }
 
 // Clear clears the current value from the reader.
-func (r *reader) clear() {
+func (r *reader) Clear() {
 	r.fieldName = nil
 	r.annotations = nil
 	r.valueType = NoType
