@@ -201,12 +201,13 @@ func TestNonEquivalency(t *testing.T) {
 // constructs Readers over the binary and text encodings to verify that the streams are equivalent.
 func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
+	symbolTable := getSymbolTable(fileBytes)
 
 	// Make a binary writer from the file
-	buf := encodeAsBinaryIon(t, fileBytes)
+	buf := encodeAsBinaryIon(t, fileBytes, symbolTable.Imports()...)
 
 	// Re-encode binWriter's stream as text into a string builder
-	str := encodeAsTextIon(t, buf.Bytes())
+	str := encodeAsTextIon(t, buf.Bytes(), symbolTable.Imports()...)
 
 	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
 	reader2 := NewReader(strings.NewReader(str.String()))
@@ -227,12 +228,13 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 // constructs Readers over the text and binary encodings to verify that the streams are equivalent.
 func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
+	symbolTable := getSymbolTable(fileBytes)
 
 	// Make a text writer from the file
-	str := encodeAsTextIon(t, fileBytes)
+	str := encodeAsTextIon(t, fileBytes, symbolTable.Imports()...)
 
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
-	buf := encodeAsBinaryIon(t, []byte(str.String()))
+	buf := encodeAsBinaryIon(t, []byte(str.String()), symbolTable.Imports()...)
 
 	reader1 := NewReader(strings.NewReader(str.String()))
 	reader2 := NewReader(bytes.NewReader(buf.Bytes()))
@@ -250,10 +252,10 @@ func testTextRoundTrip(t *testing.T, fp string) {
 }
 
 // Re-encode the provided Ion data as a text Ion string.
-func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
+func encodeAsTextIon(t *testing.T, data []byte, st ...SharedSymbolTable) strings.Builder {
 	reader := NewReader(bytes.NewReader(data))
 	str := strings.Builder{}
-	txtWriter := NewTextWriter(&str)
+	txtWriter := NewTextWriterOpts(&str, 0, st...)
 	writeFromReaderToWriter(t, reader, txtWriter)
 	err := txtWriter.Finish()
 	if err != nil {
@@ -263,10 +265,10 @@ func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
 }
 
 // Re-encode the provided Ion data as a binary Ion buffer.
-func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
-	reader := NewReader(bytes.NewReader(data))
+func encodeAsBinaryIon(t *testing.T, data []byte, st ...SharedSymbolTable) bytes.Buffer {
+	reader := NewReaderCat(bytes.NewReader(data), NewCatalog(st...))
 	buf := bytes.Buffer{}
-	binWriter := NewBinaryWriter(&buf)
+	binWriter := NewBinaryWriter(&buf, st...)
 	writeFromReaderToWriter(t, reader, binWriter)
 	err := binWriter.Finish()
 	if err != nil {
@@ -837,4 +839,10 @@ func compareIonItemSlices(this, that []ionItem) (bool, int) {
 		}
 	}
 	return true, idx
+}
+
+func getSymbolTable(fileBytes []byte) SymbolTable {
+	reader := NewReader(bytes.NewReader(fileBytes))
+	reader.Next()
+	return reader.SymbolTable()
 }
