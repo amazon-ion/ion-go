@@ -112,10 +112,9 @@ type bitstream struct {
 	state bss
 	stack bitstack
 
-	code               bitcode
-	null               bool
-	len                uint64
-	posAfterAnnotation uint64
+	code bitcode
+	null bool
+	len  uint64
 }
 
 // Init initializes this stream with the given bufio.Reader.
@@ -209,11 +208,6 @@ func (b *bitstream) Next() error {
 	b.state = bssOnValue
 
 	if code == bitcodeAnnotation {
-		// We cannot have an annotation within another annotation.
-		if b.pos <= b.posAfterAnnotation && b.stack.empty() {
-			return &SyntaxError{"annotation cannot be the enclosed value of another annotation", b.pos}
-		}
-
 		switch length {
 		case 0:
 			// This value is actually a BVM. It's invalid if we're not at the top level.
@@ -402,8 +396,6 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
-	b.posAfterAnnotation = b.pos + b.len
-
 	annotFieldLength, lengthOfAnnotFieldLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
@@ -453,10 +445,15 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 
 func checkLengthOfAnnotatedValue(annotatedData []byte, remainingLength uint64, offset uint64) error {
 	code, length := parseTag(int(annotatedData[0]))
+	if code == bitcodeAnnotation {
+		// We cannot have an annotation within another annotation.
+		return &SyntaxError{"an annotation cannot be the enclosed value of another annotation", offset}
+	}
+
 	if length == 15 {
 		// Anything with length 15 is null and should only require one byte.
 		if remainingLength != 1 {
-			return &InvalidTagByteError{byte(annotatedData[0]), offset}
+			return &InvalidTagByteError{annotatedData[0], offset}
 		}
 		return nil
 	}
@@ -488,8 +485,8 @@ func checkLengthOfAnnotatedValue(annotatedData []byte, remainingLength uint64, o
 
 	// Confirm that the computed length is consistent with the expected remaining length.
 	if length != remainingLength {
-		msg := fmt.Sprintf("Annotation length of %d is inconsistent with enclosed annotated value's length of %d",
-			remainingLength, length)
+		msg := fmt.Sprintf("Annotation wrapper indicated that the enclosed value's length should be %d "+
+			"but the enclosed value claims to have length %d", remainingLength, length)
 		return &SyntaxError{msg, offset}
 	}
 
