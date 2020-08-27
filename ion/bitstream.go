@@ -408,6 +408,7 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 	}
 
 	remainingAnnotationLength := b.len - lengthOfAnnotFieldLength - annotFieldLength
+
 	if remainingAnnotationLength <= 0 {
 		// The size of the annotations is larger than the remaining free space inside the
 		// annotation container.
@@ -425,14 +426,13 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		annotFieldLength -= idlen
 	}
 
-	// Peek looks at the next bytes without consuming them.
+	// Get the raw data for the value enclosed within the annotation without advancing the reader.
 	annotatedData, err := b.in.Peek(int(remainingAnnotationLength))
 	if err != nil {
 		return nil, err
 	}
 
-	// Confirm that annotatedData has a length consistent with remainingAnnotationLength.
-	err = checkLengthOfAnnotatedValue(annotatedData, remainingAnnotationLength, b.pos-1)
+	err = validateAnnotatedValue(annotatedData, remainingAnnotationLength, b.pos)
 	if err != nil {
 		return nil, err
 	}
@@ -443,15 +443,16 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 	return as, nil
 }
 
-func checkLengthOfAnnotatedValue(annotatedData []byte, remainingLength uint64, offset uint64) error {
+func validateAnnotatedValue(annotatedData []byte, remainingLength uint64, offset uint64) error {
 	code, length := parseTag(int(annotatedData[0]))
+
 	if code == bitcodeAnnotation {
-		// We cannot have an annotation within another annotation.
+		// We cannot have an annotation directly wrapping another annotation.
 		return &SyntaxError{"an annotation cannot be the enclosed value of another annotation", offset}
 	}
 
 	if length == 15 {
-		// Anything with length 15 is null and should only require one byte.
+		// Anything with length 15 is null and should only require one byte to represent it.
 		if remainingLength != 1 {
 			return &InvalidTagByteError{annotatedData[0], offset}
 		}
@@ -483,9 +484,9 @@ func checkLengthOfAnnotatedValue(annotatedData []byte, remainingLength uint64, o
 		remainingLength -= counter
 	}
 
-	// Confirm that the computed length is consistent with the expected remaining length.
+	// Confirm the computed length is consistent with the expected remaining length from the annotation wrapper.
 	if length != remainingLength {
-		msg := fmt.Sprintf("Annotation wrapper indicated that the enclosed value's length should be %d "+
+		msg := fmt.Sprintf("annotation wrapper indicates the enclosed value's length to be %d "+
 			"but the enclosed value claims to have length %d", remainingLength, length)
 		return &SyntaxError{msg, offset}
 	}
