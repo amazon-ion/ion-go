@@ -86,7 +86,6 @@ var textRoundTripSkipList = []string{
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
 	"subfieldVarUInt32bit.ion",
-	"symbols.ion",
 	"systemSymbols.ion",
 	"systemSymbolsAsAnnotations.ion",
 	"T7-large.10n",
@@ -131,10 +130,7 @@ var malformedIonsSkipList = []string{
 
 var equivsSkipList = []string{
 	"annotatedIvms.ion",
-	"localSymbolTableAppend.ion",
-	"localSymbolTableNullSlots.ion",
 	"localSymbolTableWithAnnotations.ion",
-	"localSymbolTables.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
@@ -147,9 +143,6 @@ var nonEquivsSkipList = []string{
 	"floats.ion",
 	"floatsVsDecimals.ion",
 	"localSymbolTableWithAnnotations.ion",
-	"symbolTables.ion",
-	"symbolTablesUnknownText.ion",
-	"symbols.ion",
 }
 
 func TestLoadGood(t *testing.T) {

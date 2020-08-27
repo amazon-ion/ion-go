@@ -55,10 +55,11 @@ func (s trs) String() string {
 type textReader struct {
 	reader
 
-	tok   tokenizer
-	state trs
-	lst   SymbolTable
-	cat   Catalog
+	tok            tokenizer
+	state          trs
+	lst            SymbolTable
+	cat            Catalog
+	isQuotedSymbol bool
 }
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -237,6 +238,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		fallthrough
 
 	case tokenSymbol, tokenSymbolQuoted:
+		if tok == tokenSymbol {
+			t.isQuotedSymbol = false
+		} else {
+			t.isQuotedSymbol = true
+		}
+
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
@@ -710,7 +717,25 @@ func (t *textReader) StringValue() (string, error) {
 	if t.value == nil {
 		return "", nil
 	}
-	return t.value.(string), nil
+
+	stringVal := t.value.(string)
+
+	if t.isQuotedSymbol {
+		return t.value.(string), nil
+	} else {
+		if isSymbolRef(stringVal) {
+			id, err := strconv.Atoi(stringVal[1:])
+			if err != nil {
+				return t.value.(string), nil
+			}
+
+			val, ok := t.lst.FindByID(uint64(id))
+			if ok {
+				return val, nil
+			}
+		}
+		return t.value.(string), nil
+	}
 }
 
 // SymbolValue returns the current value as a symbol token.
