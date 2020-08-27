@@ -5,16 +5,16 @@ import (
 )
 
 func TestLocalSymbolTableAppend(t *testing.T) {
-	text := "$ion_symbol_table::" +
-		"{" +
-		"  symbols:[ \"s1\", \"s2\" ]" +
-		"}\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"s3\", \"s4\", \"s5\" ]" +
-		"}\n" +
-		"null"
+	text := `$ion_symbol_table::
+			{
+			  symbols:[ "s1", "s2" ]
+			}
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "s3", "s4", "s5" ]
+			}
+			null`
 
 	r := NewReaderString(text)
 	r.Next()
@@ -34,26 +34,26 @@ func TestLocalSymbolTableAppend(t *testing.T) {
 }
 
 func TestLocalSymbolTableMultiAppend(t *testing.T) {
-	text := "$ion_symbol_table::" +
-		"{" +
-		"  symbols:[ \"s1\", \"s2\" ]" +
-		"}\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"s3\" ]" +
-		"}\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"s4\", \"s5\" ]" +
-		"}\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"s6\" ]" +
-		"}\n" +
-		"null"
+	text := `$ion_symbol_table::
+			{
+			  symbols:[ "s1", "s2" ]
+			}
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "s3" ]
+			}
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "s4", "s5" ]
+			}
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "s6" ]
+			}
+			null`
 
 	r := NewReaderString(text)
 	r.Next()
@@ -75,18 +75,18 @@ func TestLocalSymbolTableMultiAppend(t *testing.T) {
 }
 
 func TestLocalSymbolTableAppendEmptyList(t *testing.T) {
-	original := "$ion_symbol_table::" +
-		"{" +
-		"  symbols:[ \"s1\" ]" +
-		"}\n"
+	original := `$ion_symbol_table::
+				{
+				  symbols:[ "s1" ]
+				}`
 
 	appended := original +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[]" +
-		"}\n" +
-		"null"
+				`$ion_symbol_table::
+				{
+				  imports: $ion_symbol_table,
+				  symbols:[]
+				}
+				null`
 
 	r := NewReaderString(original + "null")
 	r.Next()
@@ -105,18 +105,18 @@ func TestLocalSymbolTableAppendEmptyList(t *testing.T) {
 }
 
 func TestLocalSymbolTableAppendNonUnique(t *testing.T) {
-	text := "$ion_symbol_table::" +
-		"{" +
-		"  symbols:[ \"foo\" ]" +
-		"}" +
-		"$10\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"foo\", \"bar\" ]" +
-		"}" +
-		"$11\n" +
-		"$12\n"
+	text := `$ion_symbol_table::
+			{ 
+			symbols:[ "foo" ]
+			}
+			$10
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "foo", "bar" ]
+			}
+			$11
+			$12`
 
 	r := NewReaderString(text)
 	r.Next()
@@ -130,18 +130,18 @@ func TestLocalSymbolTableAppendNonUnique(t *testing.T) {
 }
 
 func TestLocalSymbolTableAppendOutOfBounds(t *testing.T) {
-	text := "$ion_symbol_table::" +
-		"{" +
-		"  symbols:[ \"foo\" ]" +
-		"}" +
-		"$10\n" +
-		"$ion_symbol_table::" +
-		"{" +
-		"  imports: $ion_symbol_table," +
-		"  symbols:[ \"foo\" ]" +
-		"}" +
-		"$11\n" +
-		"$12\n"
+	text := `$ion_symbol_table::
+			{
+			  symbols:[ "foo" ]
+			}
+			$10
+			$ion_symbol_table::
+			{
+			  imports: $ion_symbol_table,
+			  symbols:[ "foo" ]
+			}
+			$11
+			$12`
 
 	r := NewReaderString(text)
 	r.Next()
