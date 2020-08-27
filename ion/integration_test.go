@@ -692,7 +692,8 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	}
 
 	currentType := reader.Type()
-	if reader.IsNull() {
+	// Excluding SymbolType from setting value to 'null.symbol' because readers can read "'null.symbol'" as text: 'null.symbol'.
+	if reader.IsNull() && reader.Type() != SymbolType {
 		ionItem.value = append(ionItem.value, textNulls[currentType])
 		ionItem.ionType = currentType
 

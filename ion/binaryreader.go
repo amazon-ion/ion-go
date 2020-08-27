@@ -349,6 +349,10 @@ func (r *binaryReader) StringValue() (string, error) {
 		return "", &UsageError{"Reader.StringValue", "value is not a string"}
 	}
 
+	if r.value == nil {
+		return "", nil
+	}
+
 	// check if value is symbol or string.
 	st, ok := r.value.(SymbolToken)
 	if !ok {
