@@ -242,7 +242,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
 
-			t.annotations = append(t.annotations, NewSymbolToken(V1SystemSymbolTable, val))
+			t.annotations = append(t.annotations, NewSymbolToken(t.SymbolTable(), val))
 			return false, nil
 		}
 

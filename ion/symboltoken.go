@@ -117,6 +117,10 @@ func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) string {
 // NewSymbolToken will check and return a symbol token if it exists in a symbol table,
 // otherwise return a new symbol token.
 func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {
+	if symbolTable == nil {
+		symbolTable = V1SystemSymbolTable
+	}
+
 	systemSymbolName := getSystemSymbolMapping(symbolTable, text)
 	if systemSymbolName != "" {
 		return SymbolToken{Text: &systemSymbolName, LocalSID: SymbolIDUnknown}
