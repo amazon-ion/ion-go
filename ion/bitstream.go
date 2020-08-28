@@ -446,17 +446,20 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 func validateAnnotatedValue(annotatedData []byte, remainingLength uint64, offset uint64) error {
 	code, length := parseTag(int(annotatedData[0]))
 
-	if code == bitcodeAnnotation {
-		// We cannot have an annotation directly wrapping another annotation.
-		return &SyntaxError{"an annotation cannot be the enclosed value of another annotation", offset}
-	}
-
 	if length == 15 {
 		// Anything with length 15 is null and should only require one byte to represent it.
 		if remainingLength != 1 {
 			return &InvalidTagByteError{annotatedData[0], offset}
 		}
 		return nil
+	}
+
+	if code == bitcodeNull {
+		// It is illegal for an annotation to wrap a NOP Pad.
+		return &SyntaxError{"an annotation cannot wrap a NOP Pad", offset}
+	} else if code == bitcodeAnnotation {
+		// We cannot have an annotation directly wrapping another annotation.
+		return &SyntaxError{"an annotation cannot be the enclosed value of another annotation", offset}
 	}
 
 	// Adjust remainingLength because we just processed the first byte of annotatedData.

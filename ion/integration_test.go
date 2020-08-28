@@ -117,7 +117,6 @@ var malformedIonsSkipList = []string{
 	"localSymbolTableWithMultipleSymbolsFields.ion",
 	"minLongWithLenTooSmall.10n",
 	"nopPadTooShort.10n",
-	"nopPadWithAnnotations.10n",
 	"nullDotCommentInt.ion",
 	"surrogate_1.ion",
 	"surrogate_10.ion",
@@ -320,11 +319,8 @@ func testInvalidReader(t *testing.T, r Reader) error {
 			}
 		}
 	}
-	if r.Err() != nil {
-		return r.Err()
-	}
 
-	return nil
+	return r.Err()
 }
 
 // Execute equivalency and non-equivalency tests, where true for eq means
