@@ -562,7 +562,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 
 		case SymbolType:
 			val, err := reader.StringValue()
-			if err != nil && !reader.IsNull() {
+			if err != nil && !isStringValueNil(err.Error()) {
 				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
 			err = writer.WriteSymbol(val)
@@ -726,7 +726,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 
 	case SymbolType:
 		val, err := reader.StringValue()
-		if err != nil && !reader.IsNull() {
+		if err != nil && !isStringValueNil(err.Error()) {
 			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 		}
 		ionItem.value = append(ionItem.value, val)

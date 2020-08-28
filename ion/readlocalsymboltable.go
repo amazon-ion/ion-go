@@ -184,7 +184,7 @@ func readSymbols(r Reader) ([]string, error) {
 	for r.Next() {
 		if r.Type() == StringType {
 			sym, err := r.StringValue()
-			if err != nil {
+			if err != nil && !isStringValueNil(err.Error()) {
 				return nil, err
 			}
 			syms = append(syms, sym)

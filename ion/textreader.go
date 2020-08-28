@@ -470,16 +470,14 @@ func (t *textReader) readSymbol(val string) (SymbolToken, error) {
 		text, ok := t.SymbolTable().FindByID(uint64(id))
 		if !ok {
 			return SymbolToken{LocalSID: int64(id)}, nil
-		} else {
-			return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 		}
+		return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 	} else {
 		id, ok := t.lst.FindByName(val)
 		if ok {
 			return SymbolToken{Text: &val, LocalSID: int64(id)}, nil
-		} else {
-			return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 		}
+		return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 	}
 }
 

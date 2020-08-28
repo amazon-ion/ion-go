@@ -228,12 +228,6 @@ func (r *reader) Type() Type {
 
 // IsNull returns true if the current value is null.
 func (r *reader) IsNull() bool {
-	if r.valueType == SymbolType || r.valueType == StringType {
-		st, ok := r.value.(SymbolToken)
-		if ok {
-			return st.Text == nil
-		}
-	}
 	return r.valueType != NoType && r.value == nil
 }
 
@@ -424,7 +418,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if r.value == nil {
-		return "string value is unknown", &UsageError{"Reader.StringValue", "string value is unknown"}
+		return "", &UsageError{"", "string value is unknown"}
 	}
 
 	// check if value is symbol or string.
@@ -434,7 +428,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if st.Text == nil {
-		return "string value is unknown", &UsageError{"Reader.StringValue", "string value is unknown"}
+		return "", &UsageError{"", "string value is unknown"}
 	}
 	return *st.Text, nil
 }

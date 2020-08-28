@@ -285,9 +285,8 @@ func (r *binaryReader) readSymbol(id uint64) (SymbolToken, error) {
 
 	if !ok {
 		return SymbolToken{LocalSID: int64(id)}, nil
-	} else {
-		return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 	}
+	return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.

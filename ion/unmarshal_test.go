@@ -339,8 +339,8 @@ func TestUnmarshalBinary(t *testing.T) {
 	test(timestampBytes, timestampValue, NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneUTC))
 
 	var symbolVal string
-	symbolBytes := prefixIVM([]byte{0x71, 0x0A}) // $10
-	test(symbolBytes, symbolVal, "$10")
+	symbolBytes := prefixIVM([]byte{0x71, 0x09}) // $9
+	test(symbolBytes, symbolVal, "$ion_shared_symbol_table")
 
 	var stringVal string
 	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
