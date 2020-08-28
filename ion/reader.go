@@ -418,7 +418,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if r.value == nil {
-		return "", &UsageError{"", "string value is unknown"}
+		return "", &UsageError{"Reader.StringValue", "string value is unknown"}
 	}
 
 	// check if value is symbol or string.
@@ -428,7 +428,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if st.Text == nil {
-		return "", &UsageError{"", "string value is unknown"}
+		return "", &UsageError{"Reader.StringValue", "string value is unknown"}
 	}
 	return *st.Text, nil
 }

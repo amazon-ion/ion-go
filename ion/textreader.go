@@ -472,13 +472,12 @@ func (t *textReader) readSymbol(val string) (SymbolToken, error) {
 			return SymbolToken{LocalSID: int64(id)}, nil
 		}
 		return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
-	} else {
-		id, ok := t.lst.FindByName(val)
-		if ok {
-			return SymbolToken{Text: &val, LocalSID: int64(id)}, nil
-		}
-		return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 	}
+	id, ok := t.lst.FindByName(val)
+	if ok {
+		return SymbolToken{Text: &val, LocalSID: int64(id)}, nil
+	}
+	return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 }
 
 // OnNull handles finding a null token.
