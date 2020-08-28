@@ -228,6 +228,12 @@ func (r *reader) Type() Type {
 
 // IsNull returns true if the current value is null.
 func (r *reader) IsNull() bool {
+	if r.valueType == SymbolType || r.valueType == StringType {
+		st, ok := r.value.(SymbolToken)
+		if ok {
+			return st.Text == nil
+		}
+	}
 	return r.valueType != NoType && r.value == nil
 }
 

@@ -383,6 +383,7 @@ func (t *lst) FindByID(id uint64) (string, bool) {
 		return t.symbols[idx], true
 	}
 	return "", false
+
 }
 
 func (t *lst) findByIDInImports(id uint64) (string, bool) {
