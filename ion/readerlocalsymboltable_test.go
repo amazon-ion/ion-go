@@ -81,12 +81,12 @@ func TestLocalSymbolTableAppendEmptyList(t *testing.T) {
 				}`
 
 	appended := original +
-				`$ion_symbol_table::
-				{
-				  imports: $ion_symbol_table,
-				  symbols:[]
-				}
-				null`
+		`$ion_symbol_table::
+		{
+		  imports: $ion_symbol_table,
+		  symbols:[]
+		}
+		null`
 
 	r := NewReaderString(original + "null")
 	r.Next()

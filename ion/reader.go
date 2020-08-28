@@ -406,3 +406,51 @@ func (r *reader) Clear() {
 func (r *reader) IsInStruct() bool {
 	return r.ctx.peek() == ctxInStruct
 }
+
+// StringValue returns the current value as a string.
+func (r *reader) StringValue() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+
+	if r.valueType != StringType && r.valueType != SymbolType {
+		return "", &UsageError{"Reader.StringValue", "value is not a string"}
+	}
+
+	if r.value == nil {
+		return "string value is unknown", &UsageError{"Reader.StringValue", "string value is unknown"}
+	}
+
+	// check if value is symbol or string.
+	st, ok := r.value.(SymbolToken)
+	if !ok {
+		return r.value.(string), nil
+	}
+
+	if st.Text == nil {
+		return "string value is unknown", &UsageError{"Reader.StringValue", "string value is unknown"}
+	}
+	return *st.Text, nil
+}
+
+// SymbolValue returns the current value as a symbol token.
+func (r *reader) SymbolValue() (SymbolToken, error) {
+	if r.err != nil {
+		return symbolTokenUndefined, r.err
+	}
+
+	if r.valueType != SymbolType {
+		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
+	}
+
+	return r.value.(SymbolToken), nil
+}
+
+// FieldNameSymbol returns the current field name as a symbol token.
+func (r *reader) FieldNameSymbol() (SymbolToken, error) {
+	if r.err != nil {
+		return symbolTokenUndefined, r.err
+	}
+
+	return r.fieldNameSymbol, nil
+}

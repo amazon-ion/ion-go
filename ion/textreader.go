@@ -55,11 +55,10 @@ func (s trs) String() string {
 type textReader struct {
 	reader
 
-	tok            tokenizer
-	state          trs
-	lst            SymbolTable
-	cat            Catalog
-	isQuotedSymbol bool
+	tok   tokenizer
+	state trs
+	lst   SymbolTable
+	cat   Catalog
 }
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -197,20 +196,16 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
-		if isSymbolRef(val) {
-			id, err := strconv.Atoi(val[1:])
+		if tok == tokenSymbolQuoted {
+			t.fieldNameSymbol = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+		} else {
+			st, err := t.readSymbol(val)
 			if err != nil {
 				return false, err
 			}
-			t.fieldNameSymbol.Text = nil
-			t.fieldNameSymbol.LocalSID = int64(id)
-		} else {
-			t.fieldNameSymbol.Text = &val
-			id, ok := t.lst.FindByName(val)
-			if ok {
-				t.fieldNameSymbol.LocalSID = int64(id)
-			}
+			t.fieldNameSymbol = st
 		}
+
 		t.state = trsBeforeTypeAnnotations
 		return false, nil
 	default:
@@ -236,14 +231,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 		fallthrough
-
-	case tokenSymbol, tokenSymbolQuoted:
-		if tok == tokenSymbol {
-			t.isQuotedSymbol = false
-		} else {
-			t.isQuotedSymbol = true
-		}
-
+	case tokenSymbolQuoted, tokenSymbol:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
@@ -264,17 +252,20 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				return false, &SyntaxError{
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
-
 			t.annotations = append(t.annotations, val)
 			return false, nil
 		}
 
-		// val was a legit symbol value.
-		if err := t.onSymbol(val, tok, ws); err != nil {
-			return false, err
+		if tok == tokenSymbolQuoted {
+			t.value = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.valueType = SymbolType
+			t.state = t.stateAfterValue()
+		} else {
+			if err := t.onSymbol(val, tok, ws); err != nil {
+				return false, err
+			}
 		}
 		return true, nil
-
 	case tokenString, tokenLongString:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
@@ -427,7 +418,7 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
-	if tok == tokenSymbol {
+	if tok == tokenSymbol || tok == tokenSymbolOperator {
 		switch val {
 		case "null":
 			vt, err := t.onNull(ws)
@@ -448,6 +439,12 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 		case "nan":
 			valueType = FloatType
 			value = math.NaN()
+		default:
+			val, err := t.readSymbol(val)
+			if err != nil {
+				return err
+			}
+			value = val
 		}
 	}
 
@@ -456,6 +453,34 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	t.value = value
 
 	return nil
+}
+
+// readSymbol reads a text and returns a symbol token.
+func (t *textReader) readSymbol(val string) (SymbolToken, error) {
+	if isSymbolRef(val) {
+		id, err := strconv.Atoi(val[1:])
+		if err != nil {
+			return symbolTokenUndefined, err
+		}
+
+		if id < 0 || uint64(id) > t.SymbolTable().MaxID() {
+			return symbolTokenUndefined, &UsageError{"Reader.Next", "sid is out of range "}
+		}
+
+		text, ok := t.SymbolTable().FindByID(uint64(id))
+		if !ok {
+			return SymbolToken{LocalSID: int64(id)}, nil
+		} else {
+			return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
+		}
+	} else {
+		id, ok := t.lst.FindByName(val)
+		if ok {
+			return SymbolToken{Text: &val, LocalSID: int64(id)}, nil
+		} else {
+			return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
+		}
+	}
 }
 
 // OnNull handles finding a null token.
@@ -707,82 +732,4 @@ func (t *textReader) stateAfterValue() trs {
 func (t *textReader) explode(err error) {
 	t.state = trsDone
 	t.err = err
-}
-
-// StringValue returns the current value as a string.
-func (t *textReader) StringValue() (string, error) {
-	if t.valueType != StringType && t.valueType != SymbolType {
-		return "", &UsageError{"Reader.StringValue", "value is not a string"}
-	}
-	if t.value == nil {
-		return "", nil
-	}
-
-	stringVal := t.value.(string)
-
-	if t.isQuotedSymbol {
-		return t.value.(string), nil
-	}
-	if isSymbolRef(stringVal) {
-		id, err := strconv.Atoi(stringVal[1:])
-		if err != nil {
-			return t.value.(string), nil
-		}
-
-		val, ok := t.lst.FindByID(uint64(id))
-		if ok {
-			return val, nil
-		}
-	}
-	return t.value.(string), nil
-}
-
-// SymbolValue returns the current value as a symbol token.
-func (t *textReader) SymbolValue() (SymbolToken, error) {
-	if t.valueType != SymbolType {
-		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
-	}
-
-	text := t.value.(string)
-
-	// Check if string value is a SID, e.g. $1
-	if isSymbolRef(text) {
-		id, err := strconv.Atoi(text[1:])
-		if err != nil {
-			return symbolTokenUndefined, err
-		}
-		SID := uint64(id)
-
-		text, ok := t.SymbolTable().FindByID(SID)
-		if !ok && (SID > t.SymbolTable().MaxID() || id < 0) {
-			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", id)
-		}
-		if !ok {
-			return SymbolToken{Text: nil, LocalSID: int64(SID)}, nil
-		}
-		return SymbolToken{Text: &text, LocalSID: int64(SID)}, nil
-	}
-
-	id, ok := t.lst.FindByName(text)
-	sid := int64(id)
-	if !ok {
-		sid = SymbolIDUnknown
-	}
-	return SymbolToken{Text: &text, LocalSID: sid}, nil
-}
-
-// FieldNameSymbol returns the current field name as a symbol token.
-func (t *textReader) FieldNameSymbol() (SymbolToken, error) {
-	if t.fieldNameSymbol.Text == nil {
-		if t.fieldNameSymbol.LocalSID < 0 || t.fieldNameSymbol.LocalSID > int64(t.SymbolTable().MaxID()) {
-			return symbolTokenUndefined, fmt.Errorf("ion: unexpected symbol ID '%v'", t.fieldNameSymbol.LocalSID)
-		}
-		fieldName, ok := t.SymbolTable().FindByID(uint64(t.fieldNameSymbol.LocalSID))
-		if !ok {
-			t.fieldNameSymbol.Text = nil
-		} else {
-			t.fieldNameSymbol.Text = &fieldName
-		}
-	}
-	return t.fieldNameSymbol, nil
 }

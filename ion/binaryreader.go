@@ -155,12 +155,11 @@ func (r *binaryReader) next() (bool, error) {
 				return false, err
 			}
 
-			text, ok := r.SymbolTable().FindByID(id)
-			if !ok {
-				r.value = SymbolToken{LocalSID: (int64)(id)}
-			} else {
-				r.value = SymbolToken{Text: &text, LocalSID: (int64)(id)}
+			st, err := r.readSymbol(id)
+			if err != nil {
+				return false, err
 			}
+			r.value = st
 		}
 		return true, nil
 
@@ -267,14 +266,28 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	s, ok := r.lst.FindByID(id)
-	if !ok {
-		r.fieldNameSymbol.Text = nil
-	} else {
-		r.fieldNameSymbol.Text = &s
+	st, err := r.readSymbol(id)
+	if err != nil {
+		return err
 	}
-	r.fieldNameSymbol.LocalSID = int64(id)
+	r.fieldNameSymbol = st
 	return nil
+
+}
+
+// ReadSymbol reads an ID and returns a symbol token.
+func (r *binaryReader) readSymbol(id uint64) (SymbolToken, error) {
+	if id > r.SymbolTable().MaxID() {
+		return symbolTokenUndefined, &UsageError{"Reader.Next", "sid is out of range "}
+	}
+
+	text, ok := r.SymbolTable().FindByID(id)
+
+	if !ok {
+		return SymbolToken{LocalSID: int64(id)}, nil
+	} else {
+		return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
+	}
 }
 
 // ReadAnnotations reads and resolves a set of annotations.
@@ -341,45 +354,4 @@ func (r *binaryReader) StepOut() error {
 	r.eof = false
 
 	return nil
-}
-
-// StringValue returns the current value as a string.
-func (r *binaryReader) StringValue() (string, error) {
-	if r.valueType != StringType && r.valueType != SymbolType {
-		return "", &UsageError{"Reader.StringValue", "value is not a string"}
-	}
-
-	if r.value == nil {
-		return "", nil
-	}
-
-	// check if value is symbol or string.
-	st, ok := r.value.(SymbolToken)
-	if !ok {
-		return r.value.(string), nil
-	}
-	return r.resolve(uint64(st.LocalSID)), nil
-}
-
-// FieldNameSymbol returns the current field name as a symbol token.
-func (r *binaryReader) FieldNameSymbol() (SymbolToken, error) {
-	if r.fieldNameSymbol.LocalSID == SymbolIDUnknown {
-		return symbolTokenUndefined, nil
-	}
-
-	text, ok := r.SymbolTable().FindByID(uint64(r.fieldNameSymbol.LocalSID))
-	if !ok {
-		return SymbolToken{LocalSID: r.fieldNameSymbol.LocalSID}, nil
-	}
-
-	return SymbolToken{Text: &text, LocalSID: r.fieldNameSymbol.LocalSID}, nil
-}
-
-// SymbolValue returns the current value as a symbol token.
-func (r *binaryReader) SymbolValue() (SymbolToken, error) {
-	if r.valueType != SymbolType {
-		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
-	}
-
-	return r.value.(SymbolToken), nil
 }
