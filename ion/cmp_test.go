@@ -57,22 +57,22 @@ func cmpAnnotations(thisItem, otherItem ionItem) bool {
 
 	// If the first annotation is $ion_symbol_table, then we want the annotation comparison logic to also apply to
 	// all the inner structs within the ion item.
-	if !thisItem.isLocalSymbolTableStruct &&
+	if !thisItem.insideLocalSymbolTable &&
 		len(thisItem.annotations) > 0 && thisItem.annotations[0] == "$ion_symbol_table" {
-		thisItem.setIsLocalSymbolTableStruct(true)
+		thisItem.setInsideLocalSymbolTable(true)
 	}
 
-	if !otherItem.isLocalSymbolTableStruct &&
+	if !otherItem.insideLocalSymbolTable &&
 		len(otherItem.annotations) > 0 && otherItem.annotations[0] == "$ion_symbol_table" {
-		otherItem.setIsLocalSymbolTableStruct(true)
+		otherItem.setInsideLocalSymbolTable(true)
 	}
 
-	if thisItem.isLocalSymbolTableStruct != otherItem.isLocalSymbolTableStruct {
+	if thisItem.insideLocalSymbolTable != otherItem.insideLocalSymbolTable {
 		return false
 	}
 
 	// We only do a strict comparison between annotations when we are not within a local symbol table struct
-	return thisItem.isLocalSymbolTableStruct || reflect.DeepEqual(thisItem.annotations, otherItem.annotations)
+	return thisItem.insideLocalSymbolTable || reflect.DeepEqual(thisItem.annotations, otherItem.annotations)
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {

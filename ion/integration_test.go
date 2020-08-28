@@ -34,11 +34,11 @@ const nonEquivsPath = "../ion-tests/iontestdata/good/non-equivs"
 type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
-	ionType                  Type
-	annotations              []string
-	value                    []interface{}
-	fieldName                string
-	isLocalSymbolTableStruct bool
+	ionType                Type
+	annotations            []string
+	value                  []interface{}
+	fieldName              string
+	insideLocalSymbolTable bool
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -66,15 +66,15 @@ func (i *ionItem) equal(o ionItem) bool {
 	}
 }
 
-func (i *ionItem) setIsLocalSymbolTableStruct(val bool) {
+func (i *ionItem) setInsideLocalSymbolTable(val bool) {
 	for j := 0; j < len(i.value); j++ {
 		if ionItemVal, ok := i.value[j].(ionItem); ok {
-			ionItemVal.setIsLocalSymbolTableStruct(val)
+			ionItemVal.setInsideLocalSymbolTable(val)
 			i.value[j] = ionItemVal
 		}
 	}
 
-	i.isLocalSymbolTableStruct = val
+	i.insideLocalSymbolTable = val
 }
 
 var readGoodFilesSkipList = []string{
