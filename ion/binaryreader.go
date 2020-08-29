@@ -446,7 +446,7 @@ func (r *binaryReader) readAnnotations() error {
 	as := make([]SymbolToken, len(ids))
 	for i, id := range ids {
 		name := r.resolve(id)
-		as[i] = SymbolToken{Text: &name, LocalSID: SymbolIDUnknown}
+		as[i] = SymbolToken{Text: &name, LocalSID: int64(id)}
 	}
 
 	r.annotations = as
