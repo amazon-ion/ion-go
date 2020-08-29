@@ -236,6 +236,8 @@ func (r *reader) Annotations() []string {
 			} else {
 				annotations = append(annotations, *an.Text)
 			}
+		} else {
+			annotations = append(annotations, "")
 		}
 	}
 
