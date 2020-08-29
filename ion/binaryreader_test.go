@@ -433,7 +433,7 @@ func TestReadBinarySymbols(t *testing.T) {
 	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false)
 	_symbol(t, r, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: 1})
 	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false)
-	_symbolAF(t, r, nil, nil, "foo", SymbolToken{Text: newString("foo"), LocalSID: 0}, false, false)
+	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 0})
 	_symbolAF(t, r, nil, []string{"foo"}, "bar", SymbolToken{Text: newString("bar"), LocalSID: 0}, false, false)
 
 	r.Next()
@@ -527,6 +527,47 @@ func TestReadBinaryFloats(t *testing.T) {
 	_float(t, r, math.Inf(-1))
 	_float(t, r, math.NaN())
 	_eof(t, r)
+}
+
+func TestReadMultipleLSTs(t *testing.T) {
+	r := readBinary([]byte{
+		0x71, 0x0B, // $11
+		0x71, 0x6F, // bar
+		0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
+		0xEE, 0x8F, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: `$ion_symbol_table`,
+		0x87, 0xB8, // symbols:[
+		0x83, 'f', 'o', 'o', // "foo"
+		0x83, 'b', 'a', 'r', // "bar" ]}
+		0x71, 0x0B, // bar
+		0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: $ion_symbol_table
+		0x87, 0xB4, // symbols:[
+		0x83, 'b', 'a', 'z', // "baz" ]}
+		0x71, 0x0B, // bar
+		0x71, 0x0C, // baz
+		0x71, 0x0C, // $12
+		0x71, 0x6F, // $111
+	})
+
+	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 11}, true, false)
+	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
+	r.Next()
+	if r.Err() == nil {
+		t.Errorf("r.err did not return an error")
+	}
+	_, err := r.StringValue()
+	if err == nil {
+		t.Errorf("r.stringvalue did not return an error")
+	}
+	_, err = r.SymbolValue()
+	if err == nil {
+		t.Errorf("r.symbolvalue did not return an error")
+	}
 }
 
 func TestReadBinaryInts(t *testing.T) {

@@ -118,10 +118,9 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 				if r.IsNull() {
 					return nil, fmt.Errorf("ion: max id is null")
 				}
-				var i int64
-				i, err = r.Int64Value()
-				if i < 0 {
-					return nil, fmt.Errorf("ion: max id is negative")
+				i, err := r.Int64Value()
+				if err != nil {
+					return nil, err
 				}
 				maxID = i
 			}
