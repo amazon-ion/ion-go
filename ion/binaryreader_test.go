@@ -270,35 +270,17 @@ func TestReadBinaryStrings(t *testing.T) {
 
 func TestReadBinarySymbols(t *testing.T) {
 	r := readBinary([]byte{
-		0x7F,
-		0x70,       // $0
+		0x71, 0x00, // $0
 		0x71, 0x01, // $ion
-		0x71, 0x0A, // $10
 		0x71, 0x6E, // foo
-		0xE4, 0x81, 0xEE, 0x71, 0x6F, // foo::bar
-		0x78, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // ${maxint64}
+		0x71, 0x6F, // bar
+		0x71, 0x71, // $113
 	})
-
-	_null(t, r, SymbolType)
 	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
 	_symbol(t, r, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: 1})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
-	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 0})
-	_symbolAF(t, r, nil, []string{"foo"}, "bar", SymbolToken{Text: newString("bar"), LocalSID: 0}, false, false, false)
+	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 110})
+	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 111})
 	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
-
-	r.Next()
-	if r.Err() == nil {
-		t.Errorf("r.err did not return an error")
-	}
-	_, err := r.StringValue()
-	if err == nil {
-		t.Errorf("r.stringvalue did not return an error")
-	}
-	_, err = r.SymbolValue()
-	if err == nil {
-		t.Errorf("r.symbolvalue did not return an error")
-	}
 }
 
 func TestReadBinaryTimestamps(t *testing.T) {
