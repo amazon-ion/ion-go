@@ -188,14 +188,6 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			}
 		}
 
-		// Skip over the following colon.
-		if err = t.tok.Next(); err != nil {
-			return false, err
-		}
-		if tok = t.tok.Token(); tok != tokenColon {
-			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
-		}
-
 		if tok == tokenSymbolQuoted {
 			t.fieldNameSymbol = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
@@ -204,6 +196,14 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 				return false, err
 			}
 			t.fieldNameSymbol = st
+		}
+
+		// Skip over the following colon.
+		if err = t.tok.Next(); err != nil {
+			return false, err
+		}
+		if tok = t.tok.Token(); tok != tokenColon {
+			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
 		t.state = trsBeforeTypeAnnotations

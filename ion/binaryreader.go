@@ -55,6 +55,7 @@ func (r *binaryReader) Next() bool {
 	for !done {
 		done, r.err = r.next()
 		if r.err != nil {
+
 			return false
 		}
 	}
@@ -148,7 +149,6 @@ func (r *binaryReader) next() (bool, error) {
 		return true, nil
 
 	case bitcodeSymbol:
-		r.valueType = SymbolType
 		if !r.bits.IsNull() {
 			id, err := r.bits.ReadSymbolID()
 			if err != nil {
@@ -161,6 +161,7 @@ func (r *binaryReader) next() (bool, error) {
 			}
 			r.value = st
 		}
+		r.valueType = SymbolType
 		return true, nil
 
 	case bitcodeString:

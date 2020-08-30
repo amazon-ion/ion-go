@@ -16,161 +16,11 @@
 package ion
 
 import (
-	"bytes"
 	"math"
 	"math/big"
 	"testing"
 	"time"
 )
-
-func TestReadBinaryFieldNameSymbolAndSymbolValues(t *testing.T) {
-	table1 := NewSharedSymbolTable("table1", 1, []string{"s1", "s2"})
-	table2 := NewSharedSymbolTable("table2", 1, []string{"s3", "s4"})
-	catalog := NewCatalog(table1, table2)
-
-	buf := bytes.Buffer{}
-	bw := NewBinaryWriter(&buf, table1, table2)
-	err := bw.BeginStruct()
-	if err != nil {
-		t.Fatal("unable to write struct")
-	}
-	err = bw.FieldName("s1")
-	if err != nil {
-		t.Fatal("unable to write field name")
-	}
-	err = bw.WriteSymbol("s2")
-	if err != nil {
-		t.Fatal("unable to write string")
-	}
-	err = bw.FieldName("s3")
-	if err != nil {
-		t.Fatal("unable to write field name")
-	}
-	err = bw.WriteSymbol("s4")
-	if err != nil {
-		t.Fatal("unable to write string")
-	}
-	err = bw.EndStruct()
-	if err != nil {
-		t.Fatal("unable to end struct")
-	}
-	err = bw.Finish()
-	if err != nil {
-		t.Fatal("unable to create finish")
-	}
-
-	r := NewReaderBytes(buf.Bytes())
-	r.Next()
-	err = r.StepIn()
-	if err != nil {
-		t.Fatal("unable to step in")
-	}
-
-	r.Next()
-	currentType := r.Type()
-	if currentType != SymbolType {
-		t.Fatal("current type is not symbol")
-	}
-	fns, err := r.FieldNameSymbol()
-	if err != nil {
-		t.Fatal("unable to get field name symbol")
-	}
-	if fns.Text != nil {
-		t.Fatal("field name symbol text is incorrect")
-	}
-	if fns.LocalSID != 10 {
-		t.Fatal("field name symbol sid is incorrect")
-	}
-
-	name := r.FieldName()
-	if name != nil {
-		t.Fatal("field name was not nil")
-	}
-
-	st, err := r.SymbolValue()
-	if err != nil {
-		t.Fatal("symbol value is incorrect")
-	}
-	if st.LocalSID != 11 {
-		t.Fatal("symbol value sid is incorrect")
-	}
-
-	r.Next()
-	currentType = r.Type()
-	if currentType != SymbolType {
-		t.Fatal("current type is not symbol")
-	}
-
-	fns, err = r.FieldNameSymbol()
-	if err != nil {
-		t.Fatal("unable to get field name symbol")
-	}
-	if fns.Text != nil {
-		t.Fatal("field name symbol text is incorrect")
-	}
-	if fns.LocalSID != 12 {
-		t.Fatal("field name symbol sid is incorrect")
-	}
-
-	name = r.FieldName()
-	if name != nil {
-		t.Fatal("field name was not nil")
-	}
-
-	st, err = r.SymbolValue()
-	if err != nil {
-		t.Fatal("symbol token is incorrect")
-	}
-	if st.LocalSID != 13 {
-		t.Fatal("symbol token sid is incorrect")
-	}
-
-	// Make sure that a reader with the correct imports can read it.
-	r2 := NewReaderCat(bytes.NewReader(buf.Bytes()), catalog)
-	r2.Next()
-	err = r2.StepIn()
-	if err != nil {
-		t.Fatal("unable to step in")
-	}
-
-	r2.Next()
-	currentType = r2.Type()
-	if currentType != SymbolType {
-		t.Fatal("current type is not symbol")
-	}
-
-	fn := r2.FieldName()
-	if *fn != "s1" {
-		t.Fatal("current field name is incorrect")
-	}
-
-	st, err = r2.SymbolValue()
-	if err != nil {
-		t.Fatal("symbol token is incorrect")
-	}
-	if *st.Text != "s2" {
-		t.Fatal("symbol token text is incorrect")
-	}
-
-	r2.Next()
-	currentType = r2.Type()
-	if currentType != SymbolType {
-		t.Fatal("current type is not symbol")
-	}
-
-	fn = r2.FieldName()
-	if *fn != "s3" {
-		t.Fatal("current field name is incorrect")
-	}
-
-	st, err = r2.SymbolValue()
-	if err != nil {
-		t.Fatal("symbol token is incorrect")
-	}
-	if *st.Text != "s4" {
-		t.Fatal("symbol token text is incorrect")
-	}
-}
 
 func TestReadBadBVMs(t *testing.T) {
 	t.Run("E00200E9", func(t *testing.T) {
@@ -430,11 +280,12 @@ func TestReadBinarySymbols(t *testing.T) {
 	})
 
 	_null(t, r, SymbolType)
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false)
+	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
 	_symbol(t, r, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: 1})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false)
+	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
 	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 0})
-	_symbolAF(t, r, nil, []string{"foo"}, "bar", SymbolToken{Text: newString("bar"), LocalSID: 0}, false, false)
+	_symbolAF(t, r, nil, []string{"foo"}, "bar", SymbolToken{Text: newString("bar"), LocalSID: 0}, false, false, false)
+	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
 
 	r.Next()
 	if r.Err() == nil {
@@ -550,7 +401,7 @@ func TestReadMultipleLSTs(t *testing.T) {
 		0x71, 0x6F, // $111
 	})
 
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 11}, true, false)
+	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 11}, true, false, false)
 	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 111})
 	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
 	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
