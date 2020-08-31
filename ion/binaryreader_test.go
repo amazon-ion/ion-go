@@ -268,6 +268,25 @@ func TestReadBinaryStrings(t *testing.T) {
 	_eof(t, r)
 }
 
+func TestReadBinaryFieldNames(t *testing.T) {
+	r := readBinary([]byte{
+	0xDE, 0x8F, // {
+	0x80, 0x21, 0x01, //$0: 1
+	0x81, 0x21, 0x01, //$ion: 1
+	0xEE, 0x21, 0x01, //foo: 1
+	0xEF, 0x21, 0x01, //bar: 1
+	0xF1, 0x21, 0x01, //$113: 1
+	// }
+	})
+	r.Next()
+	r.StepIn()
+	_nextF(t, r, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false)
+	_nextF(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
+	_nextF(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 110}, false, false)
+	_nextF(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111}, false, false)
+	_nextF(t, r, nil, SymbolToken{}, true, true)
+}
+
 func TestReadBinarySymbols(t *testing.T) {
 	r := readBinary([]byte{
 		0x71, 0x00, // $0
