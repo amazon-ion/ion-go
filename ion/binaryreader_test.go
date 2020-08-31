@@ -408,18 +408,7 @@ func TestReadMultipleLSTs(t *testing.T) {
 	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
 	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
 	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
-	r.Next()
-	if r.Err() == nil {
-		t.Errorf("r.err did not return an error")
-	}
-	_, err := r.StringValue()
-	if err == nil {
-		t.Errorf("r.stringvalue did not return an error")
-	}
-	_, err = r.SymbolValue()
-	if err == nil {
-		t.Errorf("r.symbolvalue did not return an error")
-	}
+	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
 }
 
 func TestReadBinaryInts(t *testing.T) {
