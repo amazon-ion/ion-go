@@ -541,7 +541,7 @@ func (b *symbolTableBuilder) Build() SymbolTable {
 	}
 }
 
-// ResolveSymbolValue resolves a symbol ID to a symbol value (possibly ${id} if we're
+// ResolveSymbolName resolves a symbol ID to a symbol value (possibly ${id} if we're
 // missing the appropriate symbol table).
 func resolveSymbolName(id uint64, symbolTable SymbolTable) string {
 	s, ok := symbolTable.FindByID(id)

@@ -46,7 +46,14 @@ func (i *ionItem) equal(o ionItem) bool {
 		return false
 	}
 
-	if !cmpAnnotations(*i, o) {
+	if i.insideLocalSymbolTable != o.insideLocalSymbolTable {
+		return false
+	}
+
+	// Annotation sets are considered equal if the first annotation for each is $ion_symbol_table.
+	// eg. $ion_symbol_table::foo and $ion_symbol_table::bar::baz are considered equal.
+	// We only do a strict comparison between annotations when we are not within a local symbol table struct
+	if !i.insideLocalSymbolTable && !cmpAnnotations(i.annotations, o.annotations) {
 		return false
 	}
 
@@ -66,15 +73,15 @@ func (i *ionItem) equal(o ionItem) bool {
 	}
 }
 
-func (i *ionItem) setInsideLocalSymbolTable(val bool) {
+func (i *ionItem) setInsideLocalSymbolTable() {
 	for j := 0; j < len(i.value); j++ {
-		if ionItemVal, ok := i.value[j].(ionItem); ok {
-			ionItemVal.setInsideLocalSymbolTable(val)
+		if ionItemVal, ok := i.value[j].(ionItem); ok && !ionItemVal.insideLocalSymbolTable {
+			ionItemVal.setInsideLocalSymbolTable()
 			i.value[j] = ionItemVal
 		}
 	}
 
-	i.insideLocalSymbolTable = val
+	i.insideLocalSymbolTable = true
 }
 
 var readGoodFilesSkipList = []string{
@@ -697,6 +704,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 
 	an := reader.Annotations()
 	if len(an) > 0 {
+		ionItem.insideLocalSymbolTable = an[0] == "$ion_symbol_table"
 		ionItem.annotations = an
 	}
 
@@ -799,6 +807,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if ionItem.insideLocalSymbolTable {
+			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
+			// to also apply to all the inner ion items within the ion item.
+			ionItem.setInsideLocalSymbolTable()
+		}
 
 	case ListType:
 		err := reader.StepIn()
@@ -812,6 +825,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		err = reader.StepOut()
 		if err != nil {
 			t.Fatal(err)
+		}
+		if ionItem.insideLocalSymbolTable {
+			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
+			// to also apply to all the inner ion items within the ion item.
+			ionItem.setInsideLocalSymbolTable()
 		}
 
 	case StructType:
@@ -827,7 +845,13 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if ionItem.insideLocalSymbolTable {
+			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
+			// to also apply to all the inner ion items within the ion item.
+			ionItem.setInsideLocalSymbolTable()
+		}
 	}
+
 	return ionItem
 }
 

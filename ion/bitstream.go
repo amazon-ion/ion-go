@@ -414,10 +414,10 @@ func (b *bitstream) ReadAnnotationIDs(symbolTable SymbolTable) ([]SymbolToken, e
 			return nil, err
 		}
 
-		lengthValue -= idlen
-
 		symbolName := resolveSymbolName(id, symbolTable)
 		as = append(as, SymbolToken{Text: &symbolName, LocalSID: int64(id)})
+
+		lengthValue -= idlen
 	}
 
 	b.state = bssBeforeValue
