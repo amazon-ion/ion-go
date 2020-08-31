@@ -230,7 +230,7 @@ func (r *reader) Annotations() []string {
 	var annotations []string
 	for _, an := range r.annotations {
 		if an.Text != nil {
-			systemSymbolName := getSystemSymbolMapping(V1SystemSymbolTable, *an.Text)
+			_, systemSymbolName := getSystemSymbolMapping(V1SystemSymbolTable, *an.Text)
 			if systemSymbolName != "" {
 				annotations = append(annotations, systemSymbolName)
 			} else {

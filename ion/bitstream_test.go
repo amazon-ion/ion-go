@@ -79,12 +79,12 @@ func TestBitstream(t *testing.T) {
 	}
 
 	next(bitcodeAnnotation, false, 31)
-	ids, err := b.ReadAnnotationIDs()
+	as, err := b.ReadAnnotationIDs(V1SystemSymbolTable)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ids) != 1 || ids[0] != 3 { // $ion_symbol_table
-		t.Errorf("expected [3], got %v", ids)
+	if len(as) != 1 || as[0].LocalSID != 3 { // $ion_symbol_table
+		t.Errorf("expected [3], got %v", as)
 	}
 
 	next(bitcodeStruct, false, 27)

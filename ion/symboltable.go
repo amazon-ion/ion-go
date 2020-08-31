@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -538,6 +539,16 @@ func (b *symbolTableBuilder) Build() SymbolTable {
 		symbols:     symbols,
 		index:       index,
 	}
+}
+
+// ResolveSymbolValue resolves a symbol ID to a symbol value (possibly ${id} if we're
+// missing the appropriate symbol table).
+func resolveSymbolName(id uint64, symbolTable SymbolTable) string {
+	s, ok := symbolTable.FindByID(id)
+	if !ok {
+		return fmt.Sprintf("$%v", id)
+	}
+	return s
 }
 
 // ProcessImports processes a slice of imports, returning an (augmented) copy, a set of

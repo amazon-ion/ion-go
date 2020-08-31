@@ -153,7 +153,7 @@ func (r *binaryReader) next() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			r.value = r.resolve(id)
+			r.value = resolveSymbolName(id, r.lst)
 		}
 		return true, nil
 
@@ -431,36 +431,20 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	fn := r.resolve(id)
+	fn := resolveSymbolName(id, r.lst)
 	r.fieldName = &fn
 	return nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.
 func (r *binaryReader) readAnnotations() error {
-	ids, err := r.bits.ReadAnnotationIDs()
+	as, err := r.bits.ReadAnnotationIDs(r.lst)
 	if err != nil {
 		return err
 	}
 
-	as := make([]SymbolToken, len(ids))
-	for i, id := range ids {
-		name := r.resolve(id)
-		as[i] = SymbolToken{Text: &name, LocalSID: int64(id)}
-	}
-
 	r.annotations = as
 	return nil
-}
-
-// Resolve resolves a symbol ID to a symbol value (possibly ${id} if we're
-// missing the appropriate symbol table).
-func (r *binaryReader) resolve(id uint64) string {
-	s, ok := r.lst.FindByID(id)
-	if !ok {
-		return fmt.Sprintf("$%v", id)
-	}
-	return s
 }
 
 // StepIn steps in to a container-type value

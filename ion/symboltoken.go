@@ -100,18 +100,18 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
-func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) string {
+func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) (int64, string) {
 	// If we have a symbol name of the form '$n' for some integer n,
 	// then we want to use the corresponding system symbol name.
 	if len(symbolName) > 1 && symbolName[0] == '$' {
-		if id, err := strconv.Atoi(symbolName[1:]); err == nil {
-			if systemSymbolName, ok := symbolTable.FindByID(uint64(id)); ok {
-				return systemSymbolName
+		if sid, err := strconv.Atoi(symbolName[1:]); err == nil {
+			if systemSymbolName, ok := symbolTable.FindByID(uint64(sid)); ok {
+				return int64(sid), systemSymbolName
 			}
 		}
 	}
 
-	return ""
+	return SymbolIDUnknown, ""
 }
 
 // NewSymbolToken will check and return a symbol token if it exists in a symbol table,
@@ -121,9 +121,9 @@ func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {
 		symbolTable = V1SystemSymbolTable
 	}
 
-	systemSymbolName := getSystemSymbolMapping(symbolTable, text)
-	if systemSymbolName != "" {
-		return SymbolToken{Text: &systemSymbolName, LocalSID: SymbolIDUnknown}
+	sid, systemSymbolName := getSystemSymbolMapping(symbolTable, text)
+	if sid != SymbolIDUnknown {
+		return SymbolToken{Text: &systemSymbolName, LocalSID: sid}
 	}
 
 	token := symbolTable.Find(text)
