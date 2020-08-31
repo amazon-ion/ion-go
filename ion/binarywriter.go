@@ -503,8 +503,10 @@ func (w *binaryWriter) beginValue(api string) error {
 				if err != nil {
 					return err
 				}
+			} else if a.LocalSID != SymbolIDUnknown {
+				id = uint64(a.LocalSID)
 			} else {
-				id = 0
+				return &UsageError{api, "invalid annotation symbol token"}
 			}
 
 			ids[i] = id
