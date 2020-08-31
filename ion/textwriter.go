@@ -121,6 +121,7 @@ func (w *textWriter) WriteSymbol(val string) error {
 	if w.err = w.beginValue("Writer.WriteSymbol"); w.err != nil {
 		return w.err
 	}
+
 	if w.err = writeSymbol(val, w.out); w.err != nil {
 		return w.err
 	}

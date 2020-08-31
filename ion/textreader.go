@@ -139,7 +139,6 @@ func (t *textReader) nextAfterValue() (bool, error) {
 			t.state = trsBeforeFieldName
 		case ctxInList:
 			t.state = trsBeforeTypeAnnotations
-
 		default:
 			panic(fmt.Sprintf("unexpected context: %v", t.ctx.peek()))
 		}
@@ -207,7 +206,9 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		}
 
 		t.state = trsBeforeTypeAnnotations
+
 		return false, nil
+
 	default:
 		return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 	}
@@ -231,6 +232,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 		fallthrough
+
 	case tokenSymbolQuoted, tokenSymbol:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
@@ -252,6 +254,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				return false, &SyntaxError{
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
+
 			t.annotations = append(t.annotations, val)
 			return false, nil
 		}
@@ -266,6 +269,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			}
 		}
 		return true, nil
+
 	case tokenString, tokenLongString:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {

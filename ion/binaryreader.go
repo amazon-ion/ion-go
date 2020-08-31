@@ -55,7 +55,6 @@ func (r *binaryReader) Next() bool {
 	for !done {
 		done, r.err = r.next()
 		if r.err != nil {
-
 			return false
 		}
 	}

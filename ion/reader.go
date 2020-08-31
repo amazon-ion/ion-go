@@ -421,7 +421,7 @@ func (r *reader) StringValue() (string, error) {
 		return "", &UsageError{"Reader.StringValue", "string value is unknown"}
 	}
 
-	// check if value is symbol or string.
+	// Check if value is symbol or string.
 	st, ok := r.value.(SymbolToken)
 	if !ok {
 		return r.value.(string), nil
