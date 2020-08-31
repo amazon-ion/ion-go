@@ -16,7 +16,6 @@
 package ion
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -160,7 +159,7 @@ func (w *writer) FieldName(val string) error {
 		return w.err
 	}
 	if !w.IsInStruct() {
-		w.err = errors.New("ion: Writer.FieldName called when not writing a struct")
+		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
 		return w.err
 	}
 
@@ -172,7 +171,7 @@ func (w *writer) FieldName(val string) error {
 // It may only be called while writing a struct.
 func (w *writer) FieldNameSymbol(val SymbolToken) error {
 	if !w.IsInStruct() {
-		w.err = errors.New("ion: Writer.FieldNameSymbol called when not writing a struct")
+		w.err = &UsageError{"Writer.FieldNameSymbol", "called when not writing a struct"}
 		return w.err
 	}
 
