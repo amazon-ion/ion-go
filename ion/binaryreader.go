@@ -32,7 +32,6 @@ type binaryReader struct {
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r := &binaryReader{
 		cat:    cat,
-		reader: reader{fieldNameSymbol: symbolTokenUndefined},
 	}
 	r.bits.Init(in)
 	return r
@@ -276,17 +275,17 @@ func (r *binaryReader) readFieldName() error {
 }
 
 // ReadSymbol reads an ID and returns a symbol token.
-func (r *binaryReader) readSymbol(id uint64) (SymbolToken, error) {
+func (r *binaryReader) readSymbol(id uint64) (*SymbolToken, error) {
 	if id > r.SymbolTable().MaxID() {
-		return symbolTokenUndefined, &UsageError{"Reader.Next", "sid is out of range "}
+		return nil, &UsageError{"Reader.Next", "sid is out of range "}
 	}
 
 	text, ok := r.SymbolTable().FindByID(id)
 
 	if !ok {
-		return SymbolToken{LocalSID: int64(id)}, nil
+		return &SymbolToken{LocalSID: int64(id)}, nil
 	}
-	return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
+	return &SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.

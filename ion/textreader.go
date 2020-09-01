@@ -63,7 +63,6 @@ type textReader struct {
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	return &textReader{
-		reader: reader{fieldNameSymbol: symbolTokenUndefined},
 		cat:    cat,
 		tok: tokenizer{
 			in: in,
@@ -188,7 +187,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		}
 
 		if tok == tokenSymbolQuoted {
-			t.fieldNameSymbol = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.fieldNameSymbol = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
 			st, err := t.readSymbol(val)
 			if err != nil {
@@ -260,7 +259,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 
 		if tok == tokenSymbolQuoted {
-			t.value = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.value = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 			t.valueType = SymbolType
 			t.state = t.stateAfterValue()
 		} else {
@@ -460,28 +459,28 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 }
 
 // readSymbol reads a text and returns a symbol token.
-func (t *textReader) readSymbol(val string) (SymbolToken, error) {
+func (t *textReader) readSymbol(val string) (*SymbolToken, error) {
 	if isSymbolRef(val) {
 		id, err := strconv.Atoi(val[1:])
 		if err != nil {
-			return symbolTokenUndefined, err
+			return nil, err
 		}
 
 		if id < 0 || uint64(id) > t.SymbolTable().MaxID() {
-			return symbolTokenUndefined, &UsageError{"Reader.Next", "sid is out of range "}
+			return nil, &UsageError{"Reader.Next", "sid is out of range "}
 		}
 
 		text, ok := t.SymbolTable().FindByID(uint64(id))
 		if !ok {
-			return SymbolToken{LocalSID: int64(id)}, nil
+			return &SymbolToken{LocalSID: int64(id)}, nil
 		}
-		return SymbolToken{Text: &text, LocalSID: int64(id)}, nil
+		return &SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 	}
 	id, ok := t.lst.FindByName(val)
 	if ok {
-		return SymbolToken{Text: &val, LocalSID: int64(id)}, nil
+		return &SymbolToken{Text: &val, LocalSID: int64(id)}, nil
 	}
-	return SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
+	return &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 }
 
 // OnNull handles finding a null token.

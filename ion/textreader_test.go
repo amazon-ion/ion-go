@@ -923,7 +923,7 @@ func _nextF(t *testing.T, r Reader, efn *string, efns SymbolToken, isFieldNameSy
 		if err != nil {
 			t.Errorf("fieldnamesymbol returned an error: %v", err.Error())
 		}
-		if !efns.Equal(&fns) {
+		if !efns.Equal(fns) {
 			t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fns)
 		}
 	}

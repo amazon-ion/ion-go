@@ -57,14 +57,6 @@ type SymbolToken struct {
 	Source *ImportSource
 }
 
-var (
-	// symbolTokenUndefined is the sentinel for invalid tokens.
-	// The `nil` value is actually SID `$0` which is a defined token.
-	symbolTokenUndefined = SymbolToken{
-		LocalSID: SymbolIDUnknown,
-	}
-)
-
 func (st *SymbolToken) String() string {
 	text := "nil"
 	if st.Text != nil {

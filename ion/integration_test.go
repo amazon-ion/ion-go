@@ -455,8 +455,8 @@ func isInSkipList(skipList []string, fn string) bool {
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		fns, err := reader.FieldNameSymbol()
-		if err == nil && reader.IsInStruct() {
-			err = writer.FieldNameSymbol(fns)
+		if err == nil && reader.IsInStruct() && fns != nil {
+			err = writer.FieldNameSymbol(*fns)
 			if err != nil {
 				t.Fatal(err)
 			}

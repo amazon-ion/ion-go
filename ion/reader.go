@@ -166,11 +166,11 @@ type Reader interface {
 
 	// FieldNameSymbol returns the field name associated with the current value as a SymbolToken.
 	// It returns an error if the current value has no field name.
-	FieldNameSymbol() (SymbolToken, error)
+	FieldNameSymbol() (*SymbolToken, error)
 
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
 	// error if the current value is not an Ion symbol.
-	SymbolValue() (SymbolToken, error)
+	SymbolValue() (*SymbolToken, error)
 
 	// Clear clears the current value from the reader.
 	Clear()
@@ -210,7 +210,7 @@ type reader struct {
 	eof bool
 	err error
 
-	fieldNameSymbol SymbolToken
+	fieldNameSymbol *SymbolToken
 	annotations     []string
 	valueType       Type
 	value           interface{}
@@ -233,7 +233,10 @@ func (r *reader) IsNull() bool {
 
 // FieldName returns the current value's field name.
 func (r *reader) FieldName() *string {
-	return r.fieldNameSymbol.Text
+	if r.fieldNameSymbol != nil {
+		return r.fieldNameSymbol.Text
+	}
+	return nil
 }
 
 // Annotations returns the current value's annotations.
@@ -396,7 +399,9 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) Clear() {
-	r.fieldNameSymbol.Text = nil
+	if r.fieldNameSymbol != nil {
+		r.fieldNameSymbol.Text = nil
+	}
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil
@@ -422,7 +427,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	// Check if value is symbol or string.
-	st, ok := r.value.(SymbolToken)
+	st, ok := r.value.(*SymbolToken)
 	if !ok {
 		return r.value.(string), nil
 	}
@@ -434,22 +439,22 @@ func (r *reader) StringValue() (string, error) {
 }
 
 // SymbolValue returns the current value as a symbol token.
-func (r *reader) SymbolValue() (SymbolToken, error) {
+func (r *reader) SymbolValue() (*SymbolToken, error) {
 	if r.err != nil {
-		return symbolTokenUndefined, r.err
+		return nil, r.err
 	}
 
 	if r.valueType != SymbolType {
-		return symbolTokenUndefined, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
+		return nil, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
 	}
 
-	return r.value.(SymbolToken), nil
+	return r.value.(*SymbolToken), nil
 }
 
 // FieldNameSymbol returns the current field name as a symbol token.
-func (r *reader) FieldNameSymbol() (SymbolToken, error) {
+func (r *reader) FieldNameSymbol() (*SymbolToken, error) {
 	if r.err != nil {
-		return symbolTokenUndefined, r.err
+		return nil, r.err
 	}
 
 	return r.fieldNameSymbol, nil
