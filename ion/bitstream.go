@@ -396,32 +396,107 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		panic("not an annotation")
 	}
 
-	lengthValue, lengthOfLength, err := b.readVarUintLen(b.len)
+	annotFieldLength, lengthOfAnnotFieldLength, err := b.readVarUintLen(b.len)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.len-lengthOfLength <= lengthValue {
+	if annotFieldLength == 0 {
+		// An annotation with zero length is illegal because at least one annotation must be present.
+		return nil, &SyntaxError{"malformed annotation: at least one annotation must be specified",
+			b.pos - lengthOfAnnotFieldLength}
+	}
+
+	remainingAnnotationLength := b.len - lengthOfAnnotFieldLength - annotFieldLength
+
+	if remainingAnnotationLength <= 0 {
 		// The size of the annotations is larger than the remaining free space inside the
 		// annotation container.
-		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfLength}
+		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfAnnotFieldLength}
 	}
 
 	var as []uint64
-	for lengthValue > 0 {
-		id, idlen, err := b.readVarUintLen(lengthValue)
+	for annotFieldLength > 0 {
+		id, idlen, err := b.readVarUintLen(annotFieldLength)
 		if err != nil {
 			return nil, err
 		}
 
 		as = append(as, id)
-		lengthValue -= idlen
+		annotFieldLength -= idlen
+	}
+
+	err = b.validateAnnotatedValue(remainingAnnotationLength)
+	if err != nil {
+		return nil, err
 	}
 
 	b.state = bssBeforeValue
 	b.clear()
 
 	return as, nil
+}
+
+func (b *bitstream) validateAnnotatedValue(remainingLength uint64) error {
+	tagByte, err := b.peekAtOffset(0)
+	if err != nil {
+		return err
+	}
+
+	code, length := parseTag(int(tagByte))
+
+	if length == 15 {
+		// Anything with length 15 is null and should only require one byte to represent it.
+		if remainingLength != 1 {
+			return &InvalidTagByteError{tagByte, b.pos}
+		}
+		return nil
+	}
+
+	if code == bitcodeNull {
+		// It is illegal for an annotation to wrap a NOP Pad.
+		return &SyntaxError{"an annotation cannot wrap a NOP Pad", b.pos}
+	} else if code == bitcodeAnnotation {
+		// We cannot have an annotation directly wrapping another annotation.
+		return &SyntaxError{"an annotation cannot be the enclosed value of another annotation", b.pos}
+	}
+
+	// Adjust remainingLength because we just processed the first byte of the annotated data.
+	remainingLength--
+
+	// If the above length is 14 or we have an ordered struct (indicated by struct with length 1),
+	// then we need to process additional bytes to figure out the full length.
+	if length == 0x0E || (code == bitcodeStruct && length == 1) {
+		val := uint64(0)
+		counter := 1
+
+		for {
+			c, err := b.peekAtOffset(counter)
+			if err != nil {
+				return err
+			}
+
+			counter++
+			remainingLength--
+
+			val <<= 7
+			val ^= uint64(c & 0x7F)
+
+			if (c & 0x80) != 0 {
+				length = val
+				break
+			}
+		}
+	}
+
+	// Confirm the computed length is consistent with the expected remaining length from the annotation wrapper.
+	if length != remainingLength {
+		msg := fmt.Sprintf("annotation wrapper indicates the enclosed value's length to be %d "+
+			"but the enclosed value claims to have length %d", remainingLength, length)
+		return &SyntaxError{msg, b.pos}
+	}
+
+	return nil
 }
 
 // ReadInt reads an integer value.
@@ -1000,6 +1075,16 @@ func (b *bitstream) skip(n uint64) error {
 	}
 
 	return nil
+}
+
+// PeekAtOffset returns the data at a certain offset without advancing the reader.
+func (b *bitstream) peekAtOffset(offset int) (byte, error) {
+	data, err := b.in.Peek(offset + 1)
+	if err != nil {
+		return 0, err
+	}
+
+	return data[offset], nil
 }
 
 // A bitnode represents a container value, including its type code and

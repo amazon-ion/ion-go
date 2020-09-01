@@ -96,6 +96,38 @@ func TestReadBadLST(t *testing.T) {
 	}
 }
 
+func TestReadMultipleLSTs(t *testing.T) {
+	r := readBinary([]byte{
+		0x71, 0x0B, // $11
+		0x71, 0x6F, // bar
+		0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
+		0xEE, 0x90, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: $ion_symbol_table,
+		0x87, 0xB8, // symbols:[
+		0x83, 'f', 'o', 'o', // "foo"
+		0x83, 'b', 'a', 'r', // "bar" ]}
+		0x71, 0x0B, // bar
+		0x71, 0x0C, // $12
+		0x71, 0x6F, // $111
+		0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: $ion_symbol_table
+		0x87, 0xB4, // symbols:[
+		0x83, 'b', 'a', 'z', // "baz" ]}
+		0x71, 0x0B, // bar
+		0x71, 0x0C, // baz
+	})
+	_symbol(t, r, "$11")
+	_symbol(t, r, "bar")
+
+	_symbol(t, r, "bar")
+	_symbol(t, r, "$12")
+	_symbol(t, r, "$111")
+
+	_symbol(t, r, "bar")
+	_symbol(t, r, "baz")
+	_eof(t, r)
+}
+
 func TestReadBinaryLST(t *testing.T) {
 	r := readBinary([]byte{0x0F})
 	_next(t, r, NullType)
