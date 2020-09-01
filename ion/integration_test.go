@@ -797,11 +797,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ionItem.insideLocalSymbolTable {
-			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
-			// to also apply to all the inner ion items within the ion item.
-			ionItem.setInsideLocalSymbolTable()
-		}
 
 	case ListType:
 		err := reader.StepIn()
@@ -815,11 +810,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		err = reader.StepOut()
 		if err != nil {
 			t.Fatal(err)
-		}
-		if ionItem.insideLocalSymbolTable {
-			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
-			// to also apply to all the inner ion items within the ion item.
-			ionItem.setInsideLocalSymbolTable()
 		}
 
 	case StructType:
@@ -835,11 +825,12 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ionItem.insideLocalSymbolTable {
-			// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
-			// to also apply to all the inner ion items within the ion item.
-			ionItem.setInsideLocalSymbolTable()
-		}
+	}
+
+	if IsContainer(currentType) && ionItem.insideLocalSymbolTable {
+		// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
+		// to also apply to all the inner ion items within the ion item.
+		ionItem.setInsideLocalSymbolTable()
 	}
 
 	return ionItem
