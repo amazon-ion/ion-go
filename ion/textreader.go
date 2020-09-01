@@ -63,7 +63,7 @@ type textReader struct {
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	return &textReader{
-		cat:    cat,
+		cat: cat,
 		tok: tokenizer{
 			in: in,
 		},

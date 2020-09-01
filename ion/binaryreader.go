@@ -31,7 +31,7 @@ type binaryReader struct {
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r := &binaryReader{
-		cat:    cat,
+		cat: cat,
 	}
 	r.bits.Init(in)
 	return r
