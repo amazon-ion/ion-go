@@ -153,7 +153,7 @@ func (r *binaryReader) next() (bool, error) {
 				return false, err
 			}
 
-			st, err := r.readSymbol(id)
+			st, err := r.resolveSymbolID(id)
 			if err != nil {
 				return false, err
 			}
@@ -265,7 +265,7 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	st, err := r.readSymbol(id)
+	st, err := r.resolveSymbolID(id)
 	if err != nil {
 		return err
 	}
@@ -274,10 +274,13 @@ func (r *binaryReader) readFieldName() error {
 
 }
 
-// ReadSymbol reads an ID and returns a symbol token.
-func (r *binaryReader) readSymbol(id uint64) (*SymbolToken, error) {
+// ResolveSymbolID resolves a symbol ID to a symbol token.
+func (r *binaryReader) resolveSymbolID(id uint64) (*SymbolToken, error) {
 	if id > r.SymbolTable().MaxID() {
-		return nil, &UsageError{"Reader.Next", "sid is out of range "}
+		return nil, &UsageError{
+			"Reader.Next",
+			fmt.Sprintf("sid: %v, is greater than max id: %v", id, r.SymbolTable().MaxID()),
+		}
 	}
 
 	text, ok := r.SymbolTable().FindByID(id)

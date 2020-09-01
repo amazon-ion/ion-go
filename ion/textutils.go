@@ -321,5 +321,5 @@ func parseTimestamp(val string) (Timestamp, error) {
 }
 
 func isStringValueNil(errMsg string) bool {
-	return errMsg == "ion: usage error in Reader.StringValue: string value is unknown"
+	return errMsg == "ion: usage error in Reader.StringValue: cannot call StringValue() when IsNull() is true"
 }

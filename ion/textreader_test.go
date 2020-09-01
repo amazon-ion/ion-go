@@ -771,10 +771,13 @@ func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval string) 
 	}
 }
 
+// _symbolAF calls reader.next and asserts the expected symbol value. This function also asserts the value has neither
+// annotation or field name.
 func _symbol(t *testing.T, r Reader, eval string, evalst SymbolToken) {
 	_symbolAF(t, r, nil, nil, eval, evalst, false, false, false)
 }
 
+// _symbolAF calls reader.next and asserts the expected symbol value, annotation, and field name.
 func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string, evalSt SymbolToken, isStringValueError bool, isSymbolValueError bool, isNextError bool) {
 	if !isNextError {
 		_nextAF(t, r, SymbolType, efn, etas)

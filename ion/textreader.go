@@ -458,7 +458,8 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	return nil
 }
 
-// readSymbol reads a text and returns a symbol token.
+// readSymbol reads a text as either a symbol identifier e.g., "$42" or a symbol text e.g., "foo" and resolves to a
+// symbol token.
 func (t *textReader) readSymbol(val string) (*SymbolToken, error) {
 	if isSymbolRef(val) {
 		id, err := strconv.Atoi(val[1:])
@@ -467,7 +468,10 @@ func (t *textReader) readSymbol(val string) (*SymbolToken, error) {
 		}
 
 		if id < 0 || uint64(id) > t.SymbolTable().MaxID() {
-			return nil, &UsageError{"Reader.Next", "sid is out of range "}
+			return nil, &UsageError{
+				"Reader.Next",
+				fmt.Sprintf("sid: %v, is greater than max id: %v", id, t.SymbolTable().MaxID()),
+			}
 		}
 
 		text, ok := t.SymbolTable().FindByID(uint64(id))

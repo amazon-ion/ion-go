@@ -419,11 +419,11 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if r.valueType != StringType && r.valueType != SymbolType {
-		return "", &UsageError{"Reader.StringValue", "value is not a string"}
+		return "", &UsageError{"Reader.StringValue", "value is not a string or symbol"}
 	}
 
 	if r.value == nil {
-		return "", &UsageError{"Reader.StringValue", "string value is unknown"}
+		return "", &UsageError{"Reader.StringValue", "cannot call StringValue() when IsNull() is true"}
 	}
 
 	// Check if value is symbol or string.
@@ -433,7 +433,7 @@ func (r *reader) StringValue() (string, error) {
 	}
 
 	if st.Text == nil {
-		return "", &UsageError{"Reader.StringValue", "string value is unknown"}
+		return "", &UsageError{"Reader.StringValue", "cannot call StringValue() when IsNull() is true"}
 	}
 	return *st.Text, nil
 }
