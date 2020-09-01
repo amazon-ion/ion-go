@@ -428,6 +428,11 @@ func (b *bitstream) ReadAnnotationIDs(symbolTable SymbolTable) ([]SymbolToken, e
 		annotFieldLength -= idlen
 	}
 
+	err = b.validateAnnotatedValue(remainingAnnotationLength)
+	if err != nil {
+		return nil, err
+	}
+
 	b.state = bssBeforeValue
 	b.clear()
 
