@@ -38,22 +38,13 @@ type ionItem struct {
 	annotations            []string
 	value                  []interface{}
 	fieldName              string
-	insideLocalSymbolTable bool
 }
 
 func (i *ionItem) equal(o ionItem) bool {
 	if i.ionType != o.ionType {
 		return false
 	}
-
-	if i.insideLocalSymbolTable != o.insideLocalSymbolTable {
-		return false
-	}
-
-	// Annotation sets are considered equal if the first annotation for each is $ion_symbol_table.
-	// eg. $ion_symbol_table::foo and $ion_symbol_table::bar::baz are considered equal.
-	// We only do a strict comparison between annotations when we are not within a local symbol table struct
-	if !i.insideLocalSymbolTable && !cmpAnnotations(i.annotations, o.annotations) {
+	if !cmpAnnotations(i.annotations, o.annotations) {
 		return false
 	}
 
@@ -71,17 +62,6 @@ func (i *ionItem) equal(o ionItem) bool {
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
-}
-
-func (i *ionItem) setInsideLocalSymbolTable() {
-	for j := 0; j < len(i.value); j++ {
-		if ionItemVal, ok := i.value[j].(ionItem); ok && !ionItemVal.insideLocalSymbolTable {
-			ionItemVal.setInsideLocalSymbolTable()
-			i.value[j] = ionItemVal
-		}
-	}
-
-	i.insideLocalSymbolTable = true
 }
 
 var readGoodFilesSkipList = []string{
@@ -153,6 +133,7 @@ var equivsSkipList = []string{
 	"localSymbolTableAppend.ion",
 	"localSymbolTableNullSlots.ion",
 	"localSymbolTables.ion",
+	"localSymbolTableWithAnnotations.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
@@ -163,6 +144,7 @@ var nonEquivsSkipList = []string{
 	"decimals.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
+	"localSymbolTableWithAnnotations.ion",
 	"symbolTables.ion",
 	"symbolTablesUnknownText.ion",
 	"symbols.ion",
@@ -694,7 +676,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 
 	an := reader.Annotations()
 	if len(an) > 0 {
-		ionItem.insideLocalSymbolTable = an[0] == "$ion_symbol_table"
 		ionItem.annotations = an
 	}
 
@@ -825,12 +806,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
-
-	if IsContainer(currentType) && ionItem.insideLocalSymbolTable {
-		// If we have $ion_symbol_table as our first annotation, then we want the annotation comparison logic
-		// to also apply to all the inner ion items within the ion item.
-		ionItem.setInsideLocalSymbolTable()
 	}
 
 	return ionItem
