@@ -34,10 +34,10 @@ const nonEquivsPath = "../ion-tests/iontestdata/good/non-equivs"
 type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
-	ionType                Type
-	annotations            []string
-	value                  []interface{}
-	fieldName              string
+	ionType     Type
+	annotations []string
+	value       []interface{}
+	fieldName   string
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -132,8 +132,8 @@ var malformedIonsSkipList = []string{
 var equivsSkipList = []string{
 	"localSymbolTableAppend.ion",
 	"localSymbolTableNullSlots.ion",
-	"localSymbolTables.ion",
 	"localSymbolTableWithAnnotations.ion",
+	"localSymbolTables.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
@@ -807,7 +807,6 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 			t.Fatal(err)
 		}
 	}
-
 	return ionItem
 }
 
