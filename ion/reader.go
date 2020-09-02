@@ -155,7 +155,7 @@ type Reader interface {
 
 	// StringValue returns the current value as a string (if that makes sense). It returns
 	// an error if the current value is not an Ion symbol or an Ion string.
-	StringValue() (string, error)
+	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
 	// an error if the current value is not an Ion clob or an Ion blob.
@@ -413,29 +413,26 @@ func (r *reader) IsInStruct() bool {
 }
 
 // StringValue returns the current value as a string.
-func (r *reader) StringValue() (string, error) {
+func (r *reader) StringValue() (*string, error) {
 	if r.err != nil {
-		return "", r.err
+		return nil, r.err
 	}
 
 	if r.valueType != StringType && r.valueType != SymbolType {
-		return "", &UsageError{"Reader.StringValue", "value is not a string or symbol"}
+		return nil, &UsageError{"Reader.StringValue", "value is not a string or symbol"}
 	}
 
 	if r.value == nil {
-		return "", &UsageError{"Reader.StringValue", "cannot call StringValue() when IsNull() is true"}
+		return nil, nil
 	}
 
 	// Check if value is symbol or string.
 	st, ok := r.value.(*SymbolToken)
 	if !ok {
-		return r.value.(string), nil
+		val := r.value.(string)
+		return &val, nil
 	}
-
-	if st.Text == nil {
-		return "", &UsageError{"Reader.StringValue", "cannot call StringValue() when IsNull() is true"}
-	}
-	return *st.Text, nil
+	return st.Text, nil
 }
 
 // SymbolValue returns the current value as a symbol token.

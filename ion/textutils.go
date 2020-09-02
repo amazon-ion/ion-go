@@ -319,7 +319,3 @@ func parseInt(str string, radix int) (interface{}, error) {
 func parseTimestamp(val string) (Timestamp, error) {
 	return ParseTimestampFromStr(val)
 }
-
-func isStringValueNil(errMsg string) bool {
-	return errMsg == "ion: usage error in Reader.StringValue: cannot call StringValue() when IsNull() is true"
-}

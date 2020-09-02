@@ -107,7 +107,11 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 		switch *r.FieldName() {
 		case "name":
 			if r.Type() == StringType {
-				name, err = r.StringValue()
+				var val *string
+				val, err = r.StringValue()
+				if val != nil {
+					name = *val
+				}
 			}
 		case "version":
 			if r.Type() == IntType {
@@ -183,10 +187,15 @@ func readSymbols(r Reader) ([]string, error) {
 	for r.Next() {
 		if r.Type() == StringType {
 			sym, err := r.StringValue()
-			if err != nil && !isStringValueNil(err.Error()) {
+
+			if err != nil {
 				return nil, err
 			}
-			syms = append(syms, sym)
+			if sym != nil {
+				syms = append(syms, *sym)
+			} else {
+				syms = append(syms, "")
+			}
 		} else {
 			syms = append(syms, "")
 		}

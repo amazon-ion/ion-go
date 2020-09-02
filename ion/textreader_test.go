@@ -38,14 +38,14 @@ func TestReadTextSymbols(t *testing.T) {
 				$11`
 
 	r := NewReaderString(ionText)
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
-	_symbol(t, r, "$4", SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown})
-	_symbol(t, r, "name", SymbolToken{Text: newString("name"), LocalSID: 4})
-	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 10})
-	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 10})
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-	_symbol(t, r, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: 1})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false, false)
+	_symbol(t, r, newString("$4"), SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown})
+	_symbol(t, r, newString("name"), SymbolToken{Text: newString("name"), LocalSID: 4})
+	_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 10})
+	_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 10})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
+	_symbol(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1})
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{}, true, true, true)
 }
 
 func TestReadTextFieldNames(t *testing.T) {
@@ -87,7 +87,7 @@ func TestIgnoreValues(t *testing.T) {
 	_next(t, r, StructType)
 	_next(t, r, ListType)
 
-	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+	_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 	_eof(t, r)
 }
 
@@ -110,13 +110,13 @@ func TestReadSexps(t *testing.T) {
 	})
 
 	test("(foo)", func(t *testing.T, r Reader) {
-		_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 	})
 
 	test("(foo bar baz :: boop)", func(t *testing.T, r Reader) {
-		_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
-		_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-		_symbolAF(t, r, nil, []string{"baz"}, "boop", SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
+		_symbolAF(t, r, nil, []string{"baz"}, newString("boop"), SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false, false)
 	})
 }
 
@@ -135,19 +135,19 @@ func TestStructs(t *testing.T) {
 
 	test("{foo : bar :: baz}", func(t *testing.T, r Reader) {
 		foo := "foo"
-		_symbolAF(t, r, &foo, []string{"bar"}, "baz", SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbolAF(t, r, &foo, []string{"bar"}, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false, false)
 	})
 
 	test("{foo: a, bar: b, baz: c}", func(t *testing.T, r Reader) {
 		foo, bar, baz := "foo", "bar", "baz"
-		_symbolAF(t, r, &foo, nil, "a", SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false, false)
-		_symbolAF(t, r, &bar, nil, "b", SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}, false, false, false)
-		_symbolAF(t, r, &baz, nil, "c", SymbolToken{Text: newString("c"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbolAF(t, r, &foo, nil, newString("a"), SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbolAF(t, r, &bar, nil, newString("b"), SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbolAF(t, r, &baz, nil, newString("c"), SymbolToken{Text: newString("c"), LocalSID: SymbolIDUnknown}, false, false, false)
 	})
 
 	test("{\"\": a}", func(t *testing.T, r Reader) {
 		emptyString := ""
-		_symbolAF(t, r, &emptyString, nil, "a", SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbolAF(t, r, &emptyString, nil, newString("a"), SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false, false)
 	})
 }
 
@@ -185,14 +185,14 @@ func TestLists(t *testing.T) {
 	})
 
 	test("[foo]", func(t *testing.T, r Reader) {
-		_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		_eof(t, r)
 	})
 
 	test("[foo, bar, baz::boop]", func(t *testing.T, r Reader) {
-		_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
-		_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-		_symbolAF(t, r, nil, []string{"baz"}, "boop", SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false, false)
+		_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
+		_symbolAF(t, r, nil, []string{"baz"}, newString("boop"), SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false, false)
 		_eof(t, r)
 	})
 }
@@ -436,9 +436,9 @@ func TestInts(t *testing.T) {
 func TestStrings(t *testing.T) {
 	r := NewReaderString(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
 
-	_stringAF(t, r, nil, []string{"foo"}, "bar")
-	_string(t, r, "baz")
-	_stringAF(t, r, nil, []string{"a", "b"}, "beepboop")
+	_stringAF(t, r, nil, []string{"foo"}, newString("bar"))
+	_string(t, r, newString("baz"))
+	_stringAF(t, r, nil, []string{"a", "b"}, newString("beepboop"))
 	_null(t, r, StringType)
 
 	_eof(t, r)
@@ -447,9 +447,9 @@ func TestStrings(t *testing.T) {
 func TestSymbols(t *testing.T) {
 	r := NewReaderString("'null'::foo bar a::b::'baz' null.symbol")
 
-	_symbolAF(t, r, nil, []string{"null"}, "foo", SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, false, false, false)
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-	_symbolAF(t, r, nil, []string{"a", "b"}, "baz", SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false, false)
+	_symbolAF(t, r, nil, []string{"null"}, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, false, false, false)
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
+	_symbolAF(t, r, nil, []string{"a", "b"}, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false, false)
 	_null(t, r, SymbolType)
 
 	_eof(t, r)
@@ -471,12 +471,12 @@ func TestOperators(t *testing.T) {
 	r := NewReaderString("(a*(b+c))")
 
 	_sexp(t, r, func(t *testing.T, r Reader) {
-		_symbol(t, r, "a", SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
-		_symbol(t, r, "*", SymbolToken{Text: newString("*"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("a"), SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
+		_symbol(t, r, newString("*"), SymbolToken{Text: newString("*"), LocalSID: SymbolIDUnknown})
 		_sexp(t, r, func(t *testing.T, r Reader) {
-			_symbol(t, r, "b", SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown})
-			_symbol(t, r, "+", SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown})
-			_symbol(t, r, "c", SymbolToken{Text: newString("c"), LocalSID: SymbolIDUnknown})
+			_symbol(t, r, newString("b"), SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown})
+			_symbol(t, r, newString("+"), SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown})
+			_symbol(t, r, newString("c"), SymbolToken{Text: newString("c"), LocalSID: SymbolIDUnknown})
 			_eof(t, r)
 		})
 		_eof(t, r)
@@ -486,7 +486,7 @@ func TestOperators(t *testing.T) {
 func TestTopLevelOperators(t *testing.T) {
 	r := NewReaderString("a + b")
 
-	_symbol(t, r, "a", SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
+	_symbol(t, r, newString("a"), SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
 
 	if r.Next() {
 		t.Errorf("next returned true")
@@ -752,11 +752,11 @@ func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Times
 	}
 }
 
-func _string(t *testing.T, r Reader, eval string) {
+func _string(t *testing.T, r Reader, eval *string) {
 	_stringAF(t, r, nil, nil, eval)
 }
 
-func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval string) {
+func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval *string) {
 	_nextAF(t, r, StringType, efn, etas)
 	if r.IsNull() {
 		t.Fatalf("expected %v, got null.string", eval)
@@ -766,19 +766,23 @@ func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if eval == nil {
+		if val != eval {
+			t.Errorf("expected %v, got %v", eval, val)
+		}
+	} else if *val != *eval {
+		t.Errorf("expected %v, got %v", *eval, *val)
 	}
 }
 
 // _symbolAF calls reader.next and asserts the expected symbol value. This function also asserts the value has neither
 // annotation or field name.
-func _symbol(t *testing.T, r Reader, eval string, evalst SymbolToken) {
+func _symbol(t *testing.T, r Reader, eval *string, evalst SymbolToken) {
 	_symbolAF(t, r, nil, nil, eval, evalst, false, false, false)
 }
 
 // _symbolAF calls reader.next and asserts the expected symbol value, annotation, and field name.
-func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string, evalSt SymbolToken, isStringValueError bool, isSymbolValueError bool, isNextError bool) {
+func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval *string, evalSt SymbolToken, isStringValueError bool, isSymbolValueError bool, isNextError bool) {
 	if !isNextError {
 		_nextAF(t, r, SymbolType, efn, etas)
 	} else {
@@ -798,8 +802,12 @@ func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval string, 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if val != eval {
-			t.Errorf("expected %v, got %v", eval, val)
+		if eval == nil {
+			if eval != val {
+				t.Errorf("expected %v, got %v", eval, val)
+			}
+		} else if *val != *eval {
+			t.Errorf("expected %v, got %v", *eval, *val)
 		}
 	}
 

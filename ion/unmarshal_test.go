@@ -340,11 +340,11 @@ func TestUnmarshalBinary(t *testing.T) {
 
 	var symbolVal string
 	symbolBytes := prefixIVM([]byte{0x71, 0x09}) // $9
-	test(symbolBytes, symbolVal, "$ion_shared_symbol_table")
+	test(symbolBytes, symbolVal, newString("$ion_shared_symbol_table"))
 
 	var stringVal string
 	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
-	test(stringBytes, stringVal, "abc")
+	test(stringBytes, stringVal, newString("abc"))
 
 	var clobVal []byte
 	clobBytes := prefixIVM([]byte{0x92, 0x0A, 0x0B})
@@ -654,8 +654,8 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", "hello")
-	test("\"hello\"", "hello")
+	test("hello", newString("hello"))
+	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
 	test("{{}}", []byte{})
@@ -669,14 +669,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": "two",
+		"b": newString("two"),
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, "two"})
+	test("[1, two]", []interface{}{1, newString("two")})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, "+", "two"})
+	test("(1 + two)", []interface{}{1, newString("+"), newString("two")})
 
 	var result []interface{}
 	test("()", result)
@@ -741,7 +741,7 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::\"abc\"", "string", foo{newString("abc"), []string{"with", "multiple", "annotations"}})
 	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
 	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, []string{"with", "multiple", "annotations"}})
 	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, []string{"with", "multiple", "annotations"}})

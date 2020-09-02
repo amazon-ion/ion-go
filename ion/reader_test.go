@@ -44,7 +44,7 @@ func TestDecodeFiles(t *testing.T) {
 			if err == ErrNoInput {
 				break
 			}
-			if err != nil && !isStringValueNil(err.Error()) {
+			if err != nil {
 				t.Fatal(err)
 			}
 			// fmt.Println(v)

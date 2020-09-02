@@ -63,7 +63,7 @@ func TestReadNullLST(t *testing.T) {
 		0x71, 0x09,
 	}
 	r := NewReaderBytes(ion)
-	_symbol(t, r, "$ion_shared_symbol_table", SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
+	_symbol(t, r, newString("$ion_shared_symbol_table"), SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 	_eof(t, r)
 }
 
@@ -74,7 +74,7 @@ func TestReadEmptyLST(t *testing.T) {
 		0x71, 0x09,
 	}
 	r := NewReaderBytes(ion)
-	_symbol(t, r, "$ion_shared_symbol_table", SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
+	_symbol(t, r, newString("$ion_shared_symbol_table"), SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 	_eof(t, r)
 }
 
@@ -262,9 +262,9 @@ func TestReadBinaryStrings(t *testing.T) {
 	})
 
 	_null(t, r, StringType)
-	_string(t, r, "")
-	_string(t, r, "a")
-	_string(t, r, "hello world but longer")
+	_string(t, r, newString(""))
+	_string(t, r, newString("a"))
+	_string(t, r, newString("hello world but longer"))
 	_eof(t, r)
 }
 
@@ -295,11 +295,11 @@ func TestReadBinarySymbols(t *testing.T) {
 		0x71, 0x6F, // bar
 		0x71, 0x71, // $113
 	})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 0}, true, false, false)
-	_symbol(t, r, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: 1})
-	_symbol(t, r, "foo", SymbolToken{Text: newString("foo"), LocalSID: 110})
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 111})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false, false)
+	_symbol(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1})
+	_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 110})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{}, true, true, true)
 }
 
 func TestReadBinaryTimestamps(t *testing.T) {
@@ -402,13 +402,13 @@ func TestReadMultipleLSTs(t *testing.T) {
 		0x71, 0x6F, // $111
 	})
 
-	_symbolAF(t, r, nil, nil, "", SymbolToken{Text: nil, LocalSID: 11}, true, false, false)
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 111})
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
-	_symbol(t, r, "bar", SymbolToken{Text: newString("bar"), LocalSID: 11})
-	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
-	_symbol(t, r, "baz", SymbolToken{Text: newString("baz"), LocalSID: 12})
-	_symbolAF(t, r, nil, nil, "", SymbolToken{}, true, true, true)
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{Text: nil, LocalSID: 11}, false, false, false)
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbol(t, r, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{}, true, true, true)
 }
 
 func TestReadBinaryInts(t *testing.T) {

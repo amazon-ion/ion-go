@@ -489,7 +489,10 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 
 	switch v.Kind() {
 	case reflect.String:
-		v.SetString(val)
+		if val != nil {
+			v.SetString(*val)
+
+		}
 		return nil
 
 	case reflect.Struct:
