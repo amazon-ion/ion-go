@@ -21,6 +21,9 @@ func readLocalSymbolTable(r Reader, cat Catalog) (SymbolTable, error) {
 
 	for r.Next() {
 		var err error
+		if r.FieldName() == nil {
+			return nil, fmt.Errorf("ion: field name is nil")
+		}
 		switch *r.FieldName() {
 		case "symbols":
 			if foundLocals {

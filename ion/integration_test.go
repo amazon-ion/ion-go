@@ -124,7 +124,6 @@ var malformedIonsSkipList = []string{
 
 var equivsSkipList = []string{
 	"annotatedIvms.ion",
-	"localSymbolTableWithAnnotations.ion",
 	"localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
@@ -136,7 +135,6 @@ var nonEquivsSkipList = []string{
 	"decimals.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
-	"localSymbolTableWithAnnotations.ion",
 }
 
 func TestLoadGood(t *testing.T) {
