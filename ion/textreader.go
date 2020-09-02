@@ -90,7 +90,7 @@ func (t *textReader) Next() bool {
 		return false
 	}
 
-	t.Clear()
+	t.clear()
 
 	// Loop until we've consumed enough tokens to know what the next value is.
 	for {
@@ -305,6 +305,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 
 		ctx := t.ctx.peek()
 		if ctx == ctxAtTopLevel && isIonSymbolTable(t.Annotations()) {
+			if t.IsNull() {
+				t.clear()
+				t.lst = V1SystemSymbolTable
+				return false, nil
+			}
+
 			st, err := readLocalSymbolTable(t, t.cat)
 			if err == nil {
 				t.lst = st
@@ -365,7 +371,7 @@ func (t *textReader) StepIn() error {
 	} else {
 		t.state = trsBeforeTypeAnnotations
 	}
-	t.Clear()
+	t.clear()
 
 	t.tok.SetFinished()
 	return nil
@@ -400,7 +406,7 @@ func (t *textReader) StepOut() error {
 
 	t.ctx.pop()
 	t.state = t.stateAfterValue()
-	t.Clear()
+	t.clear()
 	t.eof = false
 
 	return nil

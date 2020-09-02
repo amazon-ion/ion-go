@@ -48,7 +48,7 @@ func (r *binaryReader) Next() bool {
 		return false
 	}
 
-	r.Clear()
+	r.clear()
 
 	done := false
 	for !done {
@@ -217,7 +217,11 @@ func (r *binaryReader) next() (bool, error) {
 
 		// If it's a local symbol table, install it and keep going.
 		if r.ctx.peek() == ctxAtTopLevel && isIonSymbolTable(r.annotations) {
-
+			if r.IsNull() {
+				r.clear()
+				r.lst = V1SystemSymbolTable
+				return false, nil
+			}
 			st, err := readLocalSymbolTable(r, r.cat)
 			if err == nil {
 				r.lst = st
@@ -331,7 +335,7 @@ func (r *binaryReader) StepIn() error {
 	}
 
 	r.ctx.push(containerTypeToCtx(r.valueType))
-	r.Clear()
+	r.clear()
 	r.bits.StepIn()
 
 	return nil
@@ -350,7 +354,7 @@ func (r *binaryReader) StepOut() error {
 		return err
 	}
 
-	r.Clear()
+	r.clear()
 	r.ctx.pop()
 	r.eof = false
 
