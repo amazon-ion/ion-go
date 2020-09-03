@@ -55,6 +55,13 @@ func (i *ionItem) equal(o ionItem) bool {
 		return cmpDecimals(i.value[0], o.value[0])
 	case TimestampType:
 		return cmpTimestamps(i.value[0], o.value[0])
+	case StringType:
+		if i.value[0] == nil || o.value[0] == nil {
+			return i.value[0] == nil && o.value[0] == nil
+		}
+		val1 := i.value[0].(*string)
+		val2 := o.value[0].(*string)
+		return *val1 == *val2
 	case ListType, SexpType:
 		return cmpValueSlices(i.value, o.value)
 	case StructType:
@@ -72,7 +79,6 @@ var readGoodFilesSkipList = []string{
 }
 
 var binaryRoundTripSkipList = []string{
-	"localSymbolTableImportZeroMaxId.ion",
 	"T7-large.10n",
 	"T9.10n",
 	"utf16.ion",
@@ -81,17 +87,13 @@ var binaryRoundTripSkipList = []string{
 }
 
 var textRoundTripSkipList = []string{
-	"localSymbolTableImportZeroMaxId.ion",
 	"notVersionMarkers.ion",
 	"subfieldVarUInt.ion",
 	"subfieldVarUInt15bit.ion",
 	"subfieldVarUInt16bit.ion",
 	"subfieldVarUInt32bit.ion",
-	"symbolEmpty.ion",
-	"symbols.ion",
 	"systemSymbols.ion",
 	"T7-large.10n",
-	"testfile35.ion",
 	"utf16.ion",
 	"utf32.ion",
 	"whitespace.ion",
@@ -100,19 +102,10 @@ var textRoundTripSkipList = []string{
 var malformedIonsSkipList = []string{
 	"annotationSymbolIDUnmapped.10n",
 	"annotationSymbolIDUnmapped.ion",
-	"fieldNameSymbolIDUnmapped.10n",
-	"fieldNameSymbolIDUnmapped.ion",
 	"invalidVersionMarker_ion_0_0.ion",
 	"invalidVersionMarker_ion_1234_0.ion",
 	"invalidVersionMarker_ion_1_1.ion",
 	"invalidVersionMarker_ion_2_0.ion",
-	"localSymbolTableImportNegativeMaxId.ion",
-	"localSymbolTableImportNonIntegerMaxId.ion",
-	"localSymbolTableImportNullMaxId.ion",
-	"localSymbolTableWithMultipleImportsFields.ion",
-	"localSymbolTableWithMultipleSymbolsAndImportsFields.ion",
-	"localSymbolTableWithMultipleSymbolsFields.10n",
-	"localSymbolTableWithMultipleSymbolsFields.ion",
 	"minLongWithLenTooSmall.10n",
 	"nopPadTooShort.10n",
 	"nullDotCommentInt.ion",
@@ -125,16 +118,10 @@ var malformedIonsSkipList = []string{
 	"surrogate_7.ion",
 	"surrogate_8.ion",
 	"surrogate_9.ion",
-	"symbolIDUnmapped.10n",
-	"symbolIDUnmapped.ion",
 }
 
 var equivsSkipList = []string{
-	"localSymbolTableAppend.ion",
-	"localSymbolTableNullSlots.ion",
-	"localSymbolTableWithAnnotations.ion",
-	"localSymbolTables.ion",
-	"localSymbolTablesValuesWithAnnotations.ion",
+	// "localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"systemSymbols.ion",
@@ -144,10 +131,6 @@ var nonEquivsSkipList = []string{
 	"decimals.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
-	"localSymbolTableWithAnnotations.ion",
-	"symbolTables.ion",
-	"symbolTablesUnknownText.ion",
-	"symbols.ion",
 }
 
 func TestLoadGood(t *testing.T) {
@@ -190,12 +173,13 @@ func TestNonEquivalency(t *testing.T) {
 // constructs Readers over the binary and text encodings to verify that the streams are equivalent.
 func testBinaryRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
+	symbolTable := getSymbolTable(fileBytes)
 
 	// Make a binary writer from the file
-	buf := encodeAsBinaryIon(t, fileBytes)
+	buf := encodeAsBinaryIon(t, fileBytes, symbolTable.Imports()...)
 
 	// Re-encode binWriter's stream as text into a string builder
-	str := encodeAsTextIon(t, buf.Bytes())
+	str := encodeAsTextIon(t, buf.Bytes(), symbolTable.Imports()...)
 
 	reader1 := NewReader(bytes.NewReader(buf.Bytes()))
 	reader2 := NewReader(strings.NewReader(str.String()))
@@ -216,12 +200,13 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 // constructs Readers over the text and binary encodings to verify that the streams are equivalent.
 func testTextRoundTrip(t *testing.T, fp string) {
 	fileBytes := loadFile(t, fp)
+	symbolTable := getSymbolTable(fileBytes)
 
 	// Make a text writer from the file
-	str := encodeAsTextIon(t, fileBytes)
+	str := encodeAsTextIon(t, fileBytes, symbolTable.Imports()...)
 
 	// Re-encode txtWriter's stream as binary into a bytes.Buffer
-	buf := encodeAsBinaryIon(t, []byte(str.String()))
+	buf := encodeAsBinaryIon(t, []byte(str.String()), symbolTable.Imports()...)
 
 	reader1 := NewReader(strings.NewReader(str.String()))
 	reader2 := NewReader(bytes.NewReader(buf.Bytes()))
@@ -239,10 +224,10 @@ func testTextRoundTrip(t *testing.T, fp string) {
 }
 
 // Re-encode the provided Ion data as a text Ion string.
-func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
+func encodeAsTextIon(t *testing.T, data []byte, st ...SharedSymbolTable) strings.Builder {
 	reader := NewReader(bytes.NewReader(data))
 	str := strings.Builder{}
-	txtWriter := NewTextWriter(&str)
+	txtWriter := NewTextWriterOpts(&str, 0, st...)
 	writeFromReaderToWriter(t, reader, txtWriter)
 	err := txtWriter.Finish()
 	if err != nil {
@@ -252,10 +237,10 @@ func encodeAsTextIon(t *testing.T, data []byte) strings.Builder {
 }
 
 // Re-encode the provided Ion data as a binary Ion buffer.
-func encodeAsBinaryIon(t *testing.T, data []byte) bytes.Buffer {
-	reader := NewReader(bytes.NewReader(data))
+func encodeAsBinaryIon(t *testing.T, data []byte, st ...SharedSymbolTable) bytes.Buffer {
+	reader := NewReaderCat(bytes.NewReader(data), NewCatalog(st...))
 	buf := bytes.Buffer{}
-	binWriter := NewBinaryWriter(&buf)
+	binWriter := NewBinaryWriter(&buf, st...)
 	writeFromReaderToWriter(t, reader, binWriter)
 	err := binWriter.Finish()
 	if err != nil {
@@ -372,12 +357,14 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 		if err != nil {
 			t.Error("Must be string value.")
 		}
-		newReader := NewReaderString(str)
-		var ionItems []ionItem
-		for newReader.Next() {
-			ionItems = append(ionItems, readCurrentValue(t, newReader))
+		if str != nil {
+			newReader := NewReaderString(*str)
+			var ionItems []ionItem
+			for newReader.Next() {
+				ionItems = append(ionItems, readCurrentValue(t, newReader))
+			}
+			values = append(values, ionItems)
 		}
-		values = append(values, ionItems)
 	}
 	return values
 }
@@ -460,9 +447,9 @@ func isInSkipList(skipList []string, fn string) bool {
 // Read all the values in the reader and write them in the writer
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
-		name := reader.FieldName()
-		if name != nil {
-			err := writer.FieldName(*name)
+		fns, err := reader.FieldNameSymbol()
+		if err == nil && reader.IsInStruct() && fns != nil {
+			err = writer.FieldNameSymbol(*fns)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -571,9 +558,12 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
-			err = writer.WriteSymbol(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+
+			if val != nil {
+				err = writer.WriteSymbol(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+				}
 			}
 
 		case StringType:
@@ -581,9 +571,12 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a String value: " + err.Error())
 			}
-			err = writer.WriteString(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a String value: " + err.Error())
+
+			if val != nil {
+				err = writer.WriteString(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a String value: " + err.Error())
+				}
 			}
 
 		case ClobType:
@@ -664,10 +657,6 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			}
 		}
 	}
-
-	if reader.Err() != nil {
-		t.Errorf(reader.Err().Error())
-	}
 }
 
 // Read the current value in the reader and put that in an ionItem struct (defined in this file).
@@ -685,8 +674,9 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	}
 
 	currentType := reader.Type()
-	if reader.IsNull() {
-		ionItem.value = append(ionItem.value, textNulls[currentType])
+	// Excluding SymbolType from setting value to 'null.symbol' because readers can read "'null.symbol'" as text: 'null.symbol'.
+	if reader.IsNull() && reader.Type() != SymbolType {
+		ionItem.value = append(ionItem.value, &textNulls[currentType])
 		ionItem.ionType = currentType
 
 		return ionItem
@@ -823,4 +813,10 @@ func compareIonItemSlices(this, that []ionItem) (bool, int) {
 		}
 	}
 	return true, idx
+}
+
+func getSymbolTable(fileBytes []byte) SymbolTable {
+	reader := NewReader(bytes.NewReader(fileBytes))
+	reader.Next()
+	return reader.SymbolTable()
 }

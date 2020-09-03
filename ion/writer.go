@@ -16,7 +16,7 @@
 package ion
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"math/big"
 )
@@ -68,6 +68,9 @@ type Writer interface {
 
 	// FieldName sets the field name for the next value written.
 	FieldName(val string) error
+
+	// FieldName sets the field name symbol for the next value written.
+	FieldNameSymbol(val SymbolToken) error
 
 	// Annotation adds a single annotation to the next value written.
 	Annotation(val string) error
@@ -156,11 +159,29 @@ func (w *writer) FieldName(val string) error {
 		return w.err
 	}
 	if !w.IsInStruct() {
-		w.err = errors.New("ion: Writer.FieldName called when not writing a struct")
+		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
 		return w.err
 	}
 
 	w.fieldName = &val
+	return nil
+}
+
+// FieldNameSymbol sets the field name symbol for the next value written.
+// It may only be called while writing a struct.
+func (w *writer) FieldNameSymbol(val SymbolToken) error {
+	if !w.IsInStruct() {
+		w.err = &UsageError{"Writer.FieldNameSymbol", "called when not writing a struct"}
+		return w.err
+	}
+
+	if val.Text == nil {
+		sid := fmt.Sprintf("$%v", val.LocalSID)
+		w.fieldName = &sid
+		return nil
+	}
+
+	w.fieldName = val.Text
 	return nil
 }
 
