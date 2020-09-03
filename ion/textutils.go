@@ -42,25 +42,6 @@ func symbolNeedsQuoting(sym string) bool {
 	return false
 }
 
-// Is this the text form of a symbol reference ($<integer>)?
-func isSymbolRef(sym string) bool {
-	if len(sym) == 0 || sym[0] != '$' {
-		return false
-	}
-
-	if len(sym) == 1 {
-		return false
-	}
-
-	for i := 1; i < len(sym); i++ {
-		if !isDigit(int(sym[i])) {
-			return false
-		}
-	}
-
-	return true
-}
-
 // Is this a valid first character for an identifier?
 func isIdentifierStart(c int) bool {
 	if c >= 'a' && c <= 'z' {

@@ -26,7 +26,6 @@ type binaryReader struct {
 
 	bits bitstream
 	cat  Catalog
-	lst  SymbolTable
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -35,11 +34,6 @@ func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	}
 	r.bits.Init(in)
 	return r
-}
-
-// SymbolTable returns the current symbol table.
-func (r *binaryReader) SymbolTable() SymbolTable {
-	return r.lst
 }
 
 // Next moves the reader to the next value.
@@ -152,12 +146,11 @@ func (r *binaryReader) next() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-
-			st, err := r.resolveSymbolID(id)
+			st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
 			if err != nil {
 				return false, err
 			}
-			r.value = st
+			r.value = &st
 		}
 		r.valueType = SymbolType
 		return true, nil
@@ -269,40 +262,24 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	st, err := r.resolveSymbolID(id)
+	st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
 	if err != nil {
 		return err
 	}
-	r.fieldNameSymbol = st
+
+	r.fieldNameSymbol = &st
 	return nil
-
-}
-
-// ResolveSymbolID resolves a symbol ID to a symbol token.
-func (r *binaryReader) resolveSymbolID(id uint64) (*SymbolToken, error) {
-	if id > r.SymbolTable().MaxID() {
-		return nil, &UsageError{
-			"Reader.Next",
-			fmt.Sprintf("sid: %v, is greater than max id: %v", id, r.SymbolTable().MaxID()),
-		}
-	}
-
-	text, ok := r.SymbolTable().FindByID(id)
-
-	if !ok {
-		return &SymbolToken{LocalSID: int64(id)}, nil
-	}
-	return &SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.
 func (r *binaryReader) readAnnotations() error {
-	as, err := r.bits.ReadAnnotationIDs(r.lst)
+	as, err := r.bits.ReadAnnotations(r.SymbolTable())
 	if err != nil {
 		return err
 	}
 
 	r.annotations = as
+
 	return nil
 }
 

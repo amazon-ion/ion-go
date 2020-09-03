@@ -100,8 +100,6 @@ var textRoundTripSkipList = []string{
 }
 
 var malformedIonsSkipList = []string{
-	"annotationSymbolIDUnmapped.10n",
-	"annotationSymbolIDUnmapped.ion",
 	"invalidVersionMarker_ion_0_0.ion",
 	"invalidVersionMarker_ion_1234_0.ion",
 	"invalidVersionMarker_ion_1_1.ion",
@@ -121,7 +119,6 @@ var malformedIonsSkipList = []string{
 }
 
 var equivsSkipList = []string{
-	// "localSymbolTablesValuesWithAnnotations.ion",
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 	"systemSymbols.ion",
@@ -797,6 +794,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 			t.Fatal(err)
 		}
 	}
+
 	return ionItem
 }
 

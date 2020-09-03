@@ -92,47 +92,75 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
+// Parses text of the form '$n' for some integer n.
+func symbolIdentifier(symbolText string) (int64, bool) {
+	if len(symbolText) > 1 && symbolText[0] == '$' {
+		if sid, err := strconv.Atoi(symbolText[1:]); err == nil {
+			return int64(sid), true
+		}
+	}
+
+	return SymbolIDUnknown, false
+}
+
 func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) (int64, string) {
 	// If we have a symbol name of the form '$n' for some integer n,
 	// then we want to use the corresponding system symbol name.
-	if len(symbolName) > 1 && symbolName[0] == '$' {
-		if sid, err := strconv.Atoi(symbolName[1:]); err == nil {
-			if systemSymbolName, ok := symbolTable.FindByID(uint64(sid)); ok {
-				return int64(sid), systemSymbolName
-			}
+	if sid, ok := symbolIdentifier(symbolName); ok {
+		if systemSymbolName, ok := symbolTable.FindByID(uint64(sid)); ok {
+			return sid, systemSymbolName
 		}
 	}
 
 	return SymbolIDUnknown, ""
 }
 
+// NewSymbolTokenBySID will check and return a symbol token if the given id exists in a symbol table,
+// otherwise return a new symbol token.
+func NewSymbolTokenBySID(symbolTable SymbolTable, sid int64) (SymbolToken, error) {
+	if sid < 0 || uint64(sid) > symbolTable.MaxID() {
+		return SymbolToken{}, fmt.Errorf("ion: Symbol token not found for SID '%v' in symbol table %v", sid, symbolTable)
+	}
+
+	text, ok := symbolTable.FindByID(uint64(sid))
+	if !ok {
+		return SymbolToken{LocalSID: sid}, nil
+	}
+
+	return SymbolToken{Text: &text, LocalSID: sid}, nil
+}
+
 // NewSymbolToken will check and return a symbol token if it exists in a symbol table,
 // otherwise return a new symbol token.
-func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {
+func NewSymbolToken(symbolTable SymbolTable, text string) (SymbolToken, error) {
 	if symbolTable == nil {
-		symbolTable = V1SystemSymbolTable
+		return SymbolToken{}, fmt.Errorf("ion: invalid symbol table")
 	}
 
-	sid, systemSymbolName := getSystemSymbolMapping(symbolTable, text)
-	if sid != SymbolIDUnknown {
-		return SymbolToken{Text: &systemSymbolName, LocalSID: sid}
+	if sid, ok := symbolIdentifier(text); ok {
+		return NewSymbolTokenBySID(symbolTable, sid)
 	}
 
-	token := symbolTable.Find(text)
-	if token != nil {
-		return *token
+	sid, ok := symbolTable.FindByName(text)
+	if !ok {
+		return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}, nil
 	}
 
-	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+	return SymbolToken{Text: &text, LocalSID: int64(sid)}, nil
 }
 
 // NewSymbolTokens will check and return a list of symbol tokens if they exists in a symbol table,
 // otherwise return a list of new symbol tokens.
-func NewSymbolTokens(symbolTable SymbolTable, textVals []string) []SymbolToken {
+func NewSymbolTokens(symbolTable SymbolTable, textVals []string) ([]SymbolToken, error) {
 	var tokens []SymbolToken
 	for _, text := range textVals {
-		tokens = append(tokens, NewSymbolToken(symbolTable, text))
+		token, err := NewSymbolToken(symbolTable, text)
+		if err != nil {
+			return nil, err
+		}
+
+		tokens = append(tokens, token)
 	}
 
-	return tokens
+	return tokens, nil
 }

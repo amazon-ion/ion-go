@@ -79,7 +79,7 @@ func TestBitstream(t *testing.T) {
 	}
 
 	next(bitcodeAnnotation, false, 31)
-	as, err := b.ReadAnnotationIDs(V1SystemSymbolTable)
+	as, err := b.ReadAnnotations(V1SystemSymbolTable)
 	if err != nil {
 		t.Fatal(err)
 	}

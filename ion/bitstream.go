@@ -390,8 +390,8 @@ func (b *bitstream) ReadFieldID() (uint64, error) {
 	return id, nil
 }
 
-// ReadAnnotationIDs reads a set of annotation IDs.
-func (b *bitstream) ReadAnnotationIDs(symbolTable SymbolTable) ([]SymbolToken, error) {
+// ReadAnnotations reads a set of annotation IDs and returns a set of SymbolTokens.
+func (b *bitstream) ReadAnnotations(symbolTable SymbolTable) ([]SymbolToken, error) {
 	if b.code != bitcodeAnnotation {
 		panic("not an annotation")
 	}
@@ -422,8 +422,12 @@ func (b *bitstream) ReadAnnotationIDs(symbolTable SymbolTable) ([]SymbolToken, e
 			return nil, err
 		}
 
-		symbolName := resolveSymbolName(id, symbolTable)
-		as = append(as, SymbolToken{Text: &symbolName, LocalSID: int64(id)})
+		token, err := NewSymbolTokenBySID(symbolTable, int64(id))
+		if err != nil {
+			return nil, err
+		}
+
+		as = append(as, token)
 
 		annotFieldLength -= idlen
 	}
