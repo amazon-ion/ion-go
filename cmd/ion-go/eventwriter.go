@@ -59,7 +59,6 @@ func (e *eventwriter) FieldName(val string) error {
 }
 
 func (e *eventwriter) Annotation(val string) error {
-	var token ion.SymbolToken
 	token, err := ion.NewSymbolToken(ion.V1SystemSymbolTable, val)
 	if err != nil {
 		return err
@@ -71,7 +70,6 @@ func (e *eventwriter) Annotation(val string) error {
 }
 
 func (e *eventwriter) Annotations(values ...string) error {
-	var tokens []ion.SymbolToken
 	tokens, err := ion.NewSymbolTokens(ion.V1SystemSymbolTable, values)
 	if err != nil {
 		return err
