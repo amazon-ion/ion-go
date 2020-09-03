@@ -57,24 +57,20 @@ type textReader struct {
 
 	tok   tokenizer
 	state trs
-	lst   SymbolTable
 	cat   Catalog
 }
 
 func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
-	return &textReader{
+	tr := textReader{
 		cat: cat,
 		tok: tokenizer{
 			in: in,
 		},
 		state: trsBeforeTypeAnnotations,
-		lst:   V1SystemSymbolTable,
 	}
-}
+	tr.lst = V1SystemSymbolTable
 
-// SymbolTable returns the current symbol table.
-func (t *textReader) SymbolTable() SymbolTable {
-	return t.lst
+	return &tr
 }
 
 // Next moves the reader to the next value.
@@ -189,11 +185,11 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		if tok == tokenSymbolQuoted {
 			t.fieldNameSymbol = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
-			st, err := t.readSymbol(val)
+			st, err := NewSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return false, err
 			}
-			t.fieldNameSymbol = st
+			t.fieldNameSymbol = &st
 		}
 
 		// Skip over the following colon.
@@ -254,7 +250,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
 
-			t.annotations = append(t.annotations, val)
+			token, err := NewSymbolToken(t.SymbolTable(), val)
+			if err != nil {
+				return false, err
+			}
+
+			t.annotations = append(t.annotations, token)
 			return false, nil
 		}
 
@@ -304,7 +305,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.value = StructType
 
 		ctx := t.ctx.peek()
-		if ctx == ctxAtTopLevel && isIonSymbolTable(t.Annotations()) {
+		if ctx == ctxAtTopLevel && isIonSymbolTable(t.annotations) {
 			if t.IsNull() {
 				t.clear()
 				t.lst = V1SystemSymbolTable
@@ -449,11 +450,11 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 			valueType = FloatType
 			value = math.NaN()
 		default:
-			val, err := t.readSymbol(val)
+			val, err := NewSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return err
 			}
-			value = val
+			value = &val
 		}
 	}
 
@@ -462,35 +463,6 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	t.value = value
 
 	return nil
-}
-
-// readSymbol reads a text as either a symbol identifier e.g., "$42" or a symbol text e.g., "foo" and resolves to a
-// symbol token.
-func (t *textReader) readSymbol(val string) (*SymbolToken, error) {
-	if isSymbolRef(val) {
-		id, err := strconv.Atoi(val[1:])
-		if err != nil {
-			return nil, err
-		}
-
-		if id < 0 || uint64(id) > t.SymbolTable().MaxID() {
-			return nil, &UsageError{
-				"Reader.Next",
-				fmt.Sprintf("sid: %v, is greater than max id: %v", id, t.SymbolTable().MaxID()),
-			}
-		}
-
-		text, ok := t.SymbolTable().FindByID(uint64(id))
-		if !ok {
-			return &SymbolToken{LocalSID: int64(id)}, nil
-		}
-		return &SymbolToken{Text: &text, LocalSID: int64(id)}, nil
-	}
-	id, ok := t.lst.FindByName(val)
-	if ok {
-		return &SymbolToken{Text: &val, LocalSID: int64(id)}, nil
-	}
-	return &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}, nil
 }
 
 // OnNull handles finding a null token.

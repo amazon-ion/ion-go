@@ -26,7 +26,6 @@ type binaryReader struct {
 
 	bits bitstream
 	cat  Catalog
-	lst  SymbolTable
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -35,11 +34,6 @@ func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	}
 	r.bits.Init(in)
 	return r
-}
-
-// SymbolTable returns the current symbol table.
-func (r *binaryReader) SymbolTable() SymbolTable {
-	return r.lst
 }
 
 // Next moves the reader to the next value.
@@ -152,12 +146,11 @@ func (r *binaryReader) next() (bool, error) {
 			if err != nil {
 				return false, err
 			}
-
-			st, err := r.resolveSymbolID(id)
+			st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
 			if err != nil {
 				return false, err
 			}
-			r.value = st
+			r.value = &st
 		}
 		r.valueType = SymbolType
 		return true, nil
@@ -235,8 +228,8 @@ func (r *binaryReader) next() (bool, error) {
 	panic(fmt.Sprintf("invalid bitcode %v", code))
 }
 
-func isIonSymbolTable(as []string) bool {
-	return len(as) > 0 && as[0] == "$ion_symbol_table"
+func isIonSymbolTable(as []SymbolToken) bool {
+	return len(as) > 0 && as[0].Text != nil && *as[0].Text == "$ion_symbol_table"
 }
 
 // ReadBVM reads a BVM, validates it, and resets the local symbol table.
@@ -269,56 +262,25 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	st, err := r.resolveSymbolID(id)
+	st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
 	if err != nil {
 		return err
 	}
-	r.fieldNameSymbol = st
+
+	r.fieldNameSymbol = &st
 	return nil
-
-}
-
-// ResolveSymbolID resolves a symbol ID to a symbol token.
-func (r *binaryReader) resolveSymbolID(id uint64) (*SymbolToken, error) {
-	if id > r.SymbolTable().MaxID() {
-		return nil, &UsageError{
-			"Reader.Next",
-			fmt.Sprintf("sid: %v, is greater than max id: %v", id, r.SymbolTable().MaxID()),
-		}
-	}
-
-	text, ok := r.SymbolTable().FindByID(id)
-
-	if !ok {
-		return &SymbolToken{LocalSID: int64(id)}, nil
-	}
-	return &SymbolToken{Text: &text, LocalSID: int64(id)}, nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.
 func (r *binaryReader) readAnnotations() error {
-	ids, err := r.bits.ReadAnnotationIDs()
+	as, err := r.bits.ReadAnnotations(r.SymbolTable())
 	if err != nil {
 		return err
 	}
 
-	as := make([]string, len(ids))
-	for i, id := range ids {
-		as[i] = r.resolve(id)
-	}
-
 	r.annotations = as
-	return nil
-}
 
-// Resolve resolves a symbol ID to a symbol value (possibly ${id} if we're
-// missing the appropriate symbol table).
-func (r *binaryReader) resolve(id uint64) string {
-	s, ok := r.lst.FindByID(id)
-	if !ok {
-		return fmt.Sprintf("$%v", id)
-	}
-	return s
+	return nil
 }
 
 // StepIn steps in to a container-type value

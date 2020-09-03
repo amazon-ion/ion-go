@@ -390,8 +390,8 @@ func (b *bitstream) ReadFieldID() (uint64, error) {
 	return id, nil
 }
 
-// ReadAnnotationIDs reads a set of annotation IDs.
-func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
+// ReadAnnotations reads a set of annotation IDs and returns a set of SymbolTokens.
+func (b *bitstream) ReadAnnotations(symbolTable SymbolTable) ([]SymbolToken, error) {
 	if b.code != bitcodeAnnotation {
 		panic("not an annotation")
 	}
@@ -415,14 +415,20 @@ func (b *bitstream) ReadAnnotationIDs() ([]uint64, error) {
 		return nil, &SyntaxError{"malformed annotation", b.pos - lengthOfAnnotFieldLength}
 	}
 
-	var as []uint64
+	var as []SymbolToken
 	for annotFieldLength > 0 {
 		id, idlen, err := b.readVarUintLen(annotFieldLength)
 		if err != nil {
 			return nil, err
 		}
 
-		as = append(as, id)
+		token, err := NewSymbolTokenBySID(symbolTable, int64(id))
+		if err != nil {
+			return nil, err
+		}
+
+		as = append(as, token)
+
 		annotFieldLength -= idlen
 	}
 

@@ -155,7 +155,7 @@ type writer struct {
 	err error
 
 	fieldName   *string
-	annotations []string
+	annotations []SymbolToken
 }
 
 // FieldName sets the field name for the next value written.
@@ -193,18 +193,36 @@ func (w *writer) FieldNameSymbol(val SymbolToken) error {
 
 // Annotation adds an annotation to the next value written.
 func (w *writer) Annotation(val string) error {
-	if w.err == nil {
-		w.annotations = append(w.annotations, val)
+	if w.err != nil {
+		return w.err
 	}
-	return w.err
+
+	var token SymbolToken
+	token, w.err = NewSymbolToken(V1SystemSymbolTable, val)
+	if w.err != nil {
+		return w.err
+	}
+
+	w.annotations = append(w.annotations, token)
+
+	return nil
 }
 
 // Annotations adds one or more annotations to the next value written.
 func (w *writer) Annotations(values ...string) error {
-	if w.err == nil {
-		w.annotations = append(w.annotations, values...)
+	if w.err != nil {
+		return w.err
 	}
-	return w.err
+
+	var tokens []SymbolToken
+	tokens, w.err = NewSymbolTokens(V1SystemSymbolTable, values)
+	if w.err != nil {
+		return w.err
+	}
+
+	w.annotations = append(w.annotations, tokens...)
+
+	return nil
 }
 
 // AnnotationAsSymbol adds an annotation as a SymbolToken to the next value written.
