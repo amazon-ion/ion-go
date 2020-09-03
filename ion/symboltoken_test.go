@@ -153,7 +153,10 @@ func TestImportSourceEqualsOperator(t *testing.T) {
 func TestNewSymbolTokenThatAlreadyExistInSymbolTable(t *testing.T) {
 	expectedSymbolToken := SymbolToken{Text: newString("$ion"), LocalSID: SymbolIDUnknown}
 
-	actualSymbolToken := NewSymbolToken(V1SystemSymbolTable, "$ion")
+	actualSymbolToken, err := NewSymbolToken(V1SystemSymbolTable, "$ion")
+	if err != nil {
+		t.Errorf("expected NewSymbolToken() to execute without errors; %s", err.Error())
+	}
 
 	if !actualSymbolToken.Equal(&expectedSymbolToken) {
 		t.Errorf("expected %v, got %v", expectedSymbolToken, actualSymbolToken)
@@ -163,7 +166,10 @@ func TestNewSymbolTokenThatAlreadyExistInSymbolTable(t *testing.T) {
 func TestNewSymbolTokenThatDoesNotExistInSymbolTable(t *testing.T) {
 	expectedSymbolToken := SymbolToken{Text: newString("newToken"), LocalSID: SymbolIDUnknown}
 
-	actualSymbolToken := NewSymbolToken(V1SystemSymbolTable, "newToken")
+	actualSymbolToken, err := NewSymbolToken(V1SystemSymbolTable, "newToken")
+	if err != nil {
+		t.Errorf("expected NewSymbolToken() to execute without errors; %s", err.Error())
+	}
 
 	if !actualSymbolToken.Equal(&expectedSymbolToken) {
 		t.Errorf("expected %v, got %v", expectedSymbolToken, actualSymbolToken)
@@ -175,12 +181,14 @@ func TestNewSymbolTokensThatAlreadyExistInSymbolTable(t *testing.T) {
 		{Text: newString("$ion"), LocalSID: SymbolIDUnknown},
 		{Text: newString("$ion_1_0"), LocalSID: SymbolIDUnknown}}
 
-	actualSymbolTokens := NewSymbolTokens(V1SystemSymbolTable, []string{"$ion", "$ion_1_0"})
+	actualSymbolTokens, err := NewSymbolTokens(V1SystemSymbolTable, []string{"$ion", "$ion_1_0"})
+	if err != nil {
+		t.Errorf("expected NewSymbolTokens() to execute without errors; %s", err.Error())
+	}
 
 	for index, actualSymbolToken := range actualSymbolTokens {
 		if !actualSymbolToken.Equal(&expectedSymbolTokens[index]) {
 			t.Errorf("expected %v, got %v", &expectedSymbolTokens[index], actualSymbolToken)
-
 		}
 	}
 }
@@ -190,12 +198,39 @@ func TestNewSymbolTokensThatDoNotExistInSymbolTable(t *testing.T) {
 		{Text: newString("newToken1"), LocalSID: SymbolIDUnknown},
 		{Text: newString("newToken2"), LocalSID: SymbolIDUnknown}}
 
-	actualSymbolTokens := NewSymbolTokens(V1SystemSymbolTable, []string{"newToken1", "newToken2"})
+	actualSymbolTokens, err := NewSymbolTokens(V1SystemSymbolTable, []string{"newToken1", "newToken2"})
+	if err != nil {
+		t.Errorf("expected NewSymbolTokens() to execute without errors; %s", err.Error())
+	}
 
 	for index, actualSymbolToken := range actualSymbolTokens {
 		if !actualSymbolToken.Equal(&expectedSymbolTokens[index]) {
 			t.Errorf("expected %v, got %v", &expectedSymbolTokens[index], actualSymbolToken)
-
 		}
 	}
+}
+
+func TestSymbolIdentifier(t *testing.T) {
+	test := func(sym string, expectedSID int64, expectedOK bool) {
+		t.Run(sym, func(t *testing.T) {
+			sid, ok := symbolIdentifier(sym)
+
+			if ok != expectedOK {
+				t.Errorf("expected %v, got %v", expectedOK, ok)
+			}
+
+			if expectedOK && sid != expectedSID {
+				t.Errorf("expected %v, got %v", expectedSID, sid)
+			}
+		})
+	}
+
+	test("", SymbolIDUnknown, false)
+	test("1", SymbolIDUnknown, false)
+	test("a", SymbolIDUnknown, false)
+	test("$", SymbolIDUnknown, false)
+	test("$1", 1, true)
+	test("$1234567890", 1234567890, true)
+	test("$a", SymbolIDUnknown, false)
+	test("$1234a567890", SymbolIDUnknown, false)
 }

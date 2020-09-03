@@ -353,7 +353,7 @@ func (w *textWriter) beginValue(api string) error {
 
 	w.annotations = append(w.annotations, as...)
 	if len(w.annotations) > 0 {
-		if err := w.writeAnnotations(); err != nil {
+		if err := w.writeAnnotations(api); err != nil {
 			return err
 		}
 	}
@@ -411,12 +411,21 @@ func (w *textWriter) writeFieldName(api string) error {
 }
 
 // writeAnnotations writes out the annotations for a value.
-func (w *textWriter) writeAnnotations() error {
+func (w *textWriter) writeAnnotations(api string) error {
 	as := w.annotations
 	w.annotations = nil
 
+	var text string
 	for _, a := range as {
-		if err := writeSymbol(a, w.out); err != nil {
+		if a.Text != nil {
+			text = *a.Text
+		} else if a.LocalSID != SymbolIDUnknown {
+			text = fmt.Sprintf("$%v", a.LocalSID)
+		} else {
+			return &UsageError{api, "invalid annotation symbol token"}
+		}
+
+		if err := writeSymbol(text, w.out); err != nil {
 			return err
 		}
 		if err := writeRawString("::", w.out); err != nil {

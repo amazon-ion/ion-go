@@ -74,11 +74,6 @@ import (
 //
 type Reader interface {
 
-	// SymbolTable returns the current symbol table, or nil if there isn't one.
-	// Text Readers do not, generally speaking, have an associated symbol table.
-	// Binary Readers do.
-	SymbolTable() SymbolTable
-
 	// Next advances the Reader to the next position in the current value stream.
 	// It returns true if this is the position of an Ion value, and false if it
 	// is not. On error, it returns false and sets Err.
@@ -171,6 +166,11 @@ type Reader interface {
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
 	// error if the current value is not an Ion symbol.
 	SymbolValue() (*SymbolToken, error)
+
+	// SymbolTable returns the current symbol table, or nil if there isn't one.
+	// Text Readers do not, generally speaking, have an associated symbol table.
+	// Binary Readers do.
+	SymbolTable() SymbolTable
 }
 
 // NewReader creates a new Ion reader of the appropriate type by peeking
@@ -207,8 +207,9 @@ type reader struct {
 	eof bool
 	err error
 
+	lst             SymbolTable
 	fieldNameSymbol *SymbolToken
-	annotations     []string
+	annotations     []SymbolToken
 	valueType       Type
 	value           interface{}
 }
@@ -238,7 +239,21 @@ func (r *reader) FieldName() *string {
 
 // Annotations returns the current value's annotations.
 func (r *reader) Annotations() []string {
-	return r.annotations
+	var annotations []string
+	for _, an := range r.annotations {
+		if an.Text != nil {
+			sid, systemSymbolName := getSystemSymbolMapping(r.SymbolTable(), *an.Text)
+			if sid != SymbolIDUnknown {
+				annotations = append(annotations, systemSymbolName)
+			} else {
+				annotations = append(annotations, *an.Text)
+			}
+		} else {
+			annotations = append(annotations, "")
+		}
+	}
+
+	return annotations
 }
 
 // BoolValue returns the current value as a bool.
@@ -452,4 +467,9 @@ func (r *reader) FieldNameSymbol() (*SymbolToken, error) {
 	}
 
 	return r.fieldNameSymbol, nil
+}
+
+// SymbolTable returns the current symbol table.
+func (r *reader) SymbolTable() SymbolTable {
+	return r.lst
 }
