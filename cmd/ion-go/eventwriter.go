@@ -29,7 +29,7 @@ type eventwriter struct {
 
 	depth       int
 	fieldname   *string
-	annotations []string
+	annotations []ion.SymbolToken
 	inStruct    map[int]bool
 }
 
@@ -59,11 +59,35 @@ func (e *eventwriter) FieldName(val string) error {
 }
 
 func (e *eventwriter) Annotation(val string) error {
-	e.annotations = append(e.annotations, val)
+	var token ion.SymbolToken
+	token, err := ion.NewSymbolToken(ion.V1SystemSymbolTable, val)
+	if err != nil {
+		return err
+	}
+
+	e.annotations = append(e.annotations, token)
+
 	return nil
 }
 
 func (e *eventwriter) Annotations(values ...string) error {
+	var tokens []ion.SymbolToken
+	tokens, err := ion.NewSymbolTokens(ion.V1SystemSymbolTable, values)
+	if err != nil {
+		return err
+	}
+
+	e.annotations = append(e.annotations, tokens...)
+
+	return nil
+}
+
+func (e *eventwriter) AnnotationAsSymbol(val ion.SymbolToken) error {
+	e.annotations = append(e.annotations, val)
+	return nil
+}
+
+func (e *eventwriter) AnnotationsAsSymbols(values ...ion.SymbolToken) error {
 	e.annotations = append(e.annotations, values...)
 	return nil
 }
@@ -290,7 +314,11 @@ func (e *eventwriter) write(ev event) error {
 	if len(annos) > 0 {
 		asyms := make([]token, len(annos))
 		for i, a := range annos {
-			asyms[i] = token{Text: a}
+			if a.Text != nil {
+				asyms[i] = token{Text: *a.Text}
+			} else {
+				asyms[i] = token{Text: ""}
+			}
 		}
 		ev.Annotations = asyms
 	}

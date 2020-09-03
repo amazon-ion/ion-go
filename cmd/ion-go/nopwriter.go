@@ -44,6 +44,14 @@ func (nopwriter) Annotations(...string) error {
 	return nil
 }
 
+func (nopwriter) AnnotationAsSymbol(ion.SymbolToken) error {
+	return nil
+}
+
+func (nopwriter) AnnotationsAsSymbols(...ion.SymbolToken) error {
+	return nil
+}
+
 func (nopwriter) WriteNull() error {
 	return nil
 }
