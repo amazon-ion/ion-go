@@ -314,11 +314,7 @@ func (e *eventwriter) write(ev event) error {
 	if len(annos) > 0 {
 		asyms := make([]token, len(annos))
 		for i, a := range annos {
-			if a.Text != nil {
-				asyms[i] = token{Text: *a.Text}
-			} else {
-				asyms[i] = token{Text: ""}
-			}
+			asyms[i] = token{Text: a.ResolveToString()}
 		}
 		ev.Annotations = asyms
 	}
