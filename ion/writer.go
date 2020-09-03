@@ -78,6 +78,9 @@ type Writer interface {
 	// Annotations adds multiple annotations to the next value written.
 	Annotations(values ...string) error
 
+	// Annotations adds multiple annotations as SymbolTokens to the next value written.
+	AnnotationsAsSymbols(values ...SymbolToken) error
+
 	// WriteNull writes an untyped null value.
 	WriteNull() error
 
@@ -199,6 +202,17 @@ func (w *writer) Annotations(values ...string) error {
 		w.annotations = append(w.annotations, values...)
 	}
 	return w.err
+}
+
+// AnnotationsAsSymbols adds one or more annotations to the next value written.
+func (w *writer) AnnotationsAsSymbols(values ...SymbolToken) error {
+	if w.err != nil {
+		return w.err
+	}
+
+	w.annotations = append(w.annotations, values...)
+
+	return nil
 }
 
 // IsInStruct returns true if we're currently writing a struct.

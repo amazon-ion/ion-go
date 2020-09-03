@@ -89,6 +89,19 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
+// ResolveToString returns a SymbolToken's text value or "$<sid>"
+func (st *SymbolToken) ResolveToString() string {
+	if st.Text != nil {
+		return *st.Text
+	}
+
+	if st.LocalSID != SymbolIDUnknown {
+		return fmt.Sprintf("$%v", st.LocalSID)
+	}
+
+	return ""
+}
+
 // NewSymbolToken will check and return a symbol token if it exists in a symbol table,
 // otherwise return a new symbol token.
 func NewSymbolToken(symbolTable SymbolTable, text string) SymbolToken {

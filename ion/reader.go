@@ -103,6 +103,9 @@ type Reader interface {
 	// It returns nil if there is no current value or the current value has no annotations.
 	Annotations() []string
 
+	// AnnotationsAsSymbols returns the set of annotations associated with the current value as SymbolTokens.
+	AnnotationsAsSymbols() []SymbolToken
+
 	// StepIn steps in to the current value if it is a container. It returns an error if there
 	// is no current value or if the value is not a container. On success, the Reader is
 	// positioned before the first value in the container.
@@ -238,6 +241,11 @@ func (r *reader) FieldName() *string {
 
 // Annotations returns the current value's annotations.
 func (r *reader) Annotations() []string {
+	return r.annotations
+}
+
+// AnnotationsAsSymbols returns the current value's annotations as SymbolTokens.
+func (r *reader) AnnotationsAsSymbols() []SymbolToken {
 	return r.annotations
 }
 
