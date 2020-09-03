@@ -78,6 +78,9 @@ type Writer interface {
 	// Annotations adds multiple annotations to the next value written.
 	Annotations(values ...string) error
 
+	// Annotation adds a single annotation as a SymbolToken to the next value written.
+	AnnotationAsSymbol(val SymbolToken) error
+
 	// Annotations adds multiple annotations as SymbolTokens to the next value written.
 	AnnotationsAsSymbols(values ...SymbolToken) error
 
@@ -204,7 +207,18 @@ func (w *writer) Annotations(values ...string) error {
 	return w.err
 }
 
-// AnnotationsAsSymbols adds one or more annotations to the next value written.
+// AnnotationAsSymbol adds an annotation as a SymbolToken to the next value written.
+func (w *writer) AnnotationAsSymbol(val SymbolToken) error {
+	if w.err != nil {
+		return w.err
+	}
+
+	w.annotations = append(w.annotations, val)
+
+	return nil
+}
+
+// AnnotationsAsSymbols adds one or more annotations as SymbolTokens to the next value written.
 func (w *writer) AnnotationsAsSymbols(values ...SymbolToken) error {
 	if w.err != nil {
 		return w.err
