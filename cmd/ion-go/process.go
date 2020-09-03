@@ -306,14 +306,18 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteSymbol(val)
+			if val != nil {
+				err = p.out.WriteSymbol(*val)
+			}
 
 		case ion.StringType:
 			val, err := in.StringValue()
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteString(val)
+			if val != nil {
+				err = p.out.WriteString(*val)
+			}
 
 		case ion.ClobType:
 			val, err := in.ByteValue()

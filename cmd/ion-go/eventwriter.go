@@ -16,6 +16,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"math/big"
 	"strings"
@@ -39,6 +40,17 @@ func NewEventWriter(out io.Writer) ion.Writer {
 	w.WriteSymbol("$ion_event_stream")
 
 	return &eventwriter{enc: ion.NewEncoder(w)}
+}
+
+func (e *eventwriter) FieldNameSymbol(val ion.SymbolToken) error {
+	if val.Text == nil {
+		sid := fmt.Sprintf("$%v", val.LocalSID)
+		e.fieldname = &sid
+		return nil
+	}
+
+	e.fieldname = val.Text
+	return nil
 }
 
 func (e *eventwriter) FieldName(val string) error {
