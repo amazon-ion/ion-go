@@ -16,7 +16,6 @@
 package ion
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -64,7 +63,7 @@ func TestReadNullLST(t *testing.T) {
 		0x71, 0x09,
 	}
 	r := NewReaderBytes(ion)
-	_symbol(t, r, "$ion_shared_symbol_table")
+	_symbol(t, r, newString("$ion_shared_symbol_table"), SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 	_eof(t, r)
 }
 
@@ -75,7 +74,7 @@ func TestReadEmptyLST(t *testing.T) {
 		0x71, 0x09,
 	}
 	r := NewReaderBytes(ion)
-	_symbol(t, r, "$ion_shared_symbol_table")
+	_symbol(t, r, newString("$ion_shared_symbol_table"), SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 	_eof(t, r)
 }
 
@@ -95,38 +94,6 @@ func TestReadBadLST(t *testing.T) {
 	if r.Err() == nil {
 		t.Fatal("err is nil")
 	}
-}
-
-func TestReadMultipleLSTs(t *testing.T) {
-	r := readBinary([]byte{
-		0x71, 0x0B, // $11
-		0x71, 0x6F, // bar
-		0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
-		0xEE, 0x8F, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
-		0x86, 0x71, 0x03, // imports: $ion_symbol_table,
-		0x87, 0xB8, // symbols:[
-		0x83, 'f', 'o', 'o', // "foo"
-		0x83, 'b', 'a', 'r', // "bar" ]}
-		0x71, 0x0B, // bar
-		0x71, 0x0C, // $12
-		0x71, 0x6F, // $111
-		0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
-		0x86, 0x71, 0x03, // imports: $ion_symbol_table
-		0x87, 0xB4, // symbols:[
-		0x83, 'b', 'a', 'z', // "baz" ]}
-		0x71, 0x0B, // bar
-		0x71, 0x0C, // baz
-	})
-	_symbol(t, r, "$11")
-	_symbol(t, r, "bar")
-
-	_symbol(t, r, "bar")
-	_symbol(t, r, "$12")
-	_symbol(t, r, "$111")
-
-	_symbol(t, r, "bar")
-	_symbol(t, r, "baz")
-	_eof(t, r)
 }
 
 func TestReadBinaryLST(t *testing.T) {
@@ -295,31 +262,44 @@ func TestReadBinaryStrings(t *testing.T) {
 	})
 
 	_null(t, r, StringType)
-	_string(t, r, "")
-	_string(t, r, "a")
-	_string(t, r, "hello world but longer")
+	_string(t, r, newString(""))
+	_string(t, r, newString("a"))
+	_string(t, r, newString("hello world but longer"))
 	_eof(t, r)
+}
+
+func TestReadBinaryFieldNames(t *testing.T) {
+	r := readBinary([]byte{
+		0xDE, 0x8F, // {
+		0x80, 0x21, 0x01, // $0: 1
+		0x81, 0x21, 0x01, // $ion: 1
+		0xEE, 0x21, 0x01, // foo: 1
+		0xEF, 0x21, 0x01, // bar: 1
+		0xF1, 0x21, 0x01, // $113: 1
+		// }
+	})
+	r.Next()
+	r.StepIn()
+	_nextF(t, r, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false)
+	_nextF(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
+	_nextF(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 110}, false, false)
+	_nextF(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111}, false, false)
+	_nextF(t, r, nil, SymbolToken{}, true, true)
 }
 
 func TestReadBinarySymbols(t *testing.T) {
 	r := readBinary([]byte{
-		0x7F,
-		0x70,       // $0
+		0x71, 0x00, // $0
 		0x71, 0x01, // $ion
-		0x71, 0x0A, // $10
 		0x71, 0x6E, // foo
-		0xE4, 0x81, 0xEE, 0x71, 0x6F, // foo::bar
-		0x78, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // ${maxint64}
+		0x71, 0x6F, // bar
+		0x71, 0x71, // $113
 	})
-
-	_null(t, r, SymbolType)
-	_symbol(t, r, "$0")
-	_symbol(t, r, "$ion")
-	_symbol(t, r, "$10")
-	_symbol(t, r, "foo")
-	_symbolAF(t, r, nil, []string{"foo"}, "bar")
-	_symbol(t, r, fmt.Sprintf("$%v", uint64(math.MaxUint64)))
-	_eof(t, r)
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false, false)
+	_symbol(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1})
+	_symbol(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 110})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{}, true, true, true)
 }
 
 func TestReadBinaryTimestamps(t *testing.T) {
@@ -399,6 +379,36 @@ func TestReadBinaryFloats(t *testing.T) {
 	_float(t, r, math.Inf(-1))
 	_float(t, r, math.NaN())
 	_eof(t, r)
+}
+
+func TestReadMultipleLSTs(t *testing.T) {
+	r := readBinary([]byte{
+		0x71, 0x0B, // $11
+		0x71, 0x6F, // bar
+		0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
+		0xEE, 0x90, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: `$ion_symbol_table`,
+		0x87, 0xB8, // symbols:[
+		0x83, 'f', 'o', 'o', // "foo"
+		0x83, 'b', 'a', 'r', // "bar" ]}
+		0x71, 0x0B, // bar
+		0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
+		0x86, 0x71, 0x03, // imports: $ion_symbol_table
+		0x87, 0xB4, // symbols:[
+		0x83, 'b', 'a', 'z', // "baz" ]}
+		0x71, 0x0B, // bar
+		0x71, 0x0C, // baz
+		0x71, 0x0C, // $12
+		0x71, 0x6F, // $111
+	})
+
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{Text: nil, LocalSID: 11}, false, false, false)
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbol(t, r, newString("baz"), SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbolAF(t, r, nil, nil, nil, SymbolToken{}, true, true, true)
 }
 
 func TestReadBinaryInts(t *testing.T) {

@@ -57,21 +57,20 @@ type textReader struct {
 
 	tok   tokenizer
 	state trs
+	cat   Catalog
 }
 
-func newTextReaderBuf(in *bufio.Reader) Reader {
-	return &textReader{
+func newTextReaderBuf(in *bufio.Reader, cat Catalog) Reader {
+	tr := textReader{
+		cat: cat,
 		tok: tokenizer{
 			in: in,
 		},
 		state: trsBeforeTypeAnnotations,
 	}
-}
+	tr.lst = V1SystemSymbolTable
 
-// SymbolTable returns the current symbol table.
-func (t *textReader) SymbolTable() SymbolTable {
-	// https://github.com/amzn/ion-go/issues/114
-	return nil
+	return &tr
 }
 
 // Next moves the reader to the next value.
@@ -183,6 +182,16 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			}
 		}
 
+		if tok == tokenSymbolQuoted {
+			t.fieldNameSymbol = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+		} else {
+			st, err := NewSymbolToken(t.SymbolTable(), val)
+			if err != nil {
+				return false, err
+			}
+			t.fieldNameSymbol = &st
+		}
+
 		// Skip over the following colon.
 		if err = t.tok.Next(); err != nil {
 			return false, err
@@ -191,7 +200,6 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 			return false, &UnexpectedTokenError{tok.String(), t.tok.Pos() - 1}
 		}
 
-		t.fieldName = &val
 		t.state = trsBeforeTypeAnnotations
 
 		return false, nil
@@ -220,7 +228,7 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 		fallthrough
 
-	case tokenSymbol, tokenSymbolQuoted:
+	case tokenSymbolQuoted, tokenSymbol:
 		val, err := t.tok.ReadValue(tok)
 		if err != nil {
 			return false, err
@@ -242,13 +250,23 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
 
-			t.annotations = append(t.annotations, val)
+			token, err := NewSymbolToken(t.SymbolTable(), val)
+			if err != nil {
+				return false, err
+			}
+
+			t.annotations = append(t.annotations, token)
 			return false, nil
 		}
 
-		// val was a legit symbol value.
-		if err := t.onSymbol(val, tok, ws); err != nil {
-			return false, err
+		if tok == tokenSymbolQuoted {
+			t.value = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.valueType = SymbolType
+			t.state = t.stateAfterValue()
+		} else {
+			if err := t.onSymbol(val, tok, ws); err != nil {
+				return false, err
+			}
 		}
 		return true, nil
 
@@ -285,6 +303,23 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		t.state = trsBeforeContainer
 		t.valueType = StructType
 		t.value = StructType
+
+		ctx := t.ctx.peek()
+		if ctx == ctxAtTopLevel && isIonSymbolTable(t.annotations) {
+			if t.IsNull() {
+				t.clear()
+				t.lst = V1SystemSymbolTable
+				return false, nil
+			}
+
+			st, err := readLocalSymbolTable(t, t.cat)
+			if err == nil {
+				t.lst = st
+				return false, nil
+			}
+			return false, err
+		}
+
 		return true, nil
 
 	case tokenOpenBracket:
@@ -337,7 +372,6 @@ func (t *textReader) StepIn() error {
 	} else {
 		t.state = trsBeforeTypeAnnotations
 	}
-
 	t.clear()
 
 	t.tok.SetFinished()
@@ -394,7 +428,7 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
-	if tok == tokenSymbol {
+	if tok == tokenSymbol || tok == tokenSymbolOperator {
 		switch val {
 		case "null":
 			vt, err := t.onNull(ws)
@@ -415,6 +449,12 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 		case "nan":
 			valueType = FloatType
 			value = math.NaN()
+		default:
+			val, err := NewSymbolToken(t.SymbolTable(), val)
+			if err != nil {
+				return err
+			}
+			value = &val
 		}
 	}
 

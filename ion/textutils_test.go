@@ -135,26 +135,6 @@ func TestSymbolNeedsQuoting(t *testing.T) {
 	test("abc\"def", true)
 }
 
-func TestIsSymbolRef(t *testing.T) {
-	test := func(sym string, expected bool) {
-		t.Run(sym, func(t *testing.T) {
-			actual := isSymbolRef(sym)
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
-		})
-	}
-
-	test("", false)
-	test("1", false)
-	test("a", false)
-	test("$", false)
-	test("$1", true)
-	test("$1234567890", true)
-	test("$a", false)
-	test("$1234a567890", false)
-}
-
 func TestWriteEscapedSymbol(t *testing.T) {
 	test := func(sym, expected string) {
 		t.Run(expected, func(t *testing.T) {

@@ -43,19 +43,24 @@ type textWriter struct {
 	emptyContainer bool
 	emptyStream    bool
 	indent         int
+
+	lstb     SymbolTableBuilder
+	wroteLST bool
 }
 
-// NewTextWriter returns a new text writer.
-func NewTextWriter(out io.Writer) Writer {
-	return NewTextWriterOpts(out, 0)
+// NewTextWriter returns a new text writer that will construct a
+// local symbol table as it is written to.
+func NewTextWriter(out io.Writer, sts ...SharedSymbolTable) Writer {
+	return NewTextWriterOpts(out, 0, sts...)
 }
 
 // NewTextWriterOpts returns a new text writer with the given options.
-func NewTextWriterOpts(out io.Writer, opts TextWriterOpts) Writer {
+func NewTextWriterOpts(out io.Writer, opts TextWriterOpts, sts ...SharedSymbolTable) Writer {
 	return &textWriter{
 		writer:      writer{out: out},
 		opts:        opts,
 		emptyStream: true,
+		lstb:        NewSymbolTableBuilder(sts...),
 	}
 }
 
@@ -304,6 +309,21 @@ func (w *textWriter) writeValue(api string, val string) error {
 // a separator (if needed), field name (if in a struct), and type
 // annotations (if any).
 func (w *textWriter) beginValue(api string) error {
+	// We have to record/empty these before calling w.lst.WriteTo(), which
+	// will end up using/modifying them.
+	name := w.fieldName
+	as := w.annotations
+	w.clear()
+
+	// If we have a local symbol table and haven't written it out yet, do that now.
+	if !w.wroteLST {
+		w.wroteLST = true
+		lst := w.lstb.Build()
+		if err := lst.WriteTo(w); err != nil {
+			return err
+		}
+	}
+
 	if w.needsSeparator {
 		if err := w.writeSeparator(); err != nil {
 			return err
@@ -325,13 +345,15 @@ func (w *textWriter) beginValue(api string) error {
 	}
 
 	if w.IsInStruct() {
+		w.fieldName = name
 		if err := w.writeFieldName(api); err != nil {
 			return err
 		}
 	}
 
+	w.annotations = append(w.annotations, as...)
 	if len(w.annotations) > 0 {
-		if err := w.writeAnnotations(); err != nil {
+		if err := w.writeAnnotations(api); err != nil {
 			return err
 		}
 	}
@@ -389,12 +411,21 @@ func (w *textWriter) writeFieldName(api string) error {
 }
 
 // writeAnnotations writes out the annotations for a value.
-func (w *textWriter) writeAnnotations() error {
+func (w *textWriter) writeAnnotations(api string) error {
 	as := w.annotations
 	w.annotations = nil
 
+	var text string
 	for _, a := range as {
-		if err := writeSymbol(a, w.out); err != nil {
+		if a.Text != nil {
+			text = *a.Text
+		} else if a.LocalSID != SymbolIDUnknown {
+			text = fmt.Sprintf("$%v", a.LocalSID)
+		} else {
+			return &UsageError{api, "invalid annotation symbol token"}
+		}
+
+		if err := writeSymbol(text, w.out); err != nil {
 			return err
 		}
 		if err := writeRawString("::", w.out); err != nil {

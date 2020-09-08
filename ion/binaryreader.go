@@ -26,7 +26,6 @@ type binaryReader struct {
 
 	bits bitstream
 	cat  Catalog
-	lst  SymbolTable
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -35,11 +34,6 @@ func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	}
 	r.bits.Init(in)
 	return r
-}
-
-// SymbolTable returns the current symbol table.
-func (r *binaryReader) SymbolTable() SymbolTable {
-	return r.lst
 }
 
 // Next moves the reader to the next value.
@@ -147,14 +141,18 @@ func (r *binaryReader) next() (bool, error) {
 		return true, nil
 
 	case bitcodeSymbol:
-		r.valueType = SymbolType
 		if !r.bits.IsNull() {
 			id, err := r.bits.ReadSymbolID()
 			if err != nil {
 				return false, err
 			}
-			r.value = r.resolve(id)
+			st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
+			if err != nil {
+				return false, err
+			}
+			r.value = &st
 		}
+		r.valueType = SymbolType
 		return true, nil
 
 	case bitcodeString:
@@ -212,7 +210,16 @@ func (r *binaryReader) next() (bool, error) {
 
 		// If it's a local symbol table, install it and keep going.
 		if r.ctx.peek() == ctxAtTopLevel && isIonSymbolTable(r.annotations) {
-			err := r.readLocalSymbolTable()
+			if r.IsNull() {
+				r.clear()
+				r.lst = V1SystemSymbolTable
+				return false, nil
+			}
+			st, err := readLocalSymbolTable(r, r.cat)
+			if err == nil {
+				r.lst = st
+				return false, nil
+			}
 			return false, err
 		}
 
@@ -221,8 +228,8 @@ func (r *binaryReader) next() (bool, error) {
 	panic(fmt.Sprintf("invalid bitcode %v", code))
 }
 
-func isIonSymbolTable(as []string) bool {
-	return len(as) > 0 && as[0] == "$ion_symbol_table"
+func isIonSymbolTable(as []SymbolToken) bool {
+	return len(as) > 0 && as[0].Text != nil && *as[0].Text == "$ion_symbol_table"
 }
 
 // ReadBVM reads a BVM, validates it, and resets the local symbol table.
@@ -248,182 +255,6 @@ func (r *binaryReader) readBVM() error {
 	}
 }
 
-// ReadLocalSymbolTable reads and installs a new local symbol table.
-func (r *binaryReader) readLocalSymbolTable() error {
-	if r.IsNull() {
-		r.clear()
-		r.lst = V1SystemSymbolTable
-		return nil
-	}
-
-	if err := r.StepIn(); err != nil {
-		return err
-	}
-
-	var imps []SharedSymbolTable
-	var syms []string
-
-	for r.Next() {
-		var err error
-		switch *r.FieldName() {
-		case "imports":
-			imps, err = r.readImports()
-		case "symbols":
-			syms, err = r.readSymbols()
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := r.StepOut(); err != nil {
-		return err
-	}
-
-	r.lst = NewLocalSymbolTable(imps, syms)
-	return nil
-}
-
-// ReadImports reads the imports field of a local symbol table.
-func (r *binaryReader) readImports() ([]SharedSymbolTable, error) {
-	if r.valueType == SymbolType && r.value == "$ion_symbol_table" {
-		// Special case that imports the current local symbol table.
-		if r.lst == nil || r.lst == V1SystemSymbolTable {
-			return nil, nil
-		}
-
-		imps := r.lst.Imports()
-		lsst := NewSharedSymbolTable("", 0, r.lst.Symbols())
-		return append(imps, lsst), nil
-	}
-
-	if r.Type() != ListType || r.IsNull() {
-		return nil, nil
-	}
-	if err := r.StepIn(); err != nil {
-		return nil, err
-	}
-
-	var imps []SharedSymbolTable
-	for r.Next() {
-		imp, err := r.readImport()
-		if err != nil {
-			return nil, err
-		}
-		if imp != nil {
-			imps = append(imps, imp)
-		}
-	}
-
-	err := r.StepOut()
-	return imps, err
-}
-
-// ReadImport reads an import definition.
-func (r *binaryReader) readImport() (SharedSymbolTable, error) {
-	if r.Type() != StructType || r.IsNull() {
-		return nil, nil
-	}
-	if err := r.StepIn(); err != nil {
-		return nil, err
-	}
-
-	name := ""
-	version := 0
-	maxID := uint64(0)
-
-	for r.Next() {
-		var err error
-		switch *r.FieldName() {
-		case "name":
-			if r.Type() == StringType {
-				name, err = r.StringValue()
-			}
-		case "version":
-			if r.Type() == IntType {
-				version, err = r.IntValue()
-			}
-		case "max_id":
-			if r.Type() == IntType {
-				var i int64
-				i, err = r.Int64Value()
-				if i < 0 {
-					i = 0
-				}
-				maxID = uint64(i)
-			}
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err := r.StepOut(); err != nil {
-		return nil, err
-	}
-
-	if name == "" || name == "$ion" {
-		return nil, nil
-	}
-	if version < 1 {
-		version = 1
-	}
-
-	var imp SharedSymbolTable
-	if r.cat != nil {
-		imp = r.cat.FindExact(name, version)
-		if imp == nil {
-			imp = r.cat.FindLatest(name)
-		}
-	}
-
-	if maxID == 0 {
-		if imp == nil || version != imp.Version() {
-			return nil, fmt.Errorf("ion: import of shared table %v/%v lacks a valid max_id, but an exact "+
-				"match was not found in the catalog", name, version)
-		}
-		maxID = imp.MaxID()
-	}
-
-	if imp == nil {
-		imp = &bogusSST{
-			name:    name,
-			version: version,
-			maxID:   maxID,
-		}
-	} else {
-		imp = imp.Adjust(maxID)
-	}
-
-	return imp, nil
-}
-
-// ReadSymbols reads the symbols from a symbol table.
-func (r *binaryReader) readSymbols() ([]string, error) {
-	if r.Type() != ListType {
-		return nil, nil
-	}
-	if err := r.StepIn(); err != nil {
-		return nil, err
-	}
-
-	var syms []string
-	for r.Next() {
-		if r.Type() == StringType {
-			sym, err := r.StringValue()
-			if err != nil {
-				return nil, err
-			}
-			syms = append(syms, sym)
-		} else {
-			syms = append(syms, "")
-		}
-	}
-
-	err := r.StepOut()
-	return syms, err
-}
-
 // ReadFieldName reads and resolves a field name.
 func (r *binaryReader) readFieldName() error {
 	id, err := r.bits.ReadFieldID()
@@ -431,35 +262,25 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	fn := r.resolve(id)
-	r.fieldName = &fn
+	st, err := NewSymbolTokenBySID(r.SymbolTable(), int64(id))
+	if err != nil {
+		return err
+	}
+
+	r.fieldNameSymbol = &st
 	return nil
 }
 
 // ReadAnnotations reads and resolves a set of annotations.
 func (r *binaryReader) readAnnotations() error {
-	ids, err := r.bits.ReadAnnotationIDs()
+	as, err := r.bits.ReadAnnotations(r.SymbolTable())
 	if err != nil {
 		return err
 	}
 
-	as := make([]string, len(ids))
-	for i, id := range ids {
-		as[i] = r.resolve(id)
-	}
-
 	r.annotations = as
-	return nil
-}
 
-// Resolve resolves a symbol ID to a symbol value (possibly ${id} if we're
-// missing the appropriate symbol table).
-func (r *binaryReader) resolve(id uint64) string {
-	s, ok := r.lst.FindByID(id)
-	if !ok {
-		return fmt.Sprintf("$%v", id)
-	}
-	return s
+	return nil
 }
 
 // StepIn steps in to a container-type value

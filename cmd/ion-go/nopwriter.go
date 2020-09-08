@@ -32,6 +32,10 @@ func (nopwriter) FieldName(string) error {
 	return nil
 }
 
+func (nopwriter) FieldNameSymbol(val ion.SymbolToken) error {
+	return nil
+}
+
 func (nopwriter) Annotation(string) error {
 	return nil
 }

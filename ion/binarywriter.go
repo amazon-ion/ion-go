@@ -495,10 +495,18 @@ func (w *binaryWriter) beginValue(api string) error {
 		ids := make([]uint64, len(as))
 		idlen := uint64(0)
 
+		var id uint64
+		var err error
 		for i, a := range as {
-			id, err := w.resolve(api, a)
-			if err != nil {
-				return err
+			if a.Text != nil {
+				id, err = w.resolve(api, *a.Text)
+				if err != nil {
+					return err
+				}
+			} else if a.LocalSID != SymbolIDUnknown {
+				id = uint64(a.LocalSID)
+			} else {
+				return &UsageError{api, "invalid annotation symbol token"}
 			}
 
 			ids[i] = id
