@@ -90,10 +90,6 @@ type Reader interface {
 	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
-	// FieldName returns the field name associated with the current value. It returns
-	// nil if there is no current value or the current value has no field name.
-	FieldName() *string
-
 	// Annotations returns the set of annotations associated with the current value.
 	// It returns nil if there is no current value or the current value has no annotations.
 	Annotations() []string
@@ -149,7 +145,7 @@ type Reader interface {
 	TimestampValue() (Timestamp, error)
 
 	// StringValue returns the current value as a string (if that makes sense). It returns
-	// an error if the current value is not an Ion symbol or an Ion string.
+	// an error if the current value is not an Ion string.
 	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
@@ -161,7 +157,7 @@ type Reader interface {
 
 	// FieldNameSymbol returns the field name associated with the current value as a SymbolToken.
 	// It returns an error if the current value has no field name.
-	FieldNameSymbol() (*SymbolToken, error)
+	FieldName() (*SymbolToken, error)
 
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
 	// error if the current value is not an Ion symbol.
@@ -208,7 +204,7 @@ type reader struct {
 	err error
 
 	lst             SymbolTable
-	fieldNameSymbol *SymbolToken
+	fieldName *SymbolToken
 	annotations     []SymbolToken
 	valueType       Type
 	value           interface{}
@@ -227,14 +223,6 @@ func (r *reader) Type() Type {
 // IsNull returns true if the current value is null.
 func (r *reader) IsNull() bool {
 	return r.valueType != NoType && r.value == nil
-}
-
-// FieldName returns the current value's field name.
-func (r *reader) FieldName() *string {
-	if r.fieldNameSymbol != nil {
-		return r.fieldNameSymbol.Text
-	}
-	return nil
 }
 
 // Annotations returns the current value's annotations.
@@ -411,8 +399,8 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	if r.fieldNameSymbol != nil {
-		r.fieldNameSymbol.Text = nil
+	if r.fieldName != nil {
+		r.fieldName.Text = nil
 	}
 	r.annotations = nil
 	r.valueType = NoType
@@ -430,21 +418,16 @@ func (r *reader) StringValue() (*string, error) {
 		return nil, r.err
 	}
 
-	if r.valueType != StringType && r.valueType != SymbolType {
-		return nil, &UsageError{"Reader.StringValue", "value is not a string or symbol"}
+	if r.valueType != StringType {
+		return nil, &UsageError{"Reader.StringValue", "value is not a string"}
 	}
 
 	if r.value == nil {
 		return nil, nil
 	}
 
-	// Check if value is symbol or string.
-	st, ok := r.value.(*SymbolToken)
-	if !ok {
-		val := r.value.(string)
-		return &val, nil
-	}
-	return st.Text, nil
+	val := r.value.(string)
+	return &val, nil
 }
 
 // SymbolValue returns the current value as a symbol token.
@@ -457,16 +440,20 @@ func (r *reader) SymbolValue() (*SymbolToken, error) {
 		return nil, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
 	}
 
+	if r.value == nil {
+		return nil, nil
+	}
+
 	return r.value.(*SymbolToken), nil
 }
 
-// FieldNameSymbol returns the current field name as a symbol token.
-func (r *reader) FieldNameSymbol() (*SymbolToken, error) {
+// FieldName returns the current field name as a symbol token.
+func (r *reader) FieldName() (*SymbolToken, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 
-	return r.fieldNameSymbol, nil
+	return r.fieldName, nil
 }
 
 // SymbolTable returns the current symbol table.

@@ -16,10 +16,18 @@ func readLocalSymbolTable(r Reader, cat Catalog) (SymbolTable, error) {
 
 	for r.Next() {
 		var err error
-		if r.FieldName() == nil {
+		fieldName, err := r.FieldName()
+		if err != nil {
+			return nil, err
+		}
+		if fieldName == nil {
 			return nil, fmt.Errorf("ion: field name is nil")
 		}
-		switch *r.FieldName() {
+		if fieldName.Text == nil {
+			return nil, fmt.Errorf("ion: field name is nil")
+		}
+
+		switch *fieldName.Text {
 		case "symbols":
 			if foundLocals {
 				return nil, fmt.Errorf("ion: multiple symbol fields found within a single local symbol table")
@@ -102,7 +110,18 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 
 	for r.Next() {
 		var err error
-		switch *r.FieldName() {
+		fieldName, err := r.FieldName()
+		if err != nil {
+			return nil, err
+		}
+		if fieldName == nil {
+			return nil, fmt.Errorf("ion: field name is nil")
+		}
+		if fieldName.Text == nil {
+			return nil, fmt.Errorf("ion: field name is nil")
+		}
+
+		switch *fieldName.Text {
 		case "name":
 			if r.Type() == StringType {
 				var val *string

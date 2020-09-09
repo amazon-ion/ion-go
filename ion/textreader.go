@@ -183,13 +183,13 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		}
 
 		if tok == tokenSymbolQuoted {
-			t.fieldNameSymbol = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
 			st, err := NewSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return false, err
 			}
-			t.fieldNameSymbol = &st
+			t.fieldName = &st
 		}
 
 		// Skip over the following colon.
@@ -233,7 +233,6 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-
 		ok, ws, err := t.tok.SkipDoubleColon()
 		if err != nil {
 			return false, err

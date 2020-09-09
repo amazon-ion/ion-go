@@ -200,13 +200,18 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	for d.r.Next() {
-		if d.r.FieldName() != nil {
-			name := d.r.FieldName()
-			value, err := d.decode()
-			if err != nil {
-				return nil, err
+		fieldName, err := d.r.FieldName()
+		if err != nil {
+			return nil, err
+		}
+		if fieldName != nil {
+			if fieldName.Text != nil {
+				value, err := d.decode()
+				if err != nil {
+					return nil, err
+				}
+				result[*fieldName.Text] = value
 			}
-			result[*name] = value
 		}
 	}
 
@@ -576,16 +581,23 @@ func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 	}
 
 	for d.r.Next() {
-		name := d.r.FieldName()
-		field := findField(fields, *name)
-		if field != nil {
-			subv, err := findSubvalue(v, field)
-			if err != nil {
-				return err
-			}
+		fieldName, err := d.r.FieldName()
+		if err != nil {
+			return err
+		}
+		if fieldName != nil {
+			if fieldName.Text != nil{
+				field := findField(fields, *fieldName.Text)
+				if field != nil {
+					subv, err := findSubvalue(v, field)
+					if err != nil {
+						return err
+					}
 
-			if err := d.decodeTo(subv); err != nil {
-				return err
+					if err := d.decodeTo(subv); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
@@ -642,21 +654,29 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 	}
 
 	for d.r.Next() {
-		name := d.r.FieldName()
-		if err := d.decodeTo(subv); err != nil {
+		fieldName, err := d.r.FieldName()
+		if err != nil {
 			return err
 		}
 
-		var kv reflect.Value
-		switch t.Key().Kind() {
-		case reflect.String:
-			kv = reflect.ValueOf(*name)
-		default:
-			panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
-		}
+		if fieldName != nil {
+			if fieldName.Text != nil {
+				if err := d.decodeTo(subv); err != nil {
+					return err
+				}
 
-		if kv.IsValid() {
-			v.SetMapIndex(kv, subv)
+				var kv reflect.Value
+				switch t.Key().Kind() {
+				case reflect.String:
+					kv = reflect.ValueOf(*fieldName.Text)
+				default:
+					panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
+				}
+
+				if kv.IsValid() {
+					v.SetMapIndex(kv, subv)
+				}
+			}
 		}
 	}
 

@@ -70,14 +70,14 @@ func TestReadTextFieldNames(t *testing.T) {
 	if err != nil {
 		t.Errorf("stepin returned err: %v", err.Error())
 	}
-	_nextF(t, r, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false)
-	_nextF(t, r, newString("$4"), SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
-	_nextF(t, r, newString("name"), SymbolToken{Text: newString("name"), LocalSID: 4}, false, false)
-	_nextF(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
-	_nextF(t, r, newString("foo"), SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
-	_nextF(t, r, newString("bar"), SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}, false, false)
-	_nextF(t, r, newString("$ion"), SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
-	_nextF(t, r, nil, SymbolToken{}, true, true)
+	_nextF(t, r, SymbolToken{Text: nil, LocalSID: 0}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("name"), LocalSID: 4}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}, false, false)
+	_nextF(t, r, SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
+	_nextF(t, r, SymbolToken{}, true, true)
 }
 
 func TestIgnoreValues(t *testing.T) {
@@ -898,7 +898,7 @@ func _next(t *testing.T, r Reader, et Type) {
 	_nextAF(t, r, et, nil, nil)
 }
 
-func _nextAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
+func _nextAF(t *testing.T, r Reader, et Type, efn SymbolToken, etas []string) {
 	if !r.Next() {
 		t.Fatal(r.Err())
 	}
@@ -906,36 +906,33 @@ func _nextAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
 		t.Fatalf("expected %v, got %v", et, r.Type())
 	}
 
-	fn := r.FieldName()
-	if efn != nil && fn != nil && *efn != *fn {
-		t.Errorf("expected fieldname=%v, got %v", *efn, *fn)
+	fn, _ := r.FieldName()
+	if !efn.Equal(fn){
+		t.Errorf("expected fieldname=%v, got %v", efn, fn)
 	}
+
 	if !_strequals(etas, r.Annotations()) {
 		t.Errorf("expected type annotations=%v, got %v", etas, r.Annotations())
 	}
 }
 
-func _nextF(t *testing.T, r Reader, efn *string, efns SymbolToken, isFieldNameSymbolError bool, isNextError bool) {
+func _nextF(t *testing.T, r Reader, efns SymbolToken, isFieldNameError bool, isNextError bool) {
 	if !r.Next() && !isNextError {
 		t.Fatal(r.Err())
 	}
 
-	fn := r.FieldName()
-	if efn != nil && fn != nil && *efn != *fn {
-		t.Errorf("expected fieldname=%v, got %v", *efn, *fn)
-	}
+	fn, err := r.FieldName()
 
-	fns, err := r.FieldNameSymbol()
-	if isFieldNameSymbolError {
+	if isFieldNameError {
 		if err == nil {
-			t.Fatal("stringvalue did not return an error")
+			t.Fatal("fieldName did not return an error")
 		}
 	} else {
 		if err != nil {
-			t.Errorf("fieldnamesymbol returned an error: %v", err.Error())
+			t.Errorf("fieldname returned an error: %v", err.Error())
 		}
-		if !efns.Equal(fns) {
-			t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fns)
+		if !efns.Equal(fn) {
+			t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fn)
 		}
 	}
 }
