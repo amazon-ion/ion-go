@@ -203,11 +203,11 @@ type reader struct {
 	eof bool
 	err error
 
-	lst             SymbolTable
-	fieldName *SymbolToken
-	annotations     []SymbolToken
-	valueType       Type
-	value           interface{}
+	lst         SymbolTable
+	fieldName   *SymbolToken
+	annotations []SymbolToken
+	valueType   Type
+	value       interface{}
 }
 
 // Err returns the current error.

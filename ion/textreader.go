@@ -234,25 +234,12 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, err
 		}
 
-		// Check if token is a null type
-		nullType := NoType
-		if val == "null" {
-			ok, _ := t.tok.SkipDot()
-			if ok {
-				nullType, _ = t.readNullType()
-			}
-		}
-
 		ok, ws, err := t.tok.SkipDoubleColon()
 		if err != nil {
 			return false, err
 		}
 
 		if ok {
-			if nullType != NoType {
-				return false, &UsageError{"Reader.Annotations", "type annotation cannot be null"}
-			}
-
 			// val was an annotation; remember it and keep going.
 			if tok == tokenSymbol {
 				if err := t.verifyUnquotedSymbol(val, "annotation"); err != nil {

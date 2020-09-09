@@ -586,7 +586,7 @@ func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 			return err
 		}
 		if fieldName != nil {
-			if fieldName.Text != nil{
+			if fieldName.Text != nil {
 				field := findField(fields, *fieldName.Text)
 				if field != nil {
 					subv, err := findSubvalue(v, field)

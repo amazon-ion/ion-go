@@ -907,7 +907,7 @@ func _nextAF(t *testing.T, r Reader, et Type, efn SymbolToken, etas []string) {
 	}
 
 	fn, _ := r.FieldName()
-	if !efn.Equal(fn){
+	if !efn.Equal(fn) {
 		t.Errorf("expected fieldname=%v, got %v", efn, fn)
 	}
 
