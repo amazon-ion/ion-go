@@ -170,7 +170,8 @@ func (w *binaryWriter) writeBigInt(val *big.Int) error {
 
 // WriteFloat writes a floating-point value.
 func (w *binaryWriter) WriteFloat(val float64) error {
-	if val == 0 {
+	if val == 0 && !math.Signbit(val) {
+		// Positive zero is represented as just one byte.
 		return w.writeValue("Writer.WriteFloat", []byte{0x40})
 	}
 
@@ -190,6 +191,11 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 
 	bits := math.Float64bits(val)
 	binary.BigEndian.PutUint64(bs[1:], bits)
+
+	// The above PutUint64() puts an unwanted 1 as the last byte for NaN.
+	if math.IsNaN(val) {
+		bs[8] = 0
+	}
 
 	return w.writeValue("Writer.WriteFloat", bs)
 }
