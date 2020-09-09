@@ -37,7 +37,7 @@ type ionItem struct {
 	ionType     Type
 	annotations []string
 	value       []interface{}
-	fieldName   string
+	fieldName   SymbolToken
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -444,7 +444,7 @@ func isInSkipList(skipList []string, fn string) bool {
 // Read all the values in the reader and write them in the writer
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
-		fns, err := reader.FieldNameSymbol()
+		fns, err := reader.FieldName()
 		if err == nil && reader.IsInStruct() && fns != nil {
 			err = writer.FieldNameSymbol(*fns)
 			if err != nil {
@@ -665,7 +665,10 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.annotations = an
 	}
 
-	fn := reader.FieldName()
+	fn, err := reader.FieldName()
+	if err != nil {
+		t.Errorf("Something went wrong when reading field name. " + err.Error())
+	}
 	if fn != nil {
 		ionItem.fieldName = *fn
 	}
