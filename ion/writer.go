@@ -191,12 +191,6 @@ func (w *writer) Annotation(val SymbolToken) error {
 		return w.err
 	}
 
-	//var token SymbolToken
-	//token, w.err = NewSymbolToken(V1SystemSymbolTable, val)
-	//if w.err != nil {
-	//	return w.err
-	//}
-
 	w.annotations = append(w.annotations, val)
 
 	return nil
@@ -207,12 +201,6 @@ func (w *writer) Annotations(values ...SymbolToken) error {
 	if w.err != nil {
 		return w.err
 	}
-
-	//var tokens []SymbolToken
-	//tokens, w.err = NewSymbolTokens(V1SystemSymbolTable, values)
-	//if w.err != nil {
-	//	return w.err
-	//}
 
 	w.annotations = append(w.annotations, values...)
 
