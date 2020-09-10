@@ -155,8 +155,8 @@ type Reader interface {
 	// IsInStruct indicates if the reader is currently positioned in a struct.
 	IsInStruct() bool
 
-	// FieldNameSymbol returns the field name associated with the current value as a SymbolToken.
-	// It returns an error if the current value has no field name.
+	// FieldName returns the field name associated with the current value as a SymbolToken. It returns
+	// nil if there is no current value or the current value has no field name.
 	FieldName() (*SymbolToken, error)
 
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an

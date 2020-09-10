@@ -115,14 +115,10 @@ func cmpSymbols(thisValue, otherValue interface{}) bool {
 	val1 := thisValue.(*SymbolToken)
 	val2 := otherValue.(*SymbolToken)
 
-	if val1 == nil && val2 == nil {
-		return true
+	if val1 == nil || val2 == nil {
+		return val1 == nil && val2 == nil
 	}
-
-	if val1 != nil && val2 != nil {
-		return val1.Equal(val2)
-	}
-	return false
+	return val1.Equal(val2)
 }
 
 func cmpValueSlices(thisValues, otherValues []interface{}) bool {
