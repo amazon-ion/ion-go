@@ -92,19 +92,6 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
-// ResolveToString returns a SymbolToken's text value or "$<sid>"
-func (st *SymbolToken) ResolveToString() string {
-	if st.Text != nil {
-		return *st.Text
-	}
-
-	if st.LocalSID != SymbolIDUnknown {
-		return fmt.Sprintf("$%v", st.LocalSID)
-	}
-
-	return ""
-}
-
 // Parses text of the form '$n' for some integer n.
 func symbolIdentifier(symbolText string) (int64, bool) {
 	if len(symbolText) > 1 && symbolText[0] == '$' {

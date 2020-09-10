@@ -312,7 +312,14 @@ func (e *eventwriter) write(ev event) error {
 	if len(annos) > 0 {
 		asyms := make([]token, len(annos))
 		for i, a := range annos {
-			asyms[i] = token{Text: a.ResolveToString()}
+			text := ""
+			if a.Text != nil {
+				text = *a.Text
+			} else if a.LocalSID != ion.SymbolIDUnknown {
+				text = fmt.Sprintf("$%v", a.LocalSID)
+			}
+
+			asyms[i] = token{Text: text}
 		}
 		ev.Annotations = asyms
 	}
