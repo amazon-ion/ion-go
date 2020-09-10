@@ -175,26 +175,26 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 		return w.writeValue("Writer.WriteFloat", []byte{0x40})
 	}
 
+	var bs []byte
+
 	// Can this be losslessly represented as a float32?
 	if val == float64(float32(val)) {
-		bs := make([]byte, 5)
+		bs = make([]byte, 5)
 		bs[0] = 0x44
 
 		bits := math.Float32bits(float32(val))
 		binary.BigEndian.PutUint32(bs[1:], bits)
+	} else {
+		bs = make([]byte, 9)
+		bs[0] = 0x48
 
-		return w.writeValue("Writer.WriteFloat", bs)
-	}
+		bits := math.Float64bits(val)
+		binary.BigEndian.PutUint64(bs[1:], bits)
 
-	bs := make([]byte, 9)
-	bs[0] = 0x48
-
-	bits := math.Float64bits(val)
-	binary.BigEndian.PutUint64(bs[1:], bits)
-
-	// The above PutUint64() puts an unwanted 1 as the last byte for NaN.
-	if math.IsNaN(val) {
-		bs[8] = 0
+		// The above PutUint64() puts an unwanted 1 as the last byte for NaN.
+		if math.IsNaN(val) {
+			bs[8] = 0
+		}
 	}
 
 	return w.writeValue("Writer.WriteFloat", bs)
