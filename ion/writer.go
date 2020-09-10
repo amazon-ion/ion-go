@@ -73,10 +73,10 @@ type Writer interface {
 	FieldNameSymbol(val SymbolToken) error
 
 	// Annotation adds a single annotation to the next value written.
-	Annotation(val string) error
+	Annotation(val SymbolToken) error
 
 	// Annotations adds multiple annotations to the next value written.
-	Annotations(values ...string) error
+	Annotations(values ...SymbolToken) error
 
 	// WriteNull writes an untyped null value.
 	WriteNull() error
@@ -186,35 +186,35 @@ func (w *writer) FieldNameSymbol(val SymbolToken) error {
 }
 
 // Annotation adds an annotation to the next value written.
-func (w *writer) Annotation(val string) error {
+func (w *writer) Annotation(val SymbolToken) error {
 	if w.err != nil {
 		return w.err
 	}
 
-	var token SymbolToken
-	token, w.err = NewSymbolToken(V1SystemSymbolTable, val)
-	if w.err != nil {
-		return w.err
-	}
+	//var token SymbolToken
+	//token, w.err = NewSymbolToken(V1SystemSymbolTable, val)
+	//if w.err != nil {
+	//	return w.err
+	//}
 
-	w.annotations = append(w.annotations, token)
+	w.annotations = append(w.annotations, val)
 
 	return nil
 }
 
 // Annotations adds one or more annotations to the next value written.
-func (w *writer) Annotations(values ...string) error {
+func (w *writer) Annotations(values ...SymbolToken) error {
 	if w.err != nil {
 		return w.err
 	}
 
-	var tokens []SymbolToken
-	tokens, w.err = NewSymbolTokens(V1SystemSymbolTable, values)
-	if w.err != nil {
-		return w.err
-	}
+	//var tokens []SymbolToken
+	//tokens, w.err = NewSymbolTokens(V1SystemSymbolTable, values)
+	//if w.err != nil {
+	//	return w.err
+	//}
 
-	w.annotations = append(w.annotations, tokens...)
+	w.annotations = append(w.annotations, values...)
 
 	return nil
 }

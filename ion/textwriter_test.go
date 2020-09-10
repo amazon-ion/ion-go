@@ -49,9 +49,9 @@ func TestWriteTextEmptyStruct(t *testing.T) {
 
 func TestWriteTextAnnotatedStruct(t *testing.T) {
 	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w Writer) {
-		w.Annotation("foo")
-		w.Annotation("$bar")
-		w.Annotation(".baz")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
+		w.Annotation(SymbolToken{Text: newString("$bar"), LocalSID: SymbolIDUnknown})
+		w.Annotation(SymbolToken{Text: newString(".baz"), LocalSID: SymbolIDUnknown})
 		w.BeginStruct()
 		err := w.EndStruct()
 
@@ -66,7 +66,7 @@ func TestWriteTextNestedStruct(t *testing.T) {
 		w.BeginStruct()
 
 		w.FieldName("foo")
-		w.Annotation("true")
+		w.Annotation(SymbolToken{Text: newString("true"), LocalSID: SymbolIDUnknown})
 		w.BeginStruct()
 		w.EndStruct()
 
@@ -101,11 +101,11 @@ func TestWriteTextNestedLists(t *testing.T) {
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.Annotation("foo")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.Annotation("null")
+		w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown})
 		w.BeginList()
 		w.EndList()
 
@@ -141,7 +141,7 @@ func TestWriteTextNulls(t *testing.T) {
 		w.BeginList()
 
 		w.WriteNull()
-		w.Annotation("foo")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		w.WriteNullType(NullType)
 		w.WriteNullType(BoolType)
 		w.WriteNullType(IntType)
@@ -153,7 +153,7 @@ func TestWriteTextNulls(t *testing.T) {
 		w.WriteNullType(ClobType)
 		w.WriteNullType(BlobType)
 		w.WriteNullType(ListType)
-		w.Annotation("null")
+		w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown})
 		w.WriteNullType(SexpType)
 		w.WriteNullType(StructType)
 
@@ -169,12 +169,12 @@ func TestWriteTextBool(t *testing.T) {
 		w.BeginSexp()
 
 		w.WriteBool(false)
-		w.Annotation("123")
+		w.Annotation(SymbolToken{Text: newString("123"), LocalSID: SymbolIDUnknown})
 		w.WriteBool(true)
 
 		w.EndSexp()
 
-		w.Annotation("false")
+		w.Annotation(SymbolToken{Text: newString("false"), LocalSID: SymbolIDUnknown})
 		w.WriteBool(false)
 	})
 }
@@ -184,7 +184,7 @@ func TestWriteTextInt(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		w.BeginSexp()
 
-		w.Annotation("zero")
+		w.Annotation(SymbolToken{Text: newString("zero"), LocalSID: SymbolIDUnknown})
 		w.WriteInt(0)
 		w.WriteInt(1)
 		w.WriteInt(-1)
@@ -210,7 +210,7 @@ func TestWriteTextBigInt(t *testing.T) {
 		one.SetInt64(1)
 		val.Add(&max, &one)
 
-		w.Annotation("big")
+		w.Annotation(SymbolToken{Text: newString("big"), LocalSID: SymbolIDUnknown})
 		w.WriteBigInt(&val)
 
 		w.EndList()
@@ -274,9 +274,9 @@ func TestWriteTextSymbol(t *testing.T) {
 		w.WriteSymbol("null")
 
 		w.FieldName("f")
-		w.Annotation("a")
-		w.Annotation("b")
-		w.Annotation("u")
+		w.Annotation(SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
+		w.Annotation(SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown})
+		w.Annotation(SymbolToken{Text: newString("u"), LocalSID: SymbolIDUnknown})
 		w.WriteSymbol("lo🇺🇸")
 
 		w.FieldName("$123")
@@ -295,7 +295,7 @@ func TestWriteTextString(t *testing.T) {
 
 		w.BeginSexp()
 		w.WriteString("\\\"\n\"\\")
-		w.Annotation("zany")
+		w.Annotation(SymbolToken{Text: newString("zany"), LocalSID: SymbolIDUnknown})
 		w.WriteString("🤪")
 		w.EndSexp()
 
@@ -308,7 +308,7 @@ func TestWriteTextBlob(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		w.WriteBlob([]byte{0, 1, 2, 0xFD, 0xFE, 0xFF})
 		w.WriteBlob([]byte("Hello World"))
-		w.Annotation("empty")
+		w.Annotation(SymbolToken{Text: newString("empty"), LocalSID: SymbolIDUnknown})
 		w.WriteBlob(nil)
 	})
 }
@@ -362,7 +362,7 @@ func TestWriteTextPretty(t *testing.T) {
 		w.EndStruct()
 
 		w.FieldName("list")
-		w.Annotations("i", "am", "a", "list")
+		w.Annotations(SymbolToken{Text: newString("i"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("am"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("list"), LocalSID: SymbolIDUnknown})
 		w.BeginList()
 		{
 			w.WriteString("value")

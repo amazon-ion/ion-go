@@ -92,7 +92,7 @@ type Reader interface {
 
 	// Annotations returns the set of annotations associated with the current value.
 	// It returns nil if there is no current value or the current value has no annotations.
-	Annotations() []string
+	Annotations() ([]SymbolToken, error)
 
 	// StepIn steps in to the current value if it is a container. It returns an error if there
 	// is no current value or if the value is not a container. On success, the Reader is
@@ -226,22 +226,12 @@ func (r *reader) IsNull() bool {
 }
 
 // Annotations returns the current value's annotations.
-func (r *reader) Annotations() []string {
-	var annotations []string
-	for _, an := range r.annotations {
-		if an.Text != nil {
-			sid, systemSymbolName := getSystemSymbolMapping(r.SymbolTable(), *an.Text)
-			if sid != SymbolIDUnknown {
-				annotations = append(annotations, systemSymbolName)
-			} else {
-				annotations = append(annotations, *an.Text)
-			}
-		} else {
-			annotations = append(annotations, "")
-		}
+func (r *reader) Annotations() ([]SymbolToken, error) {
+	if r.err != nil {
+		return nil, r.err
 	}
 
-	return annotations
+	return r.annotations, nil
 }
 
 // BoolValue returns the current value as a bool.

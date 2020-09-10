@@ -59,8 +59,25 @@ func (thisSymbol ionSymbol) eq(other ionEqual) bool {
 	return false
 }
 
-func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
-	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
+func cmpAnnotations(thisAnnotations, otherAnnotations []SymbolToken) bool {
+	if len(thisAnnotations) == 0 && len(otherAnnotations) == 0 {
+		return true
+	}
+
+	if len(thisAnnotations) != len(otherAnnotations) {
+		return false
+	}
+
+	res := false
+	for idx, this := range thisAnnotations {
+		other := otherAnnotations[idx]
+		res = this.Equal(&other)
+
+		if !res {
+			return false
+		}
+	}
+	return res
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {

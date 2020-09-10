@@ -436,10 +436,10 @@ func (m *Encoder) encodeWithAnnotation(v reflect.Value, fields []field) error {
 			if err != nil {
 				return err
 			}
-			listOfAnnotations, ok := annotations.Interface().([]string)
+			listOfAnnotations, ok := annotations.Interface().([]SymbolToken)
 			if !ok {
 				return fmt.Errorf("ion: '%v' is provided for annotations, "+
-					"it must be of type []string", annotations.Kind())
+					"it must be of type []SymbolToken", annotations.Kind())
 			}
 			err = m.w.Annotations(listOfAnnotations...)
 			if err != nil {

@@ -156,7 +156,7 @@ func (s *sst) FindByID(id uint64) (string, bool) {
 }
 
 func (s *sst) WriteTo(w Writer) error {
-	if err := w.Annotation("$ion_shared_symbol_table"); err != nil {
+	if err := w.Annotation(SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9}); err != nil {
 		return err
 	}
 	if err := w.BeginStruct(); err != nil {
@@ -277,7 +277,7 @@ func (s *bogusSST) WriteTo(w Writer) error {
 func (s *bogusSST) String() string {
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
-	w.Annotations("$ion_shared_symbol_table", "bogus")
+	w.Annotations(SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9}, SymbolToken{Text: newString("bogus"), LocalSID: SymbolIDUnknown})
 	w.BeginStruct()
 
 	w.FieldName("name")
@@ -405,7 +405,7 @@ func (t *lst) WriteTo(w Writer) error {
 		return nil
 	}
 
-	if err := w.Annotation("$ion_symbol_table"); err != nil {
+	if err := w.Annotation(SymbolToken{Text: newString("$ion_symbol_table"), LocalSID: 3}); err != nil {
 		return err
 	}
 	if err := w.BeginStruct(); err != nil {
@@ -578,4 +578,8 @@ func buildIndex(symbols []string, offset uint64) map[string]uint64 {
 	}
 
 	return index
+}
+
+func newString(value string) *string {
+	return &value
 }

@@ -871,7 +871,11 @@ func (d *Decoder) attachAnnotations(v reflect.Value) error {
 			if err != nil {
 				return err
 			}
-			annotations := d.r.Annotations()
+
+			annotations, err := d.r.Annotations()
+			if err != nil {
+				return err
+			}
 			subValue.Set(reflect.ValueOf(annotations))
 			break
 		}

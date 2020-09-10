@@ -35,7 +35,7 @@ type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
 	ionType     Type
-	annotations []string
+	annotations []SymbolToken
 	value       []interface{}
 	fieldName   SymbolToken
 }
@@ -315,7 +315,12 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	r := NewReader(file)
 	topLevelCounter := 0
 	for r.Next() {
-		embDoc := isEmbeddedDoc(r.Annotations())
+
+		annotations, err := r.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		embDoc := isEmbeddedDoc(annotations)
 		ionType := r.Type()
 		switch ionType {
 		case StructType, ListType, SexpType:
@@ -369,10 +374,12 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 	return values
 }
 
-func isEmbeddedDoc(an []string) bool {
+func isEmbeddedDoc(an []SymbolToken) bool {
 	for _, a := range an {
-		if a == "embedded_documents" {
-			return true
+		if a.Text != nil {
+			if *a.Text == "embedded_documents" {
+				return true
+			}
 		}
 	}
 	return false
@@ -455,7 +462,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			}
 		}
 
-		an := reader.Annotations()
+		an, err := reader.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if len(an) > 0 {
 			err := writer.Annotations(an...)
 			if err != nil {
@@ -665,7 +676,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	var ionItem ionItem
 
-	an := reader.Annotations()
+	an, err := reader.Annotations()
+	if err != nil {
+		t.Errorf("Something went wrong when reading annotations. " + err.Error())
+	}
+
 	if len(an) > 0 {
 		ionItem.annotations = an
 	}

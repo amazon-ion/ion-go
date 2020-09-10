@@ -22,10 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func newString(value string) *string {
-	return &value
-}
-
 var symbolTokenEqualsTestData = []struct {
 	text1   *string
 	sid1    int64
