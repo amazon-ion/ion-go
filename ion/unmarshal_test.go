@@ -300,6 +300,10 @@ func TestUnmarshalBinary(t *testing.T) {
 			case Timestamp:
 				thisTime := ionTimestamp{thisValue}
 				res = thisTime.eq(ionTimestamp{eval.(Timestamp)})
+			case *SymbolToken:
+				thisSymbol := ionSymbol{thisValue}
+				res = thisSymbol.eq(ionSymbol{eval.(*SymbolToken)})
+
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -340,7 +344,7 @@ func TestUnmarshalBinary(t *testing.T) {
 
 	var symbolVal string
 	symbolBytes := prefixIVM([]byte{0x71, 0x09}) // $9
-	test(symbolBytes, symbolVal, newString("$ion_shared_symbol_table"))
+	test(symbolBytes, symbolVal, &SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 
 	var stringVal string
 	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
@@ -626,6 +630,7 @@ func TestDecode(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if !reflect.DeepEqual(val, eval) {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
@@ -654,7 +659,7 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", newString("hello"))
+	test("hello", &SymbolToken{Text: newString("hello"), LocalSID: SymbolIDUnknown})
 	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
@@ -669,14 +674,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": newString("two"),
+		"b": &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown},
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, newString("two")})
+	test("[1, two]", []interface{}{1, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, newString("+"), newString("two")})
+	test("(1 + two)", []interface{}{1, &SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown}, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
 
 	var result []interface{}
 	test("()", result)

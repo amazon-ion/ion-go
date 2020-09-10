@@ -156,8 +156,11 @@ func (d *Decoder) decode() (interface{}, error) {
 	case TimestampType:
 		return d.r.TimestampValue()
 
-	case StringType, SymbolType:
+	case StringType:
 		return d.r.StringValue()
+
+	case SymbolType:
+		return d.r.SymbolValue()
 
 	case BlobType, ClobType:
 		return d.r.ByteValue()
@@ -206,11 +209,12 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 		}
 		if fieldName != nil {
 			if fieldName.Text != nil {
+				name := fieldName.Text
 				value, err := d.decode()
 				if err != nil {
 					return nil, err
 				}
-				result[*fieldName.Text] = value
+				result[*name] = value
 			}
 		}
 	}
@@ -298,8 +302,11 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 	case TimestampType:
 		return d.decodeTimestampTo(v)
 
-	case StringType, SymbolType:
+	case StringType:
 		return d.decodeStringTo(v)
+
+	case SymbolType:
+		return d.decodeSymbolTo(v)
 
 	case BlobType, ClobType:
 		return d.decodeLobTo(v)
@@ -484,6 +491,36 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 		}
 	}
 	return fmt.Errorf("ion: cannot decode timestamp to %v", v.Type().String())
+}
+
+func (d *Decoder) decodeSymbolTo(v reflect.Value) error {
+	val, err := d.r.SymbolValue()
+	if err != nil {
+		return err
+	}
+
+	switch v.Kind() {
+	case reflect.String:
+		if val != nil {
+			v.SetString(*val.Text)
+
+		}
+		return nil
+
+	case reflect.Struct:
+		if v.Type() == symbolType {
+			v.Set(reflect.ValueOf(val))
+			return d.attachAnnotations(v)
+		}
+		return d.decodeToStructWithAnnotation(v, symbolType.Kind())
+
+	case reflect.Interface:
+		if v.NumMethod() == 0 {
+			v.Set(reflect.ValueOf(val))
+			return nil
+		}
+	}
+	return fmt.Errorf("ion: cannot decode symbol to %v", v.Type().String())
 }
 
 func (d *Decoder) decodeStringTo(v reflect.Value) error {

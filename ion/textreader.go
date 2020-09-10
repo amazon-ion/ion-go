@@ -428,7 +428,7 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
-	if tok == tokenSymbol || tok == tokenSymbolOperator {
+	if tok == tokenSymbol || tok == tokenSymbolOperator || tok == tokenDot {
 		switch val {
 		case "null":
 			vt, err := t.onNull(ws)

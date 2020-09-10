@@ -56,16 +56,19 @@ func (i *ionItem) equal(o ionItem) bool {
 	case TimestampType:
 		return cmpTimestamps(i.value[0], o.value[0])
 	case StringType:
-		if i.value[0] == nil || o.value[0] == nil {
-			return i.value[0] == nil && o.value[0] == nil
-		}
 		val1 := i.value[0].(*string)
 		val2 := o.value[0].(*string)
+
+		if val1 == nil || val2 == nil {
+			return val1 == nil && val2 == nil
+		}
 		return *val1 == *val2
 	case ListType, SexpType:
 		return cmpValueSlices(i.value, o.value)
 	case StructType:
 		return cmpStruct(i.value, o.value)
+	case SymbolType:
+		return cmpSymbols(i.value[0], o.value[0])
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
@@ -551,15 +554,17 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case SymbolType:
-			val, err := reader.StringValue()
+			val, err := reader.SymbolValue()
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
 
 			if val != nil {
-				err = writer.WriteSymbol(*val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+				if val.Text != nil {
+					err = writer.WriteSymbol(*val.Text)
+					if err != nil {
+						t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+					}
 				}
 			}
 
@@ -724,7 +729,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = TimestampType
 
 	case SymbolType:
-		val, err := reader.StringValue()
+		val, err := reader.SymbolValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 		}
