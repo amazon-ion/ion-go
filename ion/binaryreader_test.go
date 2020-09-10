@@ -284,6 +284,17 @@ func TestReadBinaryFieldNames(t *testing.T) {
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
 
+func TestReadBinaryNullFieldName(t *testing.T) {
+	r := readBinary([]byte{
+		0xDE, 0x8F, // {
+		0x7F, 0x21, 0x01, // null.symbol: 1
+		// }
+	})
+	r.Next()
+	r.StepIn()
+	_nextF(t, r, &SymbolToken{}, true, true)
+}
+
 func TestReadBinarySymbols(t *testing.T) {
 	r := readBinary([]byte{
 		0x71, 0x00, // $0

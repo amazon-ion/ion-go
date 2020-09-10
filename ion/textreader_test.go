@@ -63,6 +63,7 @@ func TestReadTextFieldNames(t *testing.T) {
 					foo:1,
 					bar:1,
 					$ion:1,
+					null.symbol:1
 					$11:1
 				}`
 
@@ -70,7 +71,7 @@ func TestReadTextFieldNames(t *testing.T) {
 	r.Next()
 	err := r.StepIn()
 	if err != nil {
-		t.Errorf("stepin returned err: %v", err.Error())
+		t.Errorf("stepIn returned err: %v", err.Error())
 	}
 	_nextF(t, r, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
@@ -79,6 +80,20 @@ func TestReadTextFieldNames(t *testing.T) {
 	_nextF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
+	_nextF(t, r, &SymbolToken{}, true, true)
+}
+
+func TestReadTextNullFieldName(t *testing.T) {
+	ionText := `{
+					null.symbol:1
+				}`
+
+	r := NewReaderString(ionText)
+	r.Next()
+	err := r.StepIn()
+	if err != nil {
+		t.Errorf("stepIn returned err: %v", err.Error())
+	}
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
 
