@@ -463,14 +463,27 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 		}
 
 		switch currentType {
+		case NullType:
+			err := writer.WriteNullType(currentType)
+			if err != nil {
+				t.Errorf("Something went wrong while writing a Null value: " + err.Error())
+			}
+
 		case BoolType:
 			val, err := reader.BoolValue()
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Boolean value: " + err.Error())
 			}
-			err = writer.WriteBool(*val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(BoolType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteBool(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
+				}
 			}
 
 		case IntType:
@@ -509,6 +522,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 				if err != nil {
 					t.Errorf("Something went wrong while writing a Big Int value: " + err.Error())
 				}
+			case NullInt:
+				err := writer.WriteNullType(IntType)
+				if err != nil {
+					t.Fatal(err)
+				}
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
@@ -518,9 +536,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Float value: " + err.Error())
 			}
-			err = writer.WriteFloat(*val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Float value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(FloatType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteFloat(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Float value: " + err.Error())
+				}
 			}
 
 		case DecimalType:
@@ -528,9 +553,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Decimal value: " + err.Error())
 			}
-			err = writer.WriteDecimal(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(DecimalType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteDecimal(val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
+				}
 			}
 
 		case TimestampType:
@@ -538,9 +570,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Timestamp value: " + err.Error())
 			}
-			err = writer.WriteTimestamp(*val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(FloatType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteTimestamp(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
+				}
 			}
 
 		case SymbolType:
@@ -666,7 +705,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	currentType := reader.Type()
 	// Excluding SymbolType from setting value to 'null.symbol' because readers can read "'null.symbol'" as text: 'null.symbol'.
 	if reader.IsNull() && reader.Type() != SymbolType {
-		ionItem.value = append(ionItem.value, &textNulls[currentType])
+		ionItem.value = append(ionItem.value, nil)
 		ionItem.ionType = currentType
 
 		return ionItem

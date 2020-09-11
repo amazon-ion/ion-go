@@ -630,8 +630,10 @@ func TestDecode(t *testing.T) {
 			}
 			res := false
 			switch thisValue := val.(type) {
-			case *interface{}:
-				res = reflect.DeepEqual(*thisValue, eval)
+			case *float64:
+				res = cmpFloats(*thisValue, eval)
+			case *Timestamp:
+				res = cmpTimestamps(*thisValue, eval)
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -656,14 +658,12 @@ func TestDecode(t *testing.T) {
 	test("-2147483649", int64(math.MinInt32)-1)
 	test("9223372036854775808", new(big.Int).SetUint64(math.MaxInt64+1))
 
-	// TODO: FIX
-	//test("0e0", 0.0)
-	//test("1e100", 1e100)
+	test("0e0", 0.0)
+	test("1e100", 1e100)
 
 	test("0.", MustParseDecimal("0."))
 
-	// TODO: FIX
-	//test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
+	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
 	test("hello", newString("hello"))
 	test("\"hello\"", newString("hello"))
