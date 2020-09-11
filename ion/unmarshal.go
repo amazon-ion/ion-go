@@ -150,7 +150,8 @@ func (d *Decoder) decode() (interface{}, error) {
 
 	switch d.r.Type() {
 	case BoolType:
-		return d.r.BoolValue()
+		val, err := d.r.BoolValue()
+		return *val, err
 
 	case IntType:
 		return d.decodeInt()
@@ -191,9 +192,11 @@ func (d *Decoder) decodeInt() (interface{}, error) {
 	case NullInt:
 		return nil, nil
 	case Int32:
-		return d.r.IntValue()
+		val, err := d.r.IntValue()
+		return *val, err
 	case Int64:
-		return d.r.Int64Value()
+		val, err := d.r.Int64Value()
+		return *val, err
 	default:
 		return d.r.BigIntValue()
 	}
@@ -327,7 +330,7 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Bool:
 		// Too easy.
-		v.SetBool(val)
+		v.SetBool(*val)
 		return nil
 
 	case reflect.Struct:
@@ -335,7 +338,7 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
 	}
@@ -349,10 +352,10 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 		if err != nil {
 			return err
 		}
-		if v.OverflowInt(val) {
-			return fmt.Errorf("ion: value %v won't fit in type %v", val, v.Type().String())
+		if v.OverflowInt(*val) {
+			return fmt.Errorf("ion: value %v won't fit in type %v", *val, v.Type().String())
 		}
-		v.SetInt(val)
+		v.SetInt(*val)
 		return nil
 
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
@@ -360,10 +363,10 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 		if err != nil {
 			return err
 		}
-		if val < 0 || v.OverflowUint(uint64(val)) {
-			return fmt.Errorf("ion: value %v won't fit in type %v", val, v.Type().String())
+		if *val < 0 || v.OverflowUint(uint64(*val)) {
+			return fmt.Errorf("ion: value %v won't fit in type %v", *val, v.Type().String())
 		}
-		v.SetUint(uint64(val))
+		v.SetUint(uint64(*val))
 		return nil
 
 	case reflect.Uint, reflect.Uint64, reflect.Uintptr:
@@ -413,15 +416,15 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 
 	switch v.Kind() {
 	case reflect.Float32, reflect.Float64:
-		if v.OverflowFloat(val) {
-			return fmt.Errorf("ion: value %v won't fit in type %v", val, v.Type().String())
+		if v.OverflowFloat(*val) {
+			return fmt.Errorf("ion: value %v won't fit in type %v", *val, v.Type().String())
 		}
-		v.SetFloat(val)
+		v.SetFloat(*val)
 		return nil
 
 	case reflect.Struct:
 		if v.Type() == decimalType {
-			flt := strconv.FormatFloat(val, 'g', -1, 64)
+			flt := strconv.FormatFloat(*val, 'g', -1, 64)
 			dec, err := ParseDecimal(strings.Replace(flt, "e", "d", 1))
 			if err != nil {
 				return err
@@ -433,7 +436,7 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
 	}
@@ -472,14 +475,14 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Struct:
 		if v.Type() == timestampType {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return d.attachAnnotations(v)
 		}
 		return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
 	}

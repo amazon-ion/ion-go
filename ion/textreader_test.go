@@ -385,8 +385,8 @@ func TestInts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
+			if *val != eval {
+				t.Errorf("expected %v, got %v", eval, *val)
 			}
 		})
 	}
@@ -405,8 +405,8 @@ func TestInts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
+			if *val != eval {
+				t.Errorf("expected %v, got %v", eval, *val)
 			}
 		})
 	}
@@ -602,8 +602,8 @@ func _intAF(t *testing.T, r Reader, efn *string, etas []string, eval int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -629,8 +629,8 @@ func _int64AF(t *testing.T, r Reader, efn *string, etas []string, eval int64) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -656,8 +656,8 @@ func _uintAF(t *testing.T, r Reader, efn *string, etas []string, eval uint64) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -704,11 +704,11 @@ func _floatAF(t *testing.T, r Reader, efn *string, etas []string, eval float64) 
 	}
 
 	if math.IsNaN(eval) {
-		if !math.IsNaN(val) {
-			t.Errorf("expected %v, got %v", eval, val)
+		if !math.IsNaN(*val) {
+			t.Errorf("expected %v, got %v", eval, *val)
 		}
-	} else if eval != val {
-		t.Errorf("expected %v, got %v", eval, val)
+	} else if eval != *val {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -747,8 +747,8 @@ func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Times
 		t.Fatal(err)
 	}
 
-	if !val.Equal(eval) {
-		t.Errorf("expected %v, got %v", eval, val)
+	if !eval.Equal(*val) {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -840,8 +840,8 @@ func _boolAF(t *testing.T, r Reader, efn *string, etas []string, eval bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
