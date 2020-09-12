@@ -747,9 +747,7 @@ func (b *bitstream) readDecimal(length uint64) (*Decimal, error) {
 			return nil, err
 		}
 
-		if coef.Sign() == 0 {
-			negZero = true
-		}
+		negZero = coef.Sign() == 0
 	}
 
 	return NewDecimal(coef, int32(exp), negZero), nil
