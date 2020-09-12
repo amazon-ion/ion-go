@@ -315,7 +315,6 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	r := NewReader(file)
 	topLevelCounter := 0
 	for r.Next() {
-
 		annotations, err := r.Annotations()
 		if err != nil {
 			t.Fatal(err)
