@@ -255,6 +255,10 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 				return false, err
 			}
 
+			if tok == tokenSymbolQuoted {
+				token = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			}
+
 			t.annotations = append(t.annotations, token)
 			return false, nil
 		}

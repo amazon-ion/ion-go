@@ -50,6 +50,37 @@ func TestReadTextSymbols(t *testing.T) {
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
 }
 
+func TestReadTextAnnotations(t *testing.T) {
+	ionText := `$ion_symbol_table::
+				{
+					symbols:[ "foo" ]
+				}
+				[
+
+					$0::1,
+					'$4'::1,
+					$4::1,
+					$10::1,
+					foo::1,
+					bar::1,
+					$ion::1,
+					$11::1
+				]`
+
+	r := NewReaderString(ionText)
+	r.Next()
+	r.StepIn()
+
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("name"), LocalSID: 4}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: 10}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: 10}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, nil, true, true)
+}
+
 func TestReadTextFieldNames(t *testing.T) {
 	ionText := `$ion_symbol_table::
 				{
@@ -926,6 +957,24 @@ func _nextAF(t *testing.T, r Reader, et Type, efn *SymbolToken, etas []SymbolTok
 
 	if !_symbolTokenEquals(etas, annotations) {
 		t.Errorf("expected type annotations=%v, got %v", etas, annotations)
+	}
+}
+
+func _nextA(t *testing.T, r Reader, etas []SymbolToken, isAnnotationError bool, isNextError bool) {
+	if !r.Next() && !isNextError {
+		t.Fatal(r.Err())
+	}
+
+	annotations, err := r.Annotations()
+
+	if isAnnotationError {
+		if err == nil {
+			t.Fatal("fieldName did not return an error")
+		}
+	} else {
+		if !_symbolTokenEquals(etas, annotations) {
+			t.Errorf("expected type annotations=%v, got %v", etas, annotations)
+		}
 	}
 }
 
