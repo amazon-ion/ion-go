@@ -27,11 +27,11 @@ type importlocation struct {
 	Location   int    `ion:"location"`
 }
 
-// token describes an Ion symbol token.
-type token struct {
-	Text           string          `ion:"text,omitempty"`
-	ImportLocation *importlocation `ion:"import_location,omitempty"`
-}
+//// token describes an Ion symbol token.
+//type token struct {
+//	Text           string          `ion:"text,omitempty"`
+//	ImportLocation *importlocation `ion:"import_location,omitempty"`
+//}
 
 type importdescriptor struct {
 	ImportName string `ion:"import_name"`
@@ -80,8 +80,8 @@ func (i iontype) MarshalIon(w ion.Writer) error {
 type event struct {
 	EventType   eventtype          `ion:"event_type"`
 	IonType     iontype            `ion:"ion_type,omitempty"`
-	FieldName   *token             `ion:"field_name,omitempty"`
-	Annotations []token            `ion:"annotations,omitempty"`
+	FieldName   *ion.SymbolToken   `ion:"field_name,omitempty"`
+	Annotations []ion.SymbolToken  `ion:"annotations,omitempty"`
 	ValueText   string             `ion:"value_text,omitempty"`
 	ValueBinary []int              `ion:"value_binary,omitempty"`
 	Imports     []importdescriptor `ion:"imports,omitempty"`
