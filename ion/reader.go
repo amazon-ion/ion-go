@@ -109,47 +109,49 @@ type Reader interface {
 	// stream.
 	StepOut() error
 
-	// BoolValue returns the current value as a boolean (if that makes sense). It returns
-	// an error if the current value is not an Ion bool.
+	// BoolValue returns the current value as a boolean (if that makes sense). It returns nil
+	// if the value is null. If the current value is not an Ion bool, it returns an error.
 	BoolValue() (*bool, error)
 
 	// IntSize returns the size of integer needed to losslessly represent the current value
 	// (if that makes sense). It returns an error if the current value is not an Ion int.
 	IntSize() (IntSize, error)
 
-	// IntValue returns the current value as a 32-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 32 bits to represent losslessly.
+	// IntValue returns the current value as a 32-bit integer (if that makes sense). It returns
+	// nil if the value is null. It returns an error if the current value is not an Ion integer
+	// or requires more than 32 bits to represent losslessly.
 	IntValue() (*int, error)
 
-	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 64 bits to represent losslessly.
+	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It returns
+	// nil if the value is null. It returns an error if the current value is not an Ion integer
+	// or requires more than 64 bits to represent losslessly.
 	Int64Value() (*int64, error)
 
 	// Uint64Value returns the current value as an unsigned 64-bit integer (if that makes
-	// sense). It returns an error if the current value is not an Ion integer, is negative,
-	// or requires more than 64 bits to represent losslessly.
+	// sense). It returns nil if the value is null. It returns an error if the current value
+	// is not an Ion integer, is negative, or requires more than 64 bits to represent losslessly.
 	Uint64Value() (*uint64, error)
 
-	// BigIntValue returns the current value as a big.Integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer.
+	// BigIntValue returns the current value as a big.Integer (if that makes sense). It returns
+	// nil if the value is null. It returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
 
-	// FloatValue returns the current value as a 64-bit floating point number (if that
-	// makes sense). It returns an error if the current value is not an Ion float.
+	// FloatValue returns the current value as a 64-bit floating point number (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value
+	// is not an Ion float.
 	FloatValue() (*float64, error)
 
-	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that
-	// makes sense). It returns an error if the current value is not an Ion decimal.
+	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value is
+	// not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
 	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
-	// an error if the current value is not an Ion timestamp.
+	// nil if the value is null. It returns an error if the current value is not an Ion timestamp.
 	TimestampValue() (*Timestamp, error)
 
-	// StringValue returns the current value as a string (if that makes sense). It returns
-	// an error if the current value is not an Ion symbol or an Ion string.
+	// StringValue returns the current value as a string (if that makes sense). It returns nil if
+	// the value is null. It returns an error if the current value is not an Ion symbol or an Ion string.
 	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
