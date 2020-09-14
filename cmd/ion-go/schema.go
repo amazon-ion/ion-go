@@ -22,17 +22,6 @@ import (
 	"github.com/amzn/ion-go/ion"
 )
 
-type importlocation struct {
-	ImportName string `ion:"import_name"`
-	Location   int    `ion:"location"`
-}
-
-//// token describes an Ion symbol token.
-//type token struct {
-//	Text           string          `ion:"text,omitempty"`
-//	ImportLocation *importlocation `ion:"import_location,omitempty"`
-//}
-
 type importdescriptor struct {
 	ImportName string `ion:"import_name"`
 	Version    int    `ion:"version"`
