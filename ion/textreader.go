@@ -234,6 +234,13 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			return false, err
 		}
 
+		if val == "null" {
+			err = t.tok.checkNullAnnotation()
+			if err != nil {
+				return false, err
+			}
+		}
+
 		ok, ws, err := t.tok.SkipDoubleColon()
 		if err != nil {
 			return false, err

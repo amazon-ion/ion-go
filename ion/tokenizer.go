@@ -1369,6 +1369,57 @@ func (t *tokenizer) unread(c int) {
 	t.buffer = append(t.buffer, c)
 }
 
+// CheckNullAnnotation reads elements in the stream and checks if it is a null type annotation (e.g., 'null.string::').
+// Returns an error if the read was unsuccessful or it was a null type annotation. Returns nil otherwise.
+func (t *tokenizer) checkNullAnnotation() error {
+	skipped, err := t.SkipDot()
+	if err != nil {
+		return err
+	}
+
+	if skipped {
+		var ret []int
+
+		hasElementInStream := true
+		for hasElementInStream {
+			var c int
+			c, err = t.read()
+			if err != nil {
+				hasElementInStream = false
+				break
+			}
+			if c == -1 {
+				err = io.EOF
+				hasElementInStream = false
+				break
+			}
+			ret = append(ret, c)
+		}
+
+		for i, e := range ret {
+			// check if it is annotation.
+			if !isIdentifierPart(e) {
+				if e == 58 && len(ret) >= i+1 && ret[i+1] == 58 {
+					return &UsageError{"Reader.Annotations", "type annotation cannot be null"}
+				}
+				break
+			}
+		}
+
+		// Put back the ones we got.
+		if err == io.EOF {
+			t.unread(-1)
+		}
+		for i := len(ret) - 1; i >= 0; i-- {
+			t.unread(ret[i])
+		}
+
+		// value is not an annotation, so we unread the dot.
+		t.unread(46)
+	}
+	return nil
+}
+
 func isProhibitedControlChar(c int) bool {
 	// Values between 0 to 31 are non-displayable ASCII characters; except for new line and white space characters.
 	if c < 0x00 || c > 0x1F {
