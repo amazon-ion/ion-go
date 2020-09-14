@@ -30,6 +30,14 @@ var (
 	ErrNoInput = errors.New("ion: no input to decode")
 )
 
+var typesAcceptableKinds = map[Type][]reflect.Kind{
+	IntType: {reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr},
+	FloatType: {reflect.Float32, reflect.Float64},
+	BlobType:  {reflect.Slice, reflect.Array},
+	ListType:  {reflect.Slice, reflect.Array},
+}
+
 // Unmarshal unmarshals Ion data to the given object.
 //
 // User must pass the proper object type to the unmarshalled Ion data.
@@ -347,8 +355,6 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeIntTo(v reflect.Value) error {
-	intAcceptableKinds := []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64, reflect.Uintptr}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, err := d.r.Int64Value()
@@ -396,7 +402,7 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
-		return d.decodeToStructWithAnnotation(v, intAcceptableKinds...)
+		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[IntType]...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -412,7 +418,6 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeFloatTo(v reflect.Value) error {
-	floatAcceptableKinds := []reflect.Kind{reflect.Float32, reflect.Float64}
 	val, err := d.r.FloatValue()
 	if err != nil {
 		return err
@@ -436,7 +441,7 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 			v.Set(reflect.ValueOf(*dec))
 			return d.attachAnnotations(v)
 		}
-		return d.decodeToStructWithAnnotation(v, floatAcceptableKinds...)
+		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[FloatType]...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -550,7 +555,6 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeLobTo(v reflect.Value) error {
-	lobAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	val, err := d.r.ByteValue()
 	if err != nil {
 		return err
@@ -573,7 +577,7 @@ func (d *Decoder) decodeLobTo(v reflect.Value) error {
 		}
 
 	case reflect.Struct:
-		return d.decodeToStructWithAnnotation(v, lobAcceptableKind...)
+		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[BlobType]...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
@@ -721,7 +725,6 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 }
 
 func (d *Decoder) decodeSliceTo(v reflect.Value) error {
-	listSexpAcceptableKind := []reflect.Kind{reflect.Slice, reflect.Array}
 	k := v.Kind()
 
 	// If all we know is we need an interface{}, decode an []interface{} with
@@ -736,7 +739,7 @@ func (d *Decoder) decodeSliceTo(v reflect.Value) error {
 	}
 
 	if k == reflect.Struct {
-		return d.decodeToStructWithAnnotation(v, listSexpAcceptableKind...)
+		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[ListType]...)
 	}
 
 	// Only other valid targets are arrays and slices.
