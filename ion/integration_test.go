@@ -78,26 +78,9 @@ var readGoodFilesSkipList = []string{
 	"whitespace.ion",
 }
 
-var binaryRoundTripSkipList = []string{
-	"T7-large.10n",
-	"T9.10n",
-	"utf16.ion",
-	"utf32.ion",
-	"whitespace.ion",
-}
+var binaryRoundTripSkipList = []string{}
 
-var textRoundTripSkipList = []string{
-	"notVersionMarkers.ion",
-	"subfieldVarUInt.ion",
-	"subfieldVarUInt15bit.ion",
-	"subfieldVarUInt16bit.ion",
-	"subfieldVarUInt32bit.ion",
-	"systemSymbols.ion",
-	"T7-large.10n",
-	"utf16.ion",
-	"utf32.ion",
-	"whitespace.ion",
-}
+var textRoundTripSkipList = []string{}
 
 var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_0_0.ion",
@@ -121,14 +104,9 @@ var malformedIonsSkipList = []string{
 var equivsSkipList = []string{
 	"nonIVMNoOps.ion",
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
-	"systemSymbols.ion",
 }
 
-var nonEquivsSkipList = []string{
-	"decimals.ion",
-	"floats.ion",
-	"floatsVsDecimals.ion",
-}
+var nonEquivsSkipList = []string{}
 
 func TestLoadGood(t *testing.T) {
 	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
