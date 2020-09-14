@@ -56,7 +56,6 @@ func TestReadTextAnnotations(t *testing.T) {
 					symbols:[ "foo" ]
 				}
 				[
-
 					$0::1,
 					'$4'::1,
 					$4::1,

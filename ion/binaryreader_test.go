@@ -312,6 +312,22 @@ func TestReadBinarySymbols(t *testing.T) {
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
 }
 
+func TestReadBinaryAnnotations(t *testing.T) {
+	r := readBinary([]byte{
+		0xE3, 0x81, 0x80, 0x0F, // $0::null
+		0xE3, 0x81, 0x81, 0x0F, // $ion::null
+		0xE3, 0x81, 0xEE, 0x0F, // foo::null
+		0xE3, 0x81, 0xEF, 0x0F, // bar::null
+		0xE3, 0x81, 0xF1, 0x0F, // $113::null
+	})
+
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: 110}}, false, false)
+	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: 111}}, false, false)
+	_nextA(t, r, nil, true, true)
+}
+
 func TestReadBinaryTimestamps(t *testing.T) {
 	r := readBinary([]byte{
 		0x6F,
