@@ -351,15 +351,24 @@ func (d *Decimal) String() string {
 
 	case d.scale < 0:
 		// Value is a upscaled integer, nn'd'ss
+		if d.isNegZero {
+			return "-0d" + fmt.Sprintf("%d", -d.scale)
+		}
 		return d.n.String() + "d" + fmt.Sprintf("%d", -d.scale)
 
 	default:
 		// Value is a downscaled integer nn.nn('d'-ss)?
-		str := d.n.String()
+		var str string
+		if d.isNegZero {
+			str = "-0"
+		} else {
+			str = d.n.String()
+		}
+
 		idx := len(str) - int(d.scale)
 
 		prefix := 1
-		if d.n.Sign() < 0 {
+		if len(str) > 0 && str[0] == '-' {
 			// Account for leading '-'.
 			prefix++
 		}
