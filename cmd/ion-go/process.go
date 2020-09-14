@@ -220,11 +220,9 @@ func (p *processor) process(in ion.Reader) error {
 		if e != nil {
 			return p.error(read, err)
 		}
-		if name != nil {
-			if name.Text != nil {
-				if err = p.out.FieldName(*name.Text); err != nil {
-					return p.error(write, err)
-				}
+		if name != nil && name.Text != nil {
+			if err = p.out.FieldName(*name.Text); err != nil {
+				return p.error(write, err)
 			}
 		}
 

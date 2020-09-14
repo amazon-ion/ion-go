@@ -20,10 +20,7 @@ func readLocalSymbolTable(r Reader, cat Catalog) (SymbolTable, error) {
 		if err != nil {
 			return nil, err
 		}
-		if fieldName == nil {
-			return nil, fmt.Errorf("ion: field name is nil")
-		}
-		if fieldName.Text == nil {
+		if fieldName == nil || fieldName.Text == nil {
 			return nil, fmt.Errorf("ion: field name is nil")
 		}
 
@@ -114,10 +111,7 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 		if err != nil {
 			return nil, err
 		}
-		if fieldName == nil {
-			return nil, fmt.Errorf("ion: field name is nil")
-		}
-		if fieldName.Text == nil {
+		if fieldName == nil || fieldName.Text == nil {
 			return nil, fmt.Errorf("ion: field name is nil")
 		}
 

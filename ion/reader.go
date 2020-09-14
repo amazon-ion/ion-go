@@ -90,7 +90,7 @@ type Reader interface {
 	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
-	// Annotations returns the set of annotations associated with the current value.
+	// Annotations returns the set of annotations associated with the current value as a list of SymbolTokens.
 	// It returns nil if there is no current value or the current value has no annotations.
 	Annotations() ([]SymbolToken, error)
 

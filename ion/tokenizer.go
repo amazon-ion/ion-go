@@ -1397,7 +1397,7 @@ func (t *tokenizer) checkNullAnnotation() error {
 		}
 
 		for i, e := range ret {
-			// check if it is annotation.
+			// Check if it is annotation.
 			if !isIdentifierPart(e) {
 				if e == 58 && len(ret) >= i+1 && ret[i+1] == 58 {
 					return &UsageError{"Reader.Annotations", "type annotation cannot be null"}
@@ -1414,7 +1414,7 @@ func (t *tokenizer) checkNullAnnotation() error {
 			t.unread(ret[i])
 		}
 
-		// value is not an annotation, so we unread the dot.
+		// Value is not an annotation, so we unread the dot.
 		t.unread(46)
 	}
 	return nil
