@@ -696,8 +696,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		}
 
 		if fieldName != nil && fieldName.Text != nil{
-			if err := d.decodeTo(subv); err != nil
-			{
+			if err := d.decodeTo(subv); err != nil {
 				return err
 			}
 
