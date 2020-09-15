@@ -1401,6 +1401,7 @@ func (t *tokenizer) checkNullAnnotation() error {
 			ret = append(ret, c)
 		}
 
+		// Skips potential whitespace in annotation. e.g., 'null.string  ::'
 		hasWhiteSpaceInStream := true
 		for hasWhiteSpaceInStream {
 			var c int
