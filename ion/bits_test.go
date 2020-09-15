@@ -22,20 +22,18 @@ import (
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAppendUint(t *testing.T) {
 	test := func(val uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
 			length := uintLen(val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendUint(nil, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -49,14 +47,10 @@ func TestAppendInt(t *testing.T) {
 	test := func(val int64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
 			length := intLen(val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendInt(nil, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -79,14 +73,10 @@ func TestAppendBigInt(t *testing.T) {
 	test := func(val *big.Int, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
 			length := bigIntLen(val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendBigInt(nil, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -105,14 +95,10 @@ func TestAppendVarUint(t *testing.T) {
 	test := func(val uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
 			length := varUintLen(val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendVarUint(nil, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -130,14 +116,10 @@ func TestAppendVarInt(t *testing.T) {
 	test := func(val int64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("%x", val), func(t *testing.T) {
 			length := varIntLen(val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendVarInt(nil, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -167,14 +149,10 @@ func TestAppendTag(t *testing.T) {
 	test := func(code byte, vlen uint64, elen uint64, ebits []byte) {
 		t.Run(fmt.Sprintf("(%x,%v)", code, vlen), func(t *testing.T) {
 			length := tagLen(vlen)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendTag(nil, code, vlen)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 
@@ -192,14 +170,10 @@ func TestAppendTimestamp(t *testing.T) {
 			val.dateTime = val.dateTime.In(time.UTC)
 
 			length := timestampLen(offset, val)
-			if length != elen {
-				t.Errorf("expected length=%v, got length=%v", elen, length)
-			}
+			assert.Equal(t, elen, length)
 
 			bits := appendTimestamp(nil, offset, val)
-			if !bytes.Equal(bits, ebits) {
-				t.Errorf("expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
-			}
+			assert.True(t, bytes.Equal(bits, ebits), "expected %v, got %v", fmtbytes(ebits), fmtbytes(bits))
 		})
 	}
 

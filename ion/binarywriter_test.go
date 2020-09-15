@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWriteBinaryStruct(t *testing.T) {
@@ -35,20 +37,20 @@ func TestWriteBinaryStruct(t *testing.T) {
 		// }
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.Annotation("foo")
-		w.BeginStruct()
+		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.BeginStruct())
 		{
-			w.FieldName("name")
-			w.Annotation("bar")
-			w.WriteNull()
+			assert.NoError(t, w.FieldName("name"))
+			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.WriteNull())
 
-			w.FieldName("max_id")
-			w.WriteInt(0)
+			assert.NoError(t, w.FieldName("max_id"))
+			assert.NoError(t, w.WriteInt(0))
 		}
-		w.EndStruct()
+		assert.NoError(t, w.EndStruct())
 	})
 }
 
@@ -61,18 +63,18 @@ func TestWriteBinarySexp(t *testing.T) {
 		// )
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.BeginSexp()
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.EndSexp())
 
-		w.Annotation("foo")
-		w.BeginSexp()
+		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.BeginSexp())
 		{
-			w.Annotation("bar")
-			w.WriteNull()
+			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.WriteNull())
 
-			w.WriteInt(0)
+			assert.NoError(t, w.WriteInt(0))
 		}
-		w.EndSexp()
+		assert.NoError(t, w.EndSexp())
 	})
 }
 
@@ -85,18 +87,18 @@ func TestWriteBinaryList(t *testing.T) {
 		// ]
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.BeginList()
-		w.EndList()
+		assert.NoError(t, w.BeginList())
+		assert.NoError(t, w.EndList())
 
-		w.Annotation("foo")
-		w.BeginList()
+		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.BeginList())
 		{
-			w.Annotation("bar")
-			w.WriteNull()
+			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.WriteNull())
 
-			w.WriteInt(0)
+			assert.NoError(t, w.WriteInt(0))
 		}
-		w.EndList()
+		assert.NoError(t, w.EndList())
 	})
 }
 
@@ -106,8 +108,8 @@ func TestWriteBinaryBlob(t *testing.T) {
 		0xAB, 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteBlob([]byte{})
-		w.WriteBlob([]byte("Hello World"))
+		assert.NoError(t, w.WriteBlob([]byte{}))
+		assert.NoError(t, w.WriteBlob([]byte("Hello World")))
 	})
 }
 
@@ -117,7 +119,7 @@ func TestWriteLargeBinaryBlob(t *testing.T) {
 	eval[1] = 0x01
 	eval[2] = 0x80
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteBlob(make([]byte, 128))
+		assert.NoError(t, w.WriteBlob(make([]byte, 128)))
 	})
 }
 
@@ -127,8 +129,8 @@ func TestWriteBinaryClob(t *testing.T) {
 		0x9B, 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd',
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteClob([]byte{})
-		w.WriteClob([]byte("Hello World"))
+		assert.NoError(t, w.WriteClob([]byte{}))
+		assert.NoError(t, w.WriteClob([]byte("Hello World")))
 	})
 }
 
@@ -141,10 +143,10 @@ func TestWriteBinaryString(t *testing.T) {
 		0x84, 0xE0, 0x01, 0x00, 0xEA,
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteString("")
-		w.WriteString("Hello World")
-		w.WriteString("Hello World But Even Longer")
-		w.WriteString("\xE0\x01\x00\xEA")
+		assert.NoError(t, w.WriteString(""))
+		assert.NoError(t, w.WriteString("Hello World"))
+		assert.NoError(t, w.WriteString("Hello World But Even Longer"))
+		assert.NoError(t, w.WriteString("\xE0\x01\x00\xEA"))
 	})
 }
 
@@ -157,11 +159,11 @@ func TestWriteBinarySymbol(t *testing.T) {
 		0x74, 0xFF, 0xFF, 0xFF, 0xFF, // $4294967295
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteSymbol("$ion")
-		w.WriteSymbol("name")
-		w.WriteSymbol("version")
-		w.WriteSymbol("$ion_shared_symbol_table")
-		w.WriteSymbol("$4294967295")
+		assert.NoError(t, w.WriteSymbol("$ion"))
+		assert.NoError(t, w.WriteSymbol("name"))
+		assert.NoError(t, w.WriteSymbol("version"))
+		assert.NoError(t, w.WriteSymbol("$ion_shared_symbol_table"))
+		assert.NoError(t, w.WriteSymbol("$4294967295"))
 	})
 }
 
@@ -183,8 +185,8 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteTimestamp(NewTimestamp(time.Time{}, TimestampPrecisionNanosecond, TimezoneUTC))
-		w.WriteTimestamp(nowish)
+		assert.NoError(t, w.WriteTimestamp(NewTimestamp(time.Time{}, TimestampPrecisionNanosecond, TimezoneUTC)))
+		assert.NoError(t, w.WriteTimestamp(nowish))
 	})
 }
 
@@ -200,13 +202,13 @@ func TestWriteBinaryDecimal(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteDecimal(MustParseDecimal("0."))
-		w.WriteDecimal(MustParseDecimal("0.0"))
-		w.WriteDecimal(MustParseDecimal("0.000"))
-		w.WriteDecimal(MustParseDecimal("1.000"))
-		w.WriteDecimal(MustParseDecimal("-1.000"))
-		w.WriteDecimal(MustParseDecimal("1d100"))
-		w.WriteDecimal(MustParseDecimal("-1d100"))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("0.")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("0.0")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("0.000")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("1.000")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("-1.000")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("1d100")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("-1d100")))
 	})
 }
 
@@ -221,12 +223,12 @@ func TestWriteBinaryFloats(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteFloat(0)
-		w.WriteFloat(math.MaxFloat64)
-		w.WriteFloat(-math.MaxFloat64)
-		w.WriteFloat(math.Inf(1))
-		w.WriteFloat(math.Inf(-1))
-		w.WriteFloat(math.NaN())
+		assert.NoError(t, w.WriteFloat(0))
+		assert.NoError(t, w.WriteFloat(math.MaxFloat64))
+		assert.NoError(t, w.WriteFloat(-math.MaxFloat64))
+		assert.NoError(t, w.WriteFloat(math.Inf(1)))
+		assert.NoError(t, w.WriteFloat(math.Inf(-1)))
+		assert.NoError(t, w.WriteFloat(math.NaN()))
 	})
 }
 
@@ -239,10 +241,10 @@ func TestWriteBinaryBigInts(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteBigInt(big.NewInt(0))
-		w.WriteBigInt(big.NewInt(0xFF))
-		w.WriteBigInt(big.NewInt(-0xFF))
-		w.WriteBigInt(new(big.Int).SetBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+		assert.NoError(t, w.WriteBigInt(big.NewInt(0)))
+		assert.NoError(t, w.WriteBigInt(big.NewInt(0xFF)))
+		assert.NoError(t, w.WriteBigInt(big.NewInt(-0xFF)))
+		assert.NoError(t, w.WriteBigInt(new(big.Int).SetBytes([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})))
 	})
 }
 
@@ -255,7 +257,7 @@ func TestWriteBinaryReallyBigInts(t *testing.T) {
 	testBinaryWriter(t, eval, func(w Writer) {
 		i := new(big.Int)
 		i = i.SetBit(i, 1023, 1)
-		w.WriteBigInt(i)
+		assert.NoError(t, w.WriteBigInt(i))
 	})
 }
 
@@ -270,12 +272,12 @@ func TestWriteBinaryInts(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteInt(0)
-		w.WriteInt(0xFF)
-		w.WriteInt(-0xFF)
-		w.WriteInt(0xFFFF)
-		w.WriteInt(-0xFFFFFF)
-		w.WriteInt(math.MaxInt64)
+		assert.NoError(t, w.WriteInt(0))
+		assert.NoError(t, w.WriteInt(0xFF))
+		assert.NoError(t, w.WriteInt(-0xFF))
+		assert.NoError(t, w.WriteInt(0xFFFF))
+		assert.NoError(t, w.WriteInt(-0xFFFFFF))
+		assert.NoError(t, w.WriteInt(math.MaxInt64))
 	})
 }
 
@@ -289,8 +291,8 @@ func TestWriteBinaryBoolAnnotated(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.Annotations("name", "version")
-		w.WriteBool(false)
+		assert.NoError(t, w.Annotations("name", "version"))
+		assert.NoError(t, w.WriteBool(false))
 	})
 }
 
@@ -301,8 +303,8 @@ func TestWriteBinaryBools(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteBool(false)
-		w.WriteBool(true)
+		assert.NoError(t, w.WriteBool(false))
+		assert.NoError(t, w.WriteBool(true))
 	})
 }
 
@@ -325,19 +327,19 @@ func TestWriteBinaryNulls(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.WriteNull()
-		w.WriteNullType(BoolType)
-		w.WriteNullType(IntType)
-		w.WriteNullType(FloatType)
-		w.WriteNullType(DecimalType)
-		w.WriteNullType(TimestampType)
-		w.WriteNullType(SymbolType)
-		w.WriteNullType(StringType)
-		w.WriteNullType(ClobType)
-		w.WriteNullType(BlobType)
-		w.WriteNullType(ListType)
-		w.WriteNullType(SexpType)
-		w.WriteNullType(StructType)
+		assert.NoError(t, w.WriteNull())
+		assert.NoError(t, w.WriteNullType(BoolType))
+		assert.NoError(t, w.WriteNullType(IntType))
+		assert.NoError(t, w.WriteNullType(FloatType))
+		assert.NoError(t, w.WriteNullType(DecimalType))
+		assert.NoError(t, w.WriteNullType(TimestampType))
+		assert.NoError(t, w.WriteNullType(SymbolType))
+		assert.NoError(t, w.WriteNullType(StringType))
+		assert.NoError(t, w.WriteNullType(ClobType))
+		assert.NoError(t, w.WriteNullType(BlobType))
+		assert.NoError(t, w.WriteNullType(ListType))
+		assert.NoError(t, w.WriteNullType(SexpType))
+		assert.NoError(t, w.WriteNullType(StructType))
 	})
 }
 
@@ -361,9 +363,7 @@ func testBinaryWriter(t *testing.T, eval []byte, f func(w Writer)) {
 	}
 	eval = append(prefix, eval...)
 
-	if !bytes.Equal(val, eval) {
-		t.Errorf("expected %v, got %v", fmtbytes(eval), fmtbytes(val))
-	}
+	assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", fmtbytes(eval), fmtbytes(val))
 }
 
 func fmtbytes(bs []byte) string {

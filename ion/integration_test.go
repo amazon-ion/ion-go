@@ -24,6 +24,9 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const goodPath = "../ion-tests/iontestdata/good"
@@ -186,10 +189,8 @@ func testBinaryRoundTrip(t *testing.T, fp string) {
 		reader2.Next()
 		i2 := readCurrentValue(t, reader2)
 
-		if !i1.equal(i2) {
-			t.Errorf("Failed on %s round trip. Binary reader has %v "+
-				"where the value in Text reader is %v", fp, i1.value, i2.value)
-		}
+		assert.True(t, i1.equal(i2), "Failed on %s round trip. Binary reader has %v "+
+			"where the value in Text reader is %v", fp, i1.value, i2.value)
 	}
 }
 
@@ -213,10 +214,8 @@ func testTextRoundTrip(t *testing.T, fp string) {
 		reader2.Next()
 		i2 := readCurrentValue(t, reader2)
 
-		if !i1.equal(i2) {
-			t.Errorf("Failed on %s round trip. Text reader has %v "+
-				"where the value in Binary reader is %v", fp, i1.value, i2.value)
-		}
+		assert.True(t, i1.equal(i2), "Failed on %s round trip. Text reader has %v "+
+			"where the value in Binary reader is %v", fp, i1.value, i2.value)
 	}
 }
 
@@ -226,10 +225,7 @@ func encodeAsTextIon(t *testing.T, data []byte, st ...SharedSymbolTable) strings
 	str := strings.Builder{}
 	txtWriter := NewTextWriterOpts(&str, 0, st...)
 	writeFromReaderToWriter(t, reader, txtWriter)
-	err := txtWriter.Finish()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, txtWriter.Finish())
 	return str
 }
 
@@ -239,23 +235,18 @@ func encodeAsBinaryIon(t *testing.T, data []byte, st ...SharedSymbolTable) bytes
 	buf := bytes.Buffer{}
 	binWriter := NewBinaryWriter(&buf, st...)
 	writeFromReaderToWriter(t, reader, binWriter)
-	err := binWriter.Finish()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, binWriter.Finish())
 	return buf
 }
 
 // Reads Ion values from the provided file, verifying that an
 // error is or is not encountered as indicated by errorExpected.
 func testLoadFile(t *testing.T, errorExpected bool, fp string) {
-	file, er := os.Open(fp)
-	if er != nil {
-		t.Fatal(er)
-	}
+	file, err := os.Open(fp)
+	require.NoError(t, err)
 
 	r := NewReader(file)
-	err := testInvalidReader(t, r)
+	err = testInvalidReader(r)
 
 	if errorExpected && r.Err() == nil && err == nil {
 		t.Fatal("Should have failed loading \"" + fp + "\".")
@@ -269,14 +260,11 @@ func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 		t.Log("Test passed for " + fp + " with \"" + errMsg + "\" error.")
 	}
 
-	err = file.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, file.Close())
 }
 
 // Traverse the reader and check if it is an invalid reader, containing malformed Ion values.
-func testInvalidReader(t *testing.T, r Reader) error {
+func testInvalidReader(r Reader) error {
 	for r.Next() {
 		switch r.Type() {
 		case StructType, ListType, SexpType:
@@ -287,7 +275,7 @@ func testInvalidReader(t *testing.T, r Reader) error {
 			if err != nil {
 				return err
 			}
-			err = testInvalidReader(t, r)
+			err = testInvalidReader(r)
 			if err != nil {
 				return err
 			}
@@ -304,10 +292,8 @@ func testInvalidReader(t *testing.T, r Reader) error {
 // Execute equivalency and non-equivalency tests, where true for eq means
 // equivalency and false denotes non-equivalency test.
 func testEquivalency(t *testing.T, fp string, eq bool) {
-	file, er := os.Open(fp)
-	if er != nil {
-		t.Fatal(er)
-	}
+	file, err := os.Open(fp)
+	require.NoError(t, err)
 
 	r := NewReader(file)
 	topLevelCounter := 0
@@ -317,11 +303,9 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 		switch ionType {
 		case StructType, ListType, SexpType:
 			fmt.Printf("Checking values of top level %s #%d ...\n", ionType.String(), topLevelCounter)
+			require.NoError(t, r.StepIn())
+
 			var values [][]ionItem
-			err := r.StepIn()
-			if err != nil {
-				t.Fatal(err)
-			}
 			if embDoc {
 				values = handleEmbeddedDoc(t, r)
 			} else {
@@ -329,21 +313,16 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 					values = append(values, []ionItem{readCurrentValue(t, r)})
 				}
 			}
+
 			equivalencyAssertion(t, values, eq)
-			err = r.StepOut()
+
+			require.NoError(t, r.StepOut())
+
 			topLevelCounter++
-			if err != nil {
-				t.Fatal(err)
-			}
 		}
 	}
-	if r.Err() != nil {
-		t.Error()
-	}
-	err := file.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, r.Err())
+	require.NoError(t, file.Close())
 }
 
 // Handle equivalency tests with embedded_documents annotation
@@ -351,9 +330,8 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 	var values [][]ionItem
 	for r.Next() {
 		str, err := r.StringValue()
-		if err != nil {
-			t.Error("Must be string value.")
-		}
+		assert.NoError(t, err, "Must be string value.")
+
 		if str != nil {
 			newReader := NewReaderString(*str)
 			var ionItems []ionItem
@@ -384,11 +362,11 @@ func equivalencyAssertion(t *testing.T, values [][]ionItem, eq bool) {
 			}
 
 			res, idx := compareIonItemSlices(values[i], values[j])
-			if eq && !res {
-				t.Errorf("Equivalency test failed. All values should be interpreted as "+
+			if eq {
+				assert.True(t, res, "Equivalency test failed. All values should be interpreted as "+
 					"equal for:\nrow %d = %v\nrow %d = %v", i, values[i][idx].value, j, values[j][idx].value)
-			} else if !eq && res {
-				t.Errorf("Non-Equivalency test failed. Values should not be interpreted as "+
+			} else {
+				assert.False(t, res, "Non-Equivalency test failed. Values should not be interpreted as "+
 					"equal for:\nrow %d = %v\nrow %d = %v", i, values[i][idx].value, j, values[j][idx].value)
 			}
 		}
@@ -398,9 +376,7 @@ func equivalencyAssertion(t *testing.T, values [][]ionItem, eq bool) {
 // Read and load the files in testing path and pass them to testing functions.
 func readFilesAndTest(t *testing.T, path string, skipList []string, testingFunc testingFunc) {
 	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for _, file := range files {
 		fp := filepath.Join(path, file.Name())
@@ -418,9 +394,7 @@ func readFilesAndTest(t *testing.T, path string, skipList []string, testingFunc 
 
 func loadFile(t *testing.T, path string) []byte {
 	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return b
 }
 
@@ -446,212 +420,116 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		fns, err := reader.FieldNameSymbol()
 		if err == nil && reader.IsInStruct() && fns != nil {
-			err = writer.FieldNameSymbol(*fns)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writer.FieldNameSymbol(*fns))
 		}
 
 		an := reader.Annotations()
 		if len(an) > 0 {
-			err := writer.Annotations(an...)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writer.Annotations(an...))
 		}
 
 		currentType := reader.Type()
 		if reader.IsNull() {
-			err := writer.WriteNullType(currentType)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writer.WriteNullType(currentType))
 			continue
 		}
 
 		switch currentType {
 		case BoolType:
 			val, err := reader.BoolValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Boolean value: " + err.Error())
-			}
-			err = writer.WriteBool(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Boolean value")
+			assert.NoError(t, writer.WriteBool(val), "Something went wrong while writing a Boolean value")
 
 		case IntType:
 			intSize, err := reader.IntSize()
-			if err != nil {
-				t.Errorf("Something went wrong while retrieving the Int size: " + err.Error())
-			}
+			require.NoError(t, err, "Something went wrong while retrieving the Int size")
 
 			switch intSize {
 			case Int32, Int64:
 				val, err := reader.Int64Value()
-				if err != nil {
-					t.Errorf("Something went wrong while reading an Int value: " + err.Error())
-				}
+				assert.NoError(t, err, "Something went wrong while reading an Int value")
 
-				err = writer.WriteInt(val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing an Int value: " + err.Error())
-				}
+				assert.NoError(t, writer.WriteInt(val), "Something went wrong while writing an Int value")
 			case Uint64:
 				val, err := reader.Uint64Value()
-				if err != nil {
-					t.Errorf("Something went wrong while reading a UInt value: " + err.Error())
-				}
+				assert.NoError(t, err, "Something went wrong while reading a UInt value")
 
-				err = writer.WriteUint(val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a UInt value: " + err.Error())
-				}
+				assert.NoError(t, writer.WriteUint(val), "Something went wrong while writing a UInt value")
 			case BigInt:
 				val, err := reader.BigIntValue()
-				if err != nil {
-					t.Errorf("Something went wrong while reading a Big Int value: " + err.Error())
-				}
-				err = writer.WriteBigInt(val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a Big Int value: " + err.Error())
-				}
+				assert.NoError(t, err, "Something went wrong while reading a Big Int value")
+
+				assert.NoError(t, writer.WriteBigInt(val), "Something went wrong while writing a Big Int value")
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
 
 		case FloatType:
 			val, err := reader.FloatValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Float value: " + err.Error())
-			}
-			err = writer.WriteFloat(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Float value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Float value")
+
+			assert.NoError(t, writer.WriteFloat(val), "Something went wrong while writing a Float value")
 
 		case DecimalType:
 			val, err := reader.DecimalValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Decimal value: " + err.Error())
-			}
-			err = writer.WriteDecimal(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Decimal value")
+
+			assert.NoError(t, writer.WriteDecimal(val), "Something went wrong while writing a Decimal value")
 
 		case TimestampType:
 			val, err := reader.TimestampValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Timestamp value: " + err.Error())
-			}
-			err = writer.WriteTimestamp(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Timestamp value")
+
+			assert.NoError(t, writer.WriteTimestamp(val), "Something went wrong while writing a Timestamp value")
 
 		case SymbolType:
 			val, err := reader.StringValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Symbol value")
 
 			if val != nil {
-				err = writer.WriteSymbol(*val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
-				}
+				assert.NoError(t, writer.WriteSymbol(*val), "Something went wrong while writing a Symbol value")
 			}
 
 		case StringType:
 			val, err := reader.StringValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a String value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a String value")
 
 			if val != nil {
-				err = writer.WriteString(*val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a String value: " + err.Error())
-				}
+				assert.NoError(t, writer.WriteString(*val), "Something went wrong while writing a String value")
 			}
 
 		case ClobType:
 			val, err := reader.ByteValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Clob value: " + err.Error())
-			}
-			err = writer.WriteClob(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Clob value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Clob value")
+
+			assert.NoError(t, writer.WriteClob(val), "Something went wrong while writing a Clob value")
 
 		case BlobType:
 			val, err := reader.ByteValue()
-			if err != nil {
-				t.Errorf("Something went wrong while reading a Blob value: " + err.Error())
-			}
-			err = writer.WriteBlob(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Blob value: " + err.Error())
-			}
+			assert.NoError(t, err, "Something went wrong while reading a Blob value")
+
+			assert.NoError(t, writer.WriteBlob(val), "Something went wrong while writing a Blob value")
 
 		case SexpType:
-			err := reader.StepIn()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.BeginSexp()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepIn())
+			require.NoError(t, writer.BeginSexp())
 			writeFromReaderToWriter(t, reader, writer)
-			err = reader.StepOut()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.EndSexp()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepOut())
+			require.NoError(t, writer.EndSexp())
 
 		case ListType:
-			err := reader.StepIn()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.BeginList()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepIn())
+			require.NoError(t, writer.BeginList())
 			writeFromReaderToWriter(t, reader, writer)
-			err = reader.StepOut()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.EndList()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepOut())
+			require.NoError(t, writer.EndList())
 
 		case StructType:
-			err := reader.StepIn()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.BeginStruct()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepIn())
+			require.NoError(t, writer.BeginStruct())
 			writeFromReaderToWriter(t, reader, writer)
-			err = reader.StepOut()
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = writer.EndStruct()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, reader.StepOut())
+			require.NoError(t, writer.EndStruct())
 		}
 	}
 }
@@ -682,117 +560,90 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	switch currentType {
 	case BoolType:
 		val, err := reader.BoolValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Boolean value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = BoolType
 
 	case IntType:
 		val, err := reader.BigIntValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Int value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Int value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = IntType
 
 	case FloatType:
 		val, err := reader.FloatValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Float value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Float value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = FloatType
 
 	case DecimalType:
 		val, err := reader.DecimalValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Decimal value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = DecimalType
 
 	case TimestampType:
 		val, err := reader.TimestampValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Timestamp value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = TimestampType
 
 	case SymbolType:
 		val, err := reader.StringValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Symbol value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = SymbolType
 
 	case StringType:
 		val, err := reader.StringValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading String value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading String value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = StringType
 
 	case ClobType:
 		val, err := reader.ByteValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Clob value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Clob value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = ClobType
 
 	case BlobType:
 		val, err := reader.ByteValue()
-		if err != nil {
-			t.Errorf("Something went wrong when reading Blob value. " + err.Error())
-		}
+		assert.NoError(t, err, "Something went wrong when reading Blob value")
+
 		ionItem.value = append(ionItem.value, val)
 		ionItem.ionType = BlobType
 
 	case SexpType:
-		err := reader.StepIn()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepIn())
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = SexpType
-		err = reader.StepOut()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepOut())
 
 	case ListType:
-		err := reader.StepIn()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepIn())
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = ListType
-		err = reader.StepOut()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepOut())
 
 	case StructType:
-		err := reader.StepIn()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepIn())
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = StructType
-		err = reader.StepOut()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, reader.StepOut())
 	}
 
 	return ionItem

@@ -21,18 +21,17 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMarshalText(t *testing.T) {
 	test := func(v interface{}, eval string) {
 		t.Run(eval, func(t *testing.T) {
 			val, err := MarshalText(v)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(val) != eval {
-				t.Errorf("expected '%v', got '%v'", eval, string(val))
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, string(val))
 		})
 	}
 
@@ -51,7 +50,8 @@ func TestMarshalText(t *testing.T) {
 	test(math.NaN(), "nan")
 
 	test(MustParseDecimal("1.20"), "1.20")
-	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC), "2010-01-01T00:00:00Z")
+	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC),
+		"2010-01-01T00:00:00Z")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 
@@ -86,12 +86,8 @@ func TestMarshalBinary(t *testing.T) {
 	test := func(v interface{}, name string, eval []byte) {
 		t.Run(name, func(t *testing.T) {
 			val, err := MarshalBinary(v)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(val, eval) {
-				t.Errorf("expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
-			}
+			require.NoError(t, err)
+			assert.True(t, bytes.Equal(val, eval), "expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
 		})
 	}
 
@@ -153,12 +149,8 @@ func TestMarshalBinaryLST(t *testing.T) {
 	test := func(v interface{}, name string, lst SymbolTable, eval []byte) {
 		t.Run(name, func(t *testing.T) {
 			val, err := MarshalBinaryLST(v, lst)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(val, eval) {
-				t.Errorf("expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
-			}
+			require.NoError(t, err)
+			assert.True(t, bytes.Equal(val, eval), "expected '%v', got '%v'", fmtbytes(eval), fmtbytes(val))
 		})
 	}
 
@@ -206,14 +198,10 @@ func TestMarshalNestedStructs(t *testing.T) {
 	}
 
 	val, err := MarshalText(v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	eval := "{a:1,b:2,c:3,d:4}"
-	if string(val) != eval {
-		t.Errorf("expected %v, got %v", eval, string(val))
-	}
+	assert.Equal(t, eval, string(val))
 }
 
 func TestMarshalHints(t *testing.T) {
@@ -242,9 +230,7 @@ func TestMarshalHints(t *testing.T) {
 	}
 
 	val, err := MarshalText(v)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	eval := `{` +
 		`str:"string",` +
@@ -258,9 +244,7 @@ func TestMarshalHints(t *testing.T) {
 		`sx:(1 2 3)` +
 		`}`
 
-	if string(val) != eval {
-		t.Errorf("expected %v, got %v", eval, string(val))
-	}
+	assert.Equal(t, eval, string(val))
 }
 
 type marshalme uint8
@@ -297,42 +281,27 @@ func TestMarshalCustomMarshaler(t *testing.T) {
 	buf := strings.Builder{}
 	enc := NewTextEncoder(&buf)
 
-	if err := enc.Encode(one); err != nil {
-		t.Fatal(err)
-	}
-	if err := enc.EncodeAs([]marshalme{two, three}, SexpType); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, enc.Encode(one))
+	require.NoError(t, enc.EncodeAs([]marshalme{two, three}, SexpType))
 
 	v := struct {
 		Num marshalme `ion:"num"`
 	}{four}
-	if err := enc.Encode(v); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := enc.Finish(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, enc.Encode(v))
+	require.NoError(t, enc.Finish())
 
 	val := buf.String()
 	eval := "ONE\n(TWO THREE)\n{num:FOUR}\n"
 
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	assert.Equal(t, eval, val)
 }
 
 func TestMarshalValuesWithAnnotation(t *testing.T) {
 	test := func(v interface{}, testName, eval string) {
 		t.Run(testName, func(t *testing.T) {
 			val, err := MarshalText(v)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(val) != eval {
-				t.Errorf("expected '%v', got '%v'", eval, string(val))
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, string(val))
 		})
 	}
 

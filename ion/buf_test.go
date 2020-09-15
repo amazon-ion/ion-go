@@ -18,6 +18,9 @@ package ion
 import (
 	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBufnode(t *testing.T) {
@@ -58,9 +61,8 @@ func TestBufnode(t *testing.T) {
 	}
 
 	buf := bytes.Buffer{}
-	if err := root.EmitTo(&buf); err != nil {
-		t.Fatal(err)
-	}
+
+	require.NoError(t, root.EmitTo(&buf))
 
 	val := buf.Bytes()
 	eval := []byte{
@@ -88,7 +90,5 @@ func TestBufnode(t *testing.T) {
 		// }
 	}
 
-	if !bytes.Equal(val, eval) {
-		t.Errorf("expected %v, got %v", fmtbytes(eval), fmtbytes(val))
-	}
+	assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", fmtbytes(eval), fmtbytes(val))
 }
