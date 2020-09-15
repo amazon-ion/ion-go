@@ -1388,6 +1388,11 @@ func (t *tokenizer) checkNullAnnotation() error {
 				hasElementInStream = false
 				break
 			}
+			if !isIdentifierPart(c) {
+				hasElementInStream = false
+				t.unread(c)
+				break
+			}
 			if c == -1 {
 				err = io.EOF
 				hasElementInStream = false
@@ -1396,14 +1401,12 @@ func (t *tokenizer) checkNullAnnotation() error {
 			ret = append(ret, c)
 		}
 
-		for i, e := range ret {
-			// Check if it is annotation.
-			if !isIdentifierPart(e) {
-				if e == 58 && len(ret) >= i+1 && ret[i+1] == 58 {
-					return &UsageError{"Reader.Annotations", "type annotation cannot be null"}
-				}
-				break
-			}
+		ok, err := t.skipDoubleColon()
+		if err != nil {
+			return err
+		}
+		if ok {
+			return &UsageError{"Reader.Annotations", "type annotation cannot be null"}
 		}
 
 		// Put back the ones we got.
