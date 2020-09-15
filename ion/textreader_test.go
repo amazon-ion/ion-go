@@ -634,33 +634,6 @@ func _int64AF(t *testing.T, r Reader, efn *string, etas []string, eval int64) {
 	}
 }
 
-func _uint(t *testing.T, r Reader, eval uint64) {
-	_uintAF(t, r, nil, nil, eval)
-}
-
-func _uintAF(t *testing.T, r Reader, efn *string, etas []string, eval uint64) {
-	_nextAF(t, r, IntType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.int", eval)
-	}
-
-	size, err := r.IntSize()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != Uint64 {
-		t.Errorf("expected size=Uint, got %v", size)
-	}
-
-	val, err := r.Uint64Value()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
-}
-
 func _bigInt(t *testing.T, r Reader, eval *big.Int) {
 	_bigIntAF(t, r, nil, nil, eval)
 }

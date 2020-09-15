@@ -497,16 +497,6 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 				if err != nil {
 					t.Errorf("Something went wrong while writing an Int value: " + err.Error())
 				}
-			case Uint64:
-				val, err := reader.Uint64Value()
-				if err != nil {
-					t.Errorf("Something went wrong while reading a UInt value: " + err.Error())
-				}
-
-				err = writer.WriteUint(val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a UInt value: " + err.Error())
-				}
 			case BigInt:
 				val, err := reader.BigIntValue()
 				if err != nil {

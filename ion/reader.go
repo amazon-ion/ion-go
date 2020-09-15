@@ -127,11 +127,6 @@ type Reader interface {
 	// 64 bits to represent losslessly.
 	Int64Value() (int64, error)
 
-	// Uint64Value returns the current value as an unsigned 64-bit integer (if that makes
-	// sense). It returns an error if the current value is not an Ion integer, is negative,
-	// or requires more than 64 bits to represent losslessly.
-	Uint64Value() (uint64, error)
-
 	// BigIntValue returns the current value as a big.Integer (if that makes sense). It
 	// returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
@@ -283,11 +278,6 @@ func (r *reader) IntSize() (IntSize, error) {
 		return Int32, nil
 	}
 
-	i := r.value.(*big.Int)
-	if i.IsUint64() {
-		return Uint64, nil
-	}
-
 	return BigInt, nil
 }
 
@@ -322,32 +312,6 @@ func (r *reader) Int64Value() (int64, error) {
 	}
 
 	return 0, &UsageError{"Reader.Int64Value", "value too large for an int64"}
-}
-
-// Uint64Value returns the current value as a uint64.
-func (r *reader) Uint64Value() (uint64, error) {
-	if r.valueType != IntType {
-		return 0, &UsageError{"Reader.Uint64Value", "value is not an int"}
-	}
-	if r.value == nil {
-		return 0, nil
-	}
-
-	if i, ok := r.value.(int64); ok {
-		if i >= 0 {
-			return uint64(i), nil
-		}
-		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
-	}
-
-	bi := r.value.(*big.Int)
-	if bi.Sign() < 0 {
-		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
-	}
-	if !bi.IsUint64() {
-		return 0, &UsageError{"Reader.Uint64Value", "value too large for a uint64"}
-	}
-	return bi.Uint64(), nil
 }
 
 // BigIntValue returns the current value as a big int.
