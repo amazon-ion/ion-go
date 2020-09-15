@@ -262,13 +262,6 @@ func (p *processor) process(in ion.Reader) error {
 				}
 				err = p.out.WriteInt(val)
 
-			case ion.Uint64:
-				val, err := in.Uint64Value()
-				if err != nil {
-					return p.error(read, err)
-				}
-				err = p.out.WriteUint(val)
-
 			case ion.BigInt:
 				val, err := in.BigIntValue()
 				if err != nil {
