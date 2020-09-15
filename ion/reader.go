@@ -110,7 +110,7 @@ type Reader interface {
 	StepOut() error
 
 	// BoolValue returns the current value as a boolean (if that makes sense). It returns nil
-	// if the value is null. If the current value is not an Ion bool, it returns an error.
+	// if the value is an Ion null. If the current value is not an Ion bool, it returns an error.
 	BoolValue() (*bool, error)
 
 	// IntSize returns the size of integer needed to losslessly represent the current value
@@ -118,22 +118,22 @@ type Reader interface {
 	IntSize() (IntSize, error)
 
 	// IntValue returns the current value as a 32-bit integer (if that makes sense). It returns
-	// nil if the value is null. It returns an error if the current value is not an Ion integer
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
 	// or requires more than 32 bits to represent losslessly.
 	IntValue() (*int, error)
 
 	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It returns
-	// nil if the value is null. It returns an error if the current value is not an Ion integer
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
 	// or requires more than 64 bits to represent losslessly.
 	Int64Value() (*int64, error)
 
 	// Uint64Value returns the current value as an unsigned 64-bit integer (if that makes
-	// sense). It returns nil if the value is null. It returns an error if the current value
+	// sense). It returns nil if the value is an Ion null. It returns an error if the current value
 	// is not an Ion integer, is negative, or requires more than 64 bits to represent losslessly.
 	Uint64Value() (*uint64, error)
 
 	// BigIntValue returns the current value as a big.Integer (if that makes sense). It returns
-	// nil if the value is null. It returns an error if the current value is not an Ion integer.
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
 
 	// FloatValue returns the current value as a 64-bit floating point number (if that makes
@@ -261,7 +261,7 @@ func (r *reader) Annotations() []string {
 // BoolValue returns the current value as a bool.
 func (r *reader) BoolValue() (*bool, error) {
 	if r.valueType != BoolType {
-		return nil, &UsageError{"Reader.BoolValue", "value is not a bool"}
+		return nil, &UsageError{"Reader.BoolValue", "value is not an Ion bool"}
 	}
 	if r.value == nil {
 		return nil, nil
@@ -310,7 +310,7 @@ func (r *reader) IntValue() (*int, error) {
 // Int64Value returns the current value as an int64.
 func (r *reader) Int64Value() (*int64, error) {
 	if r.valueType != IntType {
-		return nil, &UsageError{"Reader.Int64Value", "value is not an int"}
+		return nil, &UsageError{"Reader.Int64Value", "value is not an Ion int"}
 	}
 	if r.value == nil {
 		return nil, nil
@@ -332,7 +332,7 @@ func (r *reader) Int64Value() (*int64, error) {
 // Uint64Value returns the current value as a uint64.
 func (r *reader) Uint64Value() (*uint64, error) {
 	if r.valueType != IntType {
-		return nil, &UsageError{"Reader.Uint64Value", "value is not an int"}
+		return nil, &UsageError{"Reader.Uint64Value", "value is not an Ion int"}
 	}
 	if r.value == nil {
 		return nil, nil
@@ -375,7 +375,7 @@ func (r *reader) BigIntValue() (*big.Int, error) {
 // FloatValue returns the current value as a float.
 func (r *reader) FloatValue() (*float64, error) {
 	if r.valueType != FloatType {
-		return nil, &UsageError{"Reader.FloatValue", "value is not a float"}
+		return nil, &UsageError{"Reader.FloatValue", "value is not an Ion float"}
 	}
 	if r.value == nil {
 		return nil, nil
@@ -398,7 +398,7 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 // TimestampValue returns the current value as a Timestamp.
 func (r *reader) TimestampValue() (*Timestamp, error) {
 	if r.valueType != TimestampType {
-		return nil, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return nil, &UsageError{"Reader.TimestampValue", "value is not an Ion timestamp"}
 	}
 	if r.value == nil {
 		return nil, nil
