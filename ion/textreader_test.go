@@ -51,7 +51,7 @@ func TestReadTextSymbols(t *testing.T) {
 }
 
 func TestReadTextNullAnnotations(t *testing.T) {
-	r1 := NewReaderString(`null.string::1`)
+	r1 := NewReaderString(`null.string ::1`)
 	_nextA(t, r1, nil, true, true)
 
 	r2 := NewReaderString(`null.symbol::1`)

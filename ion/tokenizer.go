@@ -1401,6 +1401,22 @@ func (t *tokenizer) checkNullAnnotation() error {
 			ret = append(ret, c)
 		}
 
+		hasWhiteSpaceInStream := true
+		for hasWhiteSpaceInStream {
+			var c int
+			c, err = t.read()
+			if err != nil {
+				hasWhiteSpaceInStream = false
+				break
+			}
+			if c != ' ' {
+				hasWhiteSpaceInStream = false
+				t.unread(c)
+				break
+			}
+			ret = append(ret, c)
+		}
+
 		ok, err := t.skipDoubleColon()
 		if err != nil {
 			return err
