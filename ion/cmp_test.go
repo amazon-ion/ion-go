@@ -36,7 +36,7 @@ func (thisFloat ionFloat) eq(other ionEqual) bool {
 
 func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 	if val, ok := other.(ionDecimal); ok {
-		if thisDecimal.scale != val.scale {
+		if thisDecimal.scale != val.scale || thisDecimal.isNegZero != val.isNegZero {
 			return false
 		}
 		return thisDecimal.Decimal.Equal(val.Decimal)

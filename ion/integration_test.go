@@ -118,7 +118,6 @@ var equivsSkipList = []string{
 }
 
 var nonEquivsSkipList = []string{
-	"decimals.ion",
 	"floats.ion",
 	"floatsVsDecimals.ion",
 }
