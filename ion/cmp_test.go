@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"math"
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,7 +33,11 @@ type ionTimestamp struct{ Timestamp }
 type ionSymbol struct{ *SymbolToken }
 
 func (thisFloat ionFloat) eq(other ionEqual) bool {
-	return cmp.Equal(thisFloat.float64, other.(ionFloat).float64, cmpopts.EquateNaNs())
+	float1 := thisFloat.float64
+	float2 := other.(ionFloat).float64
+
+	return math.Signbit(float1) == math.Signbit(float2) &&
+		cmp.Equal(float1, float2, cmpopts.EquateNaNs())
 }
 
 func (thisDecimal ionDecimal) eq(other ionEqual) bool {
