@@ -374,10 +374,8 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 }
 
 func isEmbeddedDoc(an []SymbolToken) bool {
-	for _, a := range an {
-		if a.Text != nil && *a.Text == "embedded_documents" {
-			return true
-		}
+	if len(an) >= 1 && an[0].Text != nil && *an[0].Text == "embedded_documents" {
+		return true
 	}
 	return false
 }
