@@ -216,14 +216,20 @@ func (p *processor) process(in ion.Reader) error {
 
 	for in.Next() {
 		p.idx++
-		name := in.FieldName()
-		if name != nil {
-			if err = p.out.FieldName(*name); err != nil {
+		name, e := in.FieldName()
+		if e != nil {
+			return p.error(read, err)
+		}
+		if name != nil && name.Text != nil {
+			if err = p.out.FieldName(*name.Text); err != nil {
 				return p.error(write, err)
 			}
 		}
 
-		annos := in.Annotations()
+		annos, err := in.Annotations()
+		if err != nil {
+			return p.error(read, err)
+		}
 		if len(annos) > 0 {
 			if err = p.out.Annotations(annos...); err != nil {
 				return p.error(write, err)
@@ -239,7 +245,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteBool(val)
+			err = p.out.WriteBool(*val)
 
 		case ion.IntType:
 			size, err := in.IntSize()
@@ -253,21 +259,14 @@ func (p *processor) process(in ion.Reader) error {
 				if err != nil {
 					return p.error(read, err)
 				}
-				err = p.out.WriteInt(int64(val))
+				err = p.out.WriteInt(int64(*val))
 
 			case ion.Int64:
 				val, err := in.Int64Value()
 				if err != nil {
 					return p.error(read, err)
 				}
-				err = p.out.WriteInt(val)
-
-			case ion.Uint64:
-				val, err := in.Uint64Value()
-				if err != nil {
-					return p.error(read, err)
-				}
-				err = p.out.WriteUint(val)
+				err = p.out.WriteInt(*val)
 
 			case ion.BigInt:
 				val, err := in.BigIntValue()
@@ -285,7 +284,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteFloat(val)
+			err = p.out.WriteFloat(*val)
 
 		case ion.DecimalType:
 			val, err := in.DecimalValue()
@@ -299,7 +298,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteTimestamp(val)
+			err = p.out.WriteTimestamp(*val)
 
 		case ion.SymbolType:
 			val, err := in.StringValue()

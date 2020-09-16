@@ -38,9 +38,9 @@ type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
 	ionType     Type
-	annotations []string
+	annotations []SymbolToken
 	value       []interface{}
-	fieldName   string
+	fieldName   SymbolToken
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -58,17 +58,12 @@ func (i *ionItem) equal(o ionItem) bool {
 		return cmpDecimals(i.value[0], o.value[0])
 	case TimestampType:
 		return cmpTimestamps(i.value[0], o.value[0])
-	case StringType:
-		if i.value[0] == nil || o.value[0] == nil {
-			return i.value[0] == nil && o.value[0] == nil
-		}
-		val1 := i.value[0].(*string)
-		val2 := o.value[0].(*string)
-		return *val1 == *val2
 	case ListType, SexpType:
 		return cmpValueSlices(i.value, o.value)
 	case StructType:
 		return cmpStruct(i.value, o.value)
+	case SymbolType:
+		return cmpSymbols(i.value[0], o.value[0])
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
@@ -127,11 +122,7 @@ var equivsSkipList = []string{
 	"systemSymbols.ion",
 }
 
-var nonEquivsSkipList = []string{
-	"decimals.ion",
-	"floats.ion",
-	"floatsVsDecimals.ion",
-}
+var nonEquivsSkipList = []string{}
 
 func TestLoadGood(t *testing.T) {
 	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
@@ -298,7 +289,11 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	r := NewReader(file)
 	topLevelCounter := 0
 	for r.Next() {
-		embDoc := isEmbeddedDoc(r.Annotations())
+		annotations, err := r.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		embDoc := isEmbeddedDoc(annotations)
 		ionType := r.Type()
 		switch ionType {
 		case StructType, ListType, SexpType:
@@ -344,11 +339,9 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 	return values
 }
 
-func isEmbeddedDoc(an []string) bool {
-	for _, a := range an {
-		if a == "embedded_documents" {
-			return true
-		}
+func isEmbeddedDoc(an []SymbolToken) bool {
+	if len(an) >= 1 && an[0].Text != nil && *an[0].Text == "embedded_documents" {
+		return true
 	}
 	return false
 }
@@ -418,12 +411,16 @@ func isInSkipList(skipList []string, fn string) bool {
 // Read all the values in the reader and write them in the writer
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
-		fns, err := reader.FieldNameSymbol()
+		fns, err := reader.FieldName()
 		if err == nil && reader.IsInStruct() && fns != nil {
 			require.NoError(t, writer.FieldNameSymbol(*fns))
 		}
 
-		an := reader.Annotations()
+		an, err := reader.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if len(an) > 0 {
 			require.NoError(t, writer.Annotations(an...))
 		}
@@ -435,10 +432,21 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 		}
 
 		switch currentType {
+		case NullType:
+			err := writer.WriteNullType(currentType)
+			if err != nil {
+				t.Errorf("Something went wrong while writing a Null value: " + err.Error())
+			}
+
 		case BoolType:
 			val, err := reader.BoolValue()
 			assert.NoError(t, err, "Something went wrong while reading a Boolean value")
-			assert.NoError(t, writer.WriteBool(val), "Something went wrong while writing a Boolean value")
+
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(BoolType))
+			} else {
+				assert.NoError(t, writer.WriteBool(*val), "Something went wrong while writing a Boolean value")
+			}
 
 		case IntType:
 			intSize, err := reader.IntSize()
@@ -449,17 +457,14 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 				val, err := reader.Int64Value()
 				assert.NoError(t, err, "Something went wrong while reading an Int value")
 
-				assert.NoError(t, writer.WriteInt(val), "Something went wrong while writing an Int value")
-			case Uint64:
-				val, err := reader.Uint64Value()
-				assert.NoError(t, err, "Something went wrong while reading a UInt value")
-
-				assert.NoError(t, writer.WriteUint(val), "Something went wrong while writing a UInt value")
+				assert.NoError(t, writer.WriteInt(*val), "Something went wrong while writing an Int value")
 			case BigInt:
 				val, err := reader.BigIntValue()
 				assert.NoError(t, err, "Something went wrong while reading a Big Int value")
 
 				assert.NoError(t, writer.WriteBigInt(val), "Something went wrong while writing a Big Int value")
+			case NullInt:
+				assert.NoError(t, writer.WriteNullType(IntType))
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
@@ -468,33 +473,49 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			val, err := reader.FloatValue()
 			assert.NoError(t, err, "Something went wrong while reading a Float value")
 
-			assert.NoError(t, writer.WriteFloat(val), "Something went wrong while writing a Float value")
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(FloatType))
+			} else {
+				assert.NoError(t, writer.WriteFloat(*val), "Something went wrong while writing a Float value")
+			}
 
 		case DecimalType:
 			val, err := reader.DecimalValue()
 			assert.NoError(t, err, "Something went wrong while reading a Decimal value")
 
-			assert.NoError(t, writer.WriteDecimal(val), "Something went wrong while writing a Decimal value")
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(DecimalType))
+			} else {
+				assert.NoError(t, writer.WriteDecimal(val), "Something went wrong while writing a Decimal value")
+			}
 
 		case TimestampType:
 			val, err := reader.TimestampValue()
 			assert.NoError(t, err, "Something went wrong while reading a Timestamp value")
 
-			assert.NoError(t, writer.WriteTimestamp(val), "Something went wrong while writing a Timestamp value")
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(TimestampType))
+			} else {
+				assert.NoError(t, writer.WriteTimestamp(*val), "Something went wrong while writing a Timestamp value")
+			}
 
 		case SymbolType:
-			val, err := reader.StringValue()
+			val, err := reader.SymbolValue()
 			assert.NoError(t, err, "Something went wrong while reading a Symbol value")
 
-			if val != nil {
-				assert.NoError(t, writer.WriteSymbol(*val), "Something went wrong while writing a Symbol value")
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(SymbolType))
+			} else if val.Text != nil {
+				assert.NoError(t, writer.WriteSymbol(*val.Text), "Something went wrong while writing a Symbol value")
 			}
 
 		case StringType:
 			val, err := reader.StringValue()
 			assert.NoError(t, err, "Something went wrong while reading a String value")
 
-			if val != nil {
+			if val == nil {
+				assert.NoError(t, writer.WriteNullType(StringType))
+			} else {
 				assert.NoError(t, writer.WriteString(*val), "Something went wrong while writing a String value")
 			}
 
@@ -538,52 +559,71 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	var ionItem ionItem
 
-	an := reader.Annotations()
+	an, err := reader.Annotations()
+	if err != nil {
+		t.Errorf("Something went wrong when reading annotations. " + err.Error())
+	}
+
 	if len(an) > 0 {
 		ionItem.annotations = an
 	}
 
-	fn := reader.FieldName()
+	fn, err := reader.FieldName()
+	if err != nil {
+		t.Errorf("Something went wrong when reading field name. " + err.Error())
+	}
 	if fn != nil {
 		ionItem.fieldName = *fn
 	}
 
 	currentType := reader.Type()
-	// Excluding SymbolType from setting value to 'null.symbol' because readers can read "'null.symbol'" as text: 'null.symbol'.
-	if reader.IsNull() && reader.Type() != SymbolType {
-		ionItem.value = append(ionItem.value, &textNulls[currentType])
-		ionItem.ionType = currentType
-
-		return ionItem
-	}
-
 	switch currentType {
+	case NullType:
+		ionItem.value = append(ionItem.value, nil)
+		ionItem.ionType = NullType
+
 	case BoolType:
 		val, err := reader.BoolValue()
 		assert.NoError(t, err, "Something went wrong when reading Boolean value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = BoolType
 
 	case IntType:
 		val, err := reader.BigIntValue()
 		assert.NoError(t, err, "Something went wrong when reading Int value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = IntType
 
 	case FloatType:
 		val, err := reader.FloatValue()
 		assert.NoError(t, err, "Something went wrong when reading Float value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = FloatType
 
 	case DecimalType:
 		val, err := reader.DecimalValue()
 		assert.NoError(t, err, "Something went wrong when reading Decimal value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, val)
+		}
 		ionItem.ionType = DecimalType
 
 	case TimestampType:
@@ -594,17 +634,25 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = TimestampType
 
 	case SymbolType:
-		val, err := reader.StringValue()
+		val, err := reader.SymbolValue()
 		assert.NoError(t, err, "Something went wrong when reading Symbol value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = SymbolType
 
 	case StringType:
 		val, err := reader.StringValue()
 		assert.NoError(t, err, "Something went wrong when reading String value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = StringType
 
 	case ClobType:
@@ -622,27 +670,48 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = BlobType
 
 	case SexpType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = SexpType
+			break
+		}
 		require.NoError(t, reader.StepIn())
+
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = SexpType
+
 		require.NoError(t, reader.StepOut())
 
 	case ListType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = ListType
+			break
+		}
 		require.NoError(t, reader.StepIn())
+
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = ListType
+
 		require.NoError(t, reader.StepOut())
 
 	case StructType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = StructType
+			break
+		}
 		require.NoError(t, reader.StepIn())
+
 		for reader.Next() {
 			ionItem.value = append(ionItem.value, readCurrentValue(t, reader))
 		}
 		ionItem.ionType = StructType
+
 		require.NoError(t, reader.StepOut())
 	}
 

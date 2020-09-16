@@ -23,10 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newString(value string) *string {
-	return &value
-}
-
 var symbolTokenEqualsTestData = []struct {
 	text1   *string
 	sid1    int64

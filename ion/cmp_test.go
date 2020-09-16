@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"math"
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,14 +30,19 @@ type ionEqual interface {
 type ionFloat struct{ float64 }
 type ionDecimal struct{ *Decimal }
 type ionTimestamp struct{ Timestamp }
+type ionSymbol struct{ *SymbolToken }
 
 func (thisFloat ionFloat) eq(other ionEqual) bool {
-	return cmp.Equal(thisFloat.float64, other.(ionFloat).float64, cmpopts.EquateNaNs())
+	float1 := thisFloat.float64
+	float2 := other.(ionFloat).float64
+
+	return math.Signbit(float1) == math.Signbit(float2) &&
+		cmp.Equal(float1, float2, cmpopts.EquateNaNs())
 }
 
 func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 	if val, ok := other.(ionDecimal); ok {
-		if thisDecimal.scale != val.scale {
+		if thisDecimal.scale != val.scale || thisDecimal.isNegZero != val.isNegZero {
 			return false
 		}
 		return thisDecimal.Decimal.Equal(val.Decimal)
@@ -51,8 +57,32 @@ func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	return false
 }
 
-func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
-	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
+func (thisSymbol ionSymbol) eq(other ionEqual) bool {
+	if val, ok := other.(ionSymbol); ok {
+		return thisSymbol.SymbolToken.Equal(val.SymbolToken)
+	}
+	return false
+}
+
+func cmpAnnotations(thisAnnotations, otherAnnotations []SymbolToken) bool {
+	if len(thisAnnotations) == 0 && len(otherAnnotations) == 0 {
+		return true
+	}
+
+	if len(thisAnnotations) != len(otherAnnotations) {
+		return false
+	}
+
+	res := false
+	for idx, this := range thisAnnotations {
+		other := otherAnnotations[idx]
+		res = this.Equal(&other)
+
+		if !res {
+			return false
+		}
+	}
+	return res
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {
@@ -61,11 +91,11 @@ func cmpFloats(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.float
-		return strNullTypeCmp(val, otherValue)
 	case float64:
 		thisFloat := ionFloat{val}
 		return thisFloat.eq(ionFloat{otherValue.(float64)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
@@ -77,11 +107,11 @@ func cmpDecimals(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.decimal
-		return strNullTypeCmp(val, otherValue)
 	case *Decimal:
 		thisDecimal := ionDecimal{val}
 		return thisDecimal.eq(ionDecimal{otherValue.(*Decimal)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
@@ -93,14 +123,24 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.timestamp
-		return strNullTypeCmp(val, otherValue)
 	case Timestamp:
 		thisTimestamp := ionTimestamp{val}
 		return thisTimestamp.eq(ionTimestamp{otherValue.(Timestamp)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
+}
+
+func cmpSymbols(thisValue, otherValue interface{}) bool {
+	val1 := thisValue.(*SymbolToken)
+	val2 := otherValue.(*SymbolToken)
+
+	if val1 == nil || val2 == nil {
+		return val1 == nil && val2 == nil
+	}
+	return val1.Equal(val2)
 }
 
 func cmpValueSlices(thisValues, otherValues []interface{}) bool {
@@ -170,15 +210,6 @@ func cmpStruct(thisValues, otherValues []interface{}) bool {
 	return res
 }
 
-func strNullTypeCmp(this, other interface{}) bool {
-	thisStr, thisOk := this.(*string)
-	otherStr, otherOk := other.(*string)
-	if thisOk && otherOk {
-		return cmp.Equal(thisStr, otherStr)
-	}
-	return false
-}
-
 func haveSameTypes(this, other interface{}) bool {
 	return reflect.TypeOf(this) == reflect.TypeOf(other)
 }
@@ -187,6 +218,8 @@ func getContainersType(in interface{}) interface{} {
 	switch in.(type) {
 	case *string:
 		return in.(*string)
+	case nil:
+		return nil
 	default:
 		return in.(ionItem)
 	}
@@ -204,14 +237,12 @@ func contains(list []int, idx int) bool {
 // non-null containers have ionItems inside them
 func containersEquality(this, other interface{}) bool {
 	switch this.(type) {
-	case *string: // null.list, null.sexp, null.struct
-		if strNullTypeCmp(this, other) {
-			return true
-		}
+	case nil:
+		return other == nil
 	default:
 		otherItem := other.(ionItem)
 		thisItem := this.(ionItem)
-		if thisItem.fieldName == otherItem.fieldName && thisItem.equal(otherItem) {
+		if thisItem.fieldName.Equal(&otherItem.fieldName) && thisItem.equal(otherItem) {
 			return true
 		}
 	}

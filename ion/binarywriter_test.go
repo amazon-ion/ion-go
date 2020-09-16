@@ -40,11 +40,11 @@ func TestWriteBinaryStruct(t *testing.T) {
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
-		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.BeginStruct())
 		{
 			assert.NoError(t, w.FieldName("name"))
-			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.FieldName("max_id"))
@@ -66,10 +66,10 @@ func TestWriteBinarySexp(t *testing.T) {
 		assert.NoError(t, w.BeginSexp())
 		assert.NoError(t, w.EndSexp())
 
-		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.BeginSexp())
 		{
-			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))
@@ -90,10 +90,10 @@ func TestWriteBinaryList(t *testing.T) {
 		assert.NoError(t, w.BeginList())
 		assert.NoError(t, w.EndList())
 
-		assert.NoError(t, w.Annotation("foo"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.BeginList())
 		{
-			assert.NoError(t, w.Annotation("bar"))
+			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))
@@ -219,7 +219,7 @@ func TestWriteBinaryFloats(t *testing.T) {
 		0x48, 0xFF, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // -MaxFloat64
 		0x44, 0x7F, 0x80, 0x00, 0x00, // +inf (float32)
 		0x44, 0xFF, 0x80, 0x00, 0x00, // -inf (float32)
-		0x48, 0x7F, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // NaN
+		0x44, 0x7F, 0xC0, 0x00, 0x00, // NaN
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
@@ -291,7 +291,7 @@ func TestWriteBinaryBoolAnnotated(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		assert.NoError(t, w.Annotations("name", "version"))
+		assert.NoError(t, w.Annotations(SymbolToken{Text: newString("name"), LocalSID: 4}, SymbolToken{Text: newString("version"), LocalSID: 5}))
 		assert.NoError(t, w.WriteBool(false))
 	})
 }

@@ -307,11 +307,11 @@ func TestMarshalValuesWithAnnotation(t *testing.T) {
 
 	type foo struct {
 		Value   interface{}
-		AnyName []string `ion:",annotations"`
+		AnyName []SymbolToken `ion:",annotations"`
 	}
 
 	buildValue := func(val interface{}) foo {
-		return foo{val, []string{"symbols or string", "annotations"}}
+		return foo{val, []SymbolToken{SymbolToken{Text: newString("symbols or string"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("annotations"), LocalSID: SymbolIDUnknown}}}
 	}
 
 	test(buildValue(nil), "null", "'symbols or string'::annotations::null")

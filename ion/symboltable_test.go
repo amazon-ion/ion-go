@@ -180,3 +180,7 @@ func testString(t *testing.T, st SymbolTable, expected string) {
 		assert.Equal(t, expected, actual)
 	})
 }
+
+func newString(value string) *string {
+	return &value
+}
