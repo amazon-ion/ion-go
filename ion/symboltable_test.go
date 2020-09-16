@@ -220,3 +220,7 @@ func testString(t *testing.T, st SymbolTable, expected string) {
 		}
 	})
 }
+
+func newString(value string) *string {
+	return &value
+}

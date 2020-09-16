@@ -50,17 +50,6 @@ func TestReadTextSymbols(t *testing.T) {
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
 }
 
-func TestReadTextNullAnnotations(t *testing.T) {
-	r1 := NewReaderString(`null.string ::1`)
-	_nextA(t, r1, nil, true, true)
-
-	r2 := NewReaderString(`null.symbol::1`)
-	_nextA(t, r2, nil, true, true)
-
-	r3 := NewReaderString(`null.a::1`)
-	_nextA(t, r3, nil, true, true)
-}
-
 func TestReadTextAnnotations(t *testing.T) {
 	ionText := `$ion_symbol_table::
 				{

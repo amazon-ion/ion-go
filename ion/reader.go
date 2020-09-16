@@ -90,7 +90,7 @@ type Reader interface {
 	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
-	// Annotations returns the set of annotations associated with the current value as a list of SymbolTokens.
+	// Annotations returns the annotations associated with the current value as a list of SymbolTokens.
 	// It returns nil if there is no current value or the current value has no annotations.
 	Annotations() ([]SymbolToken, error)
 
@@ -144,8 +144,8 @@ type Reader interface {
 	// an error if the current value is not an Ion timestamp.
 	TimestampValue() (Timestamp, error)
 
-	// StringValue returns the current value as a string (if that makes sense). It returns
-	// an error if the current value is not an Ion string.
+	// StringValue returns the current value as a string (if that makes sense). Returns `nil` for Ion null string.
+	// It returns an error if the current value is not an Ion string.
 	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
@@ -156,7 +156,8 @@ type Reader interface {
 	IsInStruct() bool
 
 	// FieldName returns the field name associated with the current value as a SymbolToken. It returns
-	// nil if there is no current value or the current value has no field name.
+	// nil if there is no current value or the current value has no field name. It returns an error if
+	// the `SymbolToken` SID is not found in the symbol table.
 	FieldName() (*SymbolToken, error)
 
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
