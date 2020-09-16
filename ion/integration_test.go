@@ -55,13 +55,6 @@ func (i *ionItem) equal(o ionItem) bool {
 		return cmpDecimals(i.value[0], o.value[0])
 	case TimestampType:
 		return cmpTimestamps(i.value[0], o.value[0])
-	case StringType:
-		if i.value[0] == nil || o.value[0] == nil {
-			return i.value[0] == nil && o.value[0] == nil
-		}
-		val1 := i.value[0].(*string)
-		val2 := o.value[0].(*string)
-		return *val1 == *val2
 	case ListType, SexpType:
 		return cmpValueSlices(i.value, o.value)
 	case StructType:
@@ -469,14 +462,27 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 		}
 
 		switch currentType {
+		case NullType:
+			err := writer.WriteNullType(currentType)
+			if err != nil {
+				t.Errorf("Something went wrong while writing a Null value: " + err.Error())
+			}
+
 		case BoolType:
 			val, err := reader.BoolValue()
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Boolean value: " + err.Error())
 			}
-			err = writer.WriteBool(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(BoolType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteBool(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Boolean value: " + err.Error())
+				}
 			}
 
 		case IntType:
@@ -492,7 +498,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 					t.Errorf("Something went wrong while reading an Int value: " + err.Error())
 				}
 
-				err = writer.WriteInt(val)
+				err = writer.WriteInt(*val)
 				if err != nil {
 					t.Errorf("Something went wrong while writing an Int value: " + err.Error())
 				}
@@ -502,7 +508,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 					t.Errorf("Something went wrong while reading a UInt value: " + err.Error())
 				}
 
-				err = writer.WriteUint(val)
+				err = writer.WriteUint(*val)
 				if err != nil {
 					t.Errorf("Something went wrong while writing a UInt value: " + err.Error())
 				}
@@ -515,6 +521,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 				if err != nil {
 					t.Errorf("Something went wrong while writing a Big Int value: " + err.Error())
 				}
+			case NullInt:
+				err := writer.WriteNullType(IntType)
+				if err != nil {
+					t.Fatal(err)
+				}
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
@@ -524,9 +535,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Float value: " + err.Error())
 			}
-			err = writer.WriteFloat(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Float value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(FloatType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteFloat(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Float value: " + err.Error())
+				}
 			}
 
 		case DecimalType:
@@ -534,9 +552,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Decimal value: " + err.Error())
 			}
-			err = writer.WriteDecimal(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(DecimalType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteDecimal(val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Decimal value: " + err.Error())
+				}
 			}
 
 		case TimestampType:
@@ -544,9 +569,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Timestamp value: " + err.Error())
 			}
-			err = writer.WriteTimestamp(val)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
+			if val == nil {
+				err := writer.WriteNullType(FloatType)
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = writer.WriteTimestamp(*val)
+				if err != nil {
+					t.Errorf("Something went wrong while writing a Timestamp value: " + err.Error())
+				}
 			}
 
 		case SymbolType:
@@ -670,21 +702,21 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	}
 
 	currentType := reader.Type()
-	// Excluding SymbolType from setting value to 'null.symbol' because readers can read "'null.symbol'" as text: 'null.symbol'.
-	if reader.IsNull() && reader.Type() != SymbolType {
-		ionItem.value = append(ionItem.value, &textNulls[currentType])
-		ionItem.ionType = currentType
-
-		return ionItem
-	}
-
 	switch currentType {
+	case NullType:
+		ionItem.value = append(ionItem.value, nil)
+		ionItem.ionType = NullType
+
 	case BoolType:
 		val, err := reader.BoolValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Boolean value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = BoolType
 
 	case IntType:
@@ -692,7 +724,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Errorf("Something went wrong when reading Int value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = IntType
 
 	case FloatType:
@@ -700,7 +736,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Errorf("Something went wrong when reading Float value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = FloatType
 
 	case DecimalType:
@@ -708,7 +748,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Errorf("Something went wrong when reading Decimal value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, val)
+		}
 		ionItem.ionType = DecimalType
 
 	case TimestampType:
@@ -716,7 +760,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Errorf("Something went wrong when reading Timestamp value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = TimestampType
 
 	case SymbolType:
@@ -732,7 +780,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		if err != nil {
 			t.Errorf("Something went wrong when reading String value. " + err.Error())
 		}
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = StringType
 
 	case ClobType:
@@ -752,6 +804,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = BlobType
 
 	case SexpType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = SexpType
+			break
+		}
 		err := reader.StepIn()
 		if err != nil {
 			t.Fatal(err)
@@ -766,6 +823,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		}
 
 	case ListType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = ListType
+			break
+		}
 		err := reader.StepIn()
 		if err != nil {
 			t.Fatal(err)
@@ -780,6 +842,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		}
 
 	case StructType:
+		if reader.IsNull() {
+			ionItem.value = append(ionItem.value, nil)
+			ionItem.ionType = StructType
+			break
+		}
 		err := reader.StepIn()
 		if err != nil {
 			t.Fatal(err)
