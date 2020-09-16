@@ -433,10 +433,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 
 		switch currentType {
 		case NullType:
-			err := writer.WriteNullType(currentType)
-			if err != nil {
-				t.Errorf("Something went wrong while writing a Null value: " + err.Error())
-			}
+			assert.NoError(t, writer.WriteNullType(NullType), "Something went wrong while writing a Null value")
 
 		case BoolType:
 			val, err := reader.BoolValue()
@@ -458,13 +455,16 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 				assert.NoError(t, err, "Something went wrong while reading an Int value")
 
 				assert.NoError(t, writer.WriteInt(*val), "Something went wrong while writing an Int value")
+
 			case BigInt:
 				val, err := reader.BigIntValue()
 				assert.NoError(t, err, "Something went wrong while reading a Big Int value")
 
 				assert.NoError(t, writer.WriteBigInt(val), "Something went wrong while writing a Big Int value")
+
 			case NullInt:
 				assert.NoError(t, writer.WriteNullType(IntType))
+
 			default:
 				t.Error("Expected intSize to be one of Int32, Int64, Uint64, or BigInt")
 			}
@@ -534,21 +534,27 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 		case SexpType:
 			require.NoError(t, reader.StepIn())
 			require.NoError(t, writer.BeginSexp())
+
 			writeFromReaderToWriter(t, reader, writer)
+
 			require.NoError(t, reader.StepOut())
 			require.NoError(t, writer.EndSexp())
 
 		case ListType:
 			require.NoError(t, reader.StepIn())
 			require.NoError(t, writer.BeginList())
+
 			writeFromReaderToWriter(t, reader, writer)
+
 			require.NoError(t, reader.StepOut())
 			require.NoError(t, writer.EndList())
 
 		case StructType:
 			require.NoError(t, reader.StepIn())
 			require.NoError(t, writer.BeginStruct())
+
 			writeFromReaderToWriter(t, reader, writer)
+
 			require.NoError(t, reader.StepOut())
 			require.NoError(t, writer.EndStruct())
 		}
@@ -560,18 +566,15 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	var ionItem ionItem
 
 	an, err := reader.Annotations()
-	if err != nil {
-		t.Errorf("Something went wrong when reading annotations. " + err.Error())
-	}
+	require.NoError(t, err, "Something went wrong when reading annotations")
 
 	if len(an) > 0 {
 		ionItem.annotations = an
 	}
 
 	fn, err := reader.FieldName()
-	if err != nil {
-		t.Errorf("Something went wrong when reading field name. " + err.Error())
-	}
+	require.NoError(t, err, "Something went wrong when reading field name")
+
 	if fn != nil {
 		ionItem.fieldName = *fn
 	}
@@ -630,7 +633,11 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		val, err := reader.TimestampValue()
 		assert.NoError(t, err, "Something went wrong when reading Timestamp value")
 
-		ionItem.value = append(ionItem.value, val)
+		if val == nil {
+			ionItem.value = append(ionItem.value, nil)
+		} else {
+			ionItem.value = append(ionItem.value, *val)
+		}
 		ionItem.ionType = TimestampType
 
 	case SymbolType:

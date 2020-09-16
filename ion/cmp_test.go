@@ -134,13 +134,23 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 }
 
 func cmpSymbols(thisValue, otherValue interface{}) bool {
-	val1 := thisValue.(*SymbolToken)
-	val2 := otherValue.(*SymbolToken)
-
-	if val1 == nil || val2 == nil {
-		return val1 == nil && val2 == nil
+	if thisValue == nil || otherValue == nil {
+		return thisValue == nil && otherValue == nil
 	}
-	return val1.Equal(val2)
+
+	if val1, ok := thisValue.(SymbolToken); ok {
+		if val2, ok := otherValue.(SymbolToken); ok {
+			return val1.Equal(&val2)
+		}
+	}
+
+	if val1, ok := thisValue.(*SymbolToken); ok {
+		if val2, ok := otherValue.(*SymbolToken); ok {
+			return val1.Equal(val2)
+		}
+	}
+
+	return false
 }
 
 func cmpValueSlices(thisValues, otherValues []interface{}) bool {

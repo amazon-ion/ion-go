@@ -695,25 +695,21 @@ func _symbolAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eva
 		r.Next()
 	}
 
-	require.False(t, r.IsNull(), "expected %v, got null.symbol", eval)
+	if evalSt != nil {
+		require.False(t, r.IsNull())
+	}
 
-	val, err := r.StringValue()
-	if isStringValueError {
+	symbolVal, err := r.SymbolValue()
+	if isSymbolValueError {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
-		if eval == nil {
-			assert.Equal(t, eval, val)
+
+		if evalSt == nil {
+			assert.True(t, symbolVal == nil, "expected %v, got %v", &evalSt, symbolVal)
 		} else {
-			assert.Equal(t, *eval, *val)
+			assert.True(t, symbolVal.Equal(evalSt), "expected %v, got %v", &evalSt, symbolVal)
 		}
-	}
-	symbolVal, err := r.SymbolValue()
-	if isSymbolValueError {
-		assert.Error(t, err)
-	} else {
-		require.NoError(t, err)
-		assert.True(t, symbolVal.Equal(&evalSt), "expected %v, got %v", &evalSt, symbolVal)
 	}
 }
 
@@ -786,8 +782,6 @@ func _nextAF(t *testing.T, r Reader, et Type, efn *SymbolToken, etas []SymbolTok
 	assert.NoError(t, err)
 
 	assert.True(t, _symbolTokenEquals(etas, annotations), "expected type annotations=%v, got %v", etas, annotations)
-
-	assert.True(t, _strequals(etas, r.Annotations()), "expected type annotations=%v, got %v", etas, r.Annotations())
 }
 
 func _nextA(t *testing.T, r Reader, etas []SymbolToken, isAnnotationError bool, isNextError bool) {
