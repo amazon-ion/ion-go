@@ -109,42 +109,44 @@ type Reader interface {
 	// stream.
 	StepOut() error
 
-	// BoolValue returns the current value as a boolean (if that makes sense). It returns
-	// an error if the current value is not an Ion bool.
-	BoolValue() (bool, error)
+	// BoolValue returns the current value as a boolean (if that makes sense). It returns nil
+	// if the value is an Ion null. If the current value is not an Ion bool, it returns an error.
+	BoolValue() (*bool, error)
 
 	// IntSize returns the size of integer needed to losslessly represent the current value
 	// (if that makes sense). It returns an error if the current value is not an Ion int.
 	IntSize() (IntSize, error)
 
-	// IntValue returns the current value as a 32-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 32 bits to represent losslessly.
-	IntValue() (int, error)
+	// IntValue returns the current value as a 32-bit integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
+	// or requires more than 32 bits to represent losslessly.
+	IntValue() (*int, error)
 
-	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 64 bits to represent losslessly.
-	Int64Value() (int64, error)
+	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
+	// or requires more than 64 bits to represent losslessly.
+	Int64Value() (*int64, error)
 
-	// BigIntValue returns the current value as a big.Integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer.
+	// BigIntValue returns the current value as a big.Integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
 
-	// FloatValue returns the current value as a 64-bit floating point number (if that
-	// makes sense). It returns an error if the current value is not an Ion float.
-	FloatValue() (float64, error)
+	// FloatValue returns the current value as a 64-bit floating point number (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value
+	// is not an Ion float.
+	FloatValue() (*float64, error)
 
-	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that
-	// makes sense). It returns an error if the current value is not an Ion decimal.
+	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value is
+	// not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
 	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
-	// an error if the current value is not an Ion timestamp.
-	TimestampValue() (Timestamp, error)
+	// nil if the value is null. It returns an error if the current value is not an Ion timestamp.
+	TimestampValue() (*Timestamp, error)
 
-	// StringValue returns the current value as a string (if that makes sense). It returns
-	// an error if the current value is not an Ion symbol or an Ion string.
+	// StringValue returns the current value as a string (if that makes sense). It returns nil if
+	// the value is null. It returns an error if the current value is not an Ion symbol or an Ion string.
 	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
@@ -252,14 +254,15 @@ func (r *reader) Annotations() []string {
 }
 
 // BoolValue returns the current value as a bool.
-func (r *reader) BoolValue() (bool, error) {
+func (r *reader) BoolValue() (*bool, error) {
 	if r.valueType != BoolType {
-		return false, &UsageError{"Reader.BoolValue", "value is not a bool"}
+		return nil, &UsageError{"Reader.BoolValue", "value is not an Ion bool"}
 	}
 	if r.value == nil {
-		return false, nil
+		return nil, nil
 	}
-	return r.value.(bool), nil
+	val := r.value.(bool)
+	return &val, nil
 }
 
 // IntSize returns the size of the current int value.
@@ -282,36 +285,38 @@ func (r *reader) IntSize() (IntSize, error) {
 }
 
 // IntValue returns the current value as an int.
-func (r *reader) IntValue() (int, error) {
+func (r *reader) IntValue() (*int, error) {
 	i, err := r.Int64Value()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if i > math.MaxInt32 || i < math.MinInt32 {
-		return 0, &UsageError{"Reader.IntValue", "value too large for an int32"}
+	if *i > math.MaxInt32 || *i < math.MinInt32 {
+		return nil, &UsageError{"Reader.IntValue", "value too large for an int32"}
 	}
-	return int(i), nil
+	val := int(*i)
+	return &val, nil
 }
 
 // Int64Value returns the current value as an int64.
-func (r *reader) Int64Value() (int64, error) {
+func (r *reader) Int64Value() (*int64, error) {
 	if r.valueType != IntType {
-		return 0, &UsageError{"Reader.Int64Value", "value is not an int"}
+		return nil, &UsageError{"Reader.Int64Value", "value is not an Ion int"}
 	}
 	if r.value == nil {
-		return 0, nil
+		return nil, nil
 	}
 
 	if i, ok := r.value.(int64); ok {
-		return i, nil
+		return &i, nil
 	}
 
 	bi := r.value.(*big.Int)
 	if bi.IsInt64() {
-		return bi.Int64(), nil
+		val := bi.Int64()
+		return &val, nil
 	}
 
-	return 0, &UsageError{"Reader.Int64Value", "value too large for an int64"}
+	return nil, &UsageError{"Reader.Int64Value", "value too large for an int64"}
 }
 
 // BigIntValue returns the current value as a big int.
@@ -330,14 +335,15 @@ func (r *reader) BigIntValue() (*big.Int, error) {
 }
 
 // FloatValue returns the current value as a float.
-func (r *reader) FloatValue() (float64, error) {
+func (r *reader) FloatValue() (*float64, error) {
 	if r.valueType != FloatType {
-		return 0, &UsageError{"Reader.FloatValue", "value is not a float"}
+		return nil, &UsageError{"Reader.FloatValue", "value is not an Ion float"}
 	}
 	if r.value == nil {
-		return 0.0, nil
+		return nil, nil
 	}
-	return r.value.(float64), nil
+	val := r.value.(float64)
+	return &val, nil
 }
 
 // DecimalValue returns the current value as a Decimal.
@@ -352,14 +358,15 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 }
 
 // TimestampValue returns the current value as a Timestamp.
-func (r *reader) TimestampValue() (Timestamp, error) {
+func (r *reader) TimestampValue() (*Timestamp, error) {
 	if r.valueType != TimestampType {
-		return Timestamp{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return nil, &UsageError{"Reader.TimestampValue", "value is not an Ion timestamp"}
 	}
 	if r.value == nil {
-		return Timestamp{}, nil
+		return nil, nil
 	}
-	return r.value.(Timestamp), nil
+	val := r.value.(Timestamp)
+	return &val, nil
 }
 
 // ByteValue returns the current value as a byte slice.

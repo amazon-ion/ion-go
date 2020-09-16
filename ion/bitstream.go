@@ -725,6 +725,7 @@ func (b *bitstream) readNsecs(length uint64) (int, bool, error) {
 func (b *bitstream) readDecimal(length uint64) (*Decimal, error) {
 	exp := int64(0)
 	coef := new(big.Int)
+	negZero := false
 
 	if length > 0 {
 		val, _, vlength, err := b.readVarIntLen(length)
@@ -745,9 +746,11 @@ func (b *bitstream) readDecimal(length uint64) (*Decimal, error) {
 		if err := b.readBigInt(length, coef); err != nil {
 			return nil, err
 		}
+
+		negZero = coef.Sign() == 0
 	}
 
-	return NewDecimal(coef, int32(exp)), nil
+	return NewDecimal(coef, int32(exp), negZero), nil
 }
 
 // ReadSymbolID reads a symbol value.
