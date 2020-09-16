@@ -456,9 +456,8 @@ func TestReadBinaryInts(t *testing.T) {
 	_int64(t, r, math.MaxInt64)
 	_int64(t, r, -math.MaxInt64)
 
-	_uint(t, r, math.MaxInt64+1)
-
 	i := new(big.Int).SetUint64(math.MaxInt64 + 1)
+	_bigInt(t, r, i)
 	_bigInt(t, r, new(big.Int).Neg(i))
 
 	_eof(t, r)
