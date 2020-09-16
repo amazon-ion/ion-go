@@ -245,7 +245,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteBool(val)
+			err = p.out.WriteBool(*val)
 
 		case ion.IntType:
 			size, err := in.IntSize()
@@ -259,21 +259,21 @@ func (p *processor) process(in ion.Reader) error {
 				if err != nil {
 					return p.error(read, err)
 				}
-				err = p.out.WriteInt(int64(val))
+				err = p.out.WriteInt(int64(*val))
 
 			case ion.Int64:
 				val, err := in.Int64Value()
 				if err != nil {
 					return p.error(read, err)
 				}
-				err = p.out.WriteInt(val)
+				err = p.out.WriteInt(*val)
 
 			case ion.Uint64:
 				val, err := in.Uint64Value()
 				if err != nil {
 					return p.error(read, err)
 				}
-				err = p.out.WriteUint(val)
+				err = p.out.WriteUint(*val)
 
 			case ion.BigInt:
 				val, err := in.BigIntValue()
@@ -291,7 +291,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteFloat(val)
+			err = p.out.WriteFloat(*val)
 
 		case ion.DecimalType:
 			val, err := in.DecimalValue()
@@ -305,7 +305,7 @@ func (p *processor) process(in ion.Reader) error {
 			if err != nil {
 				return p.error(read, err)
 			}
-			err = p.out.WriteTimestamp(val)
+			err = p.out.WriteTimestamp(*val)
 
 		case ion.SymbolType:
 			val, err := in.StringValue()

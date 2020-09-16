@@ -198,9 +198,9 @@ func (w *binaryWriter) WriteFloat(val float64) error {
 func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 	coef, exp := val.CoEx()
 
-	// If the value is 0. (aka 0d0) then L is zero, there are no length or
+	// If the value is positive 0. (aka 0d0) then L is zero, there are no length or
 	// representation fields, and the entire value is encoded as the single byte 0x50.
-	if coef.Sign() == 0 && int64(exp) == 0 {
+	if coef.Sign() == 0 && int64(exp) == 0 && !val.isNegZero {
 		buf := make([]byte, 0, 0)
 		buf = appendTag(buf, 0x50, 0)
 
@@ -209,14 +209,24 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 
 	// Otherwise, length or representation fields are present and must be considered.
 	vlength := varIntLen(int64(exp))
-	vlength += bigIntLen(coef)
+
+	if val.isNegZero {
+		vlength++
+	} else {
+		vlength += bigIntLen(coef)
+	}
 
 	bufLength := vlength + tagLen(vlength)
 	buf := make([]byte, 0, bufLength)
 
 	buf = appendTag(buf, 0x50, vlength)
 	buf = appendVarInt(buf, int64(exp))
-	buf = appendBigInt(buf, coef)
+
+	if val.isNegZero {
+		buf = append(buf, 0x80)
+	} else {
+		buf = appendBigInt(buf, coef)
+	}
 
 	return w.writeValue("Writer.WriteDecimal", buf)
 }

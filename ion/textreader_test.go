@@ -429,8 +429,8 @@ func TestInts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
+			if *val != eval {
+				t.Errorf("expected %v, got %v", eval, *val)
 			}
 		})
 	}
@@ -449,8 +449,8 @@ func TestInts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
+			if *val != eval {
+				t.Errorf("expected %v, got %v", eval, *val)
 			}
 		})
 	}
@@ -646,8 +646,8 @@ func _intAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eval i
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -673,8 +673,8 @@ func _int64AF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eval
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -700,8 +700,8 @@ func _uintAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eval 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -748,11 +748,11 @@ func _floatAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eval
 	}
 
 	if math.IsNaN(eval) {
-		if !math.IsNaN(val) {
-			t.Errorf("expected %v, got %v", eval, val)
+		if !math.IsNaN(*val) {
+			t.Errorf("expected %v, got %v", eval, *val)
 		}
-	} else if eval != val {
-		t.Errorf("expected %v, got %v", eval, val)
+	} else if eval != *val {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -791,8 +791,8 @@ func _timestampAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, 
 		t.Fatal(err)
 	}
 
-	if !val.Equal(eval) {
-		t.Errorf("expected %v, got %v", eval, val)
+	if !eval.Equal(*val) {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 
@@ -873,8 +873,8 @@ func _boolAF(t *testing.T, r Reader, efn *SymbolToken, etas []SymbolToken, eval 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
+	if *val != eval {
+		t.Errorf("expected %v, got %v", eval, *val)
 	}
 }
 

@@ -303,7 +303,8 @@ func TestUnmarshalBinary(t *testing.T) {
 			case *SymbolToken:
 				thisSymbol := ionSymbol{thisValue}
 				res = thisSymbol.eq(ionSymbol{eval.(*SymbolToken)})
-
+			case *interface{}:
+				res = reflect.DeepEqual(*thisValue, eval)
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -630,8 +631,16 @@ func TestDecode(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			if !reflect.DeepEqual(val, eval) {
+			res := false
+			switch thisValue := val.(type) {
+			case *float64:
+				res = cmpFloats(*thisValue, eval)
+			case *Timestamp:
+				res = cmpTimestamps(*thisValue, eval)
+			default:
+				res = reflect.DeepEqual(val, eval)
+			}
+			if !res {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 		})
