@@ -117,9 +117,7 @@ var equivsSkipList = []string{
 	"systemSymbols.ion",
 }
 
-var nonEquivsSkipList = []string{
-	"floatsVsDecimals.ion",
-}
+var nonEquivsSkipList = []string{}
 
 func TestLoadGood(t *testing.T) {
 	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
