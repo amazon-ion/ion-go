@@ -208,7 +208,7 @@ func TestWriteTextFloat(t *testing.T) {
 		assert.NoError(t, w.FieldName("z"))
 		assert.NoError(t, w.WriteFloat(0.0))
 		assert.NoError(t, w.FieldName("nz"))
-		assert.NoError(t, w.WriteFloat(-1.0 / math.Inf(1)))
+		assert.NoError(t, w.WriteFloat(-1.0/math.Inf(1)))
 
 		assert.NoError(t, w.FieldName("s"))
 		assert.NoError(t, w.WriteFloat(12.34))
