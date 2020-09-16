@@ -165,8 +165,11 @@ func (d *Decoder) decode() (interface{}, error) {
 	case TimestampType:
 		return d.r.TimestampValue()
 
-	case StringType, SymbolType:
+	case StringType:
 		return d.r.StringValue()
+
+	case SymbolType:
+		return d.r.SymbolValue()
 
 	case BlobType, ClobType:
 		return d.r.ByteValue()
@@ -211,8 +214,12 @@ func (d *Decoder) decodeMap() (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	for d.r.Next() {
-		if d.r.FieldName() != nil {
-			name := d.r.FieldName()
+		fieldName, err := d.r.FieldName()
+		if err != nil {
+			return nil, err
+		}
+		if fieldName != nil && fieldName.Text != nil {
+			name := fieldName.Text
 			value, err := d.decode()
 			if err != nil {
 				return nil, err
@@ -304,8 +311,11 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 	case TimestampType:
 		return d.decodeTimestampTo(v)
 
-	case StringType, SymbolType:
+	case StringType:
 		return d.decodeStringTo(v)
+
+	case SymbolType:
+		return d.decodeSymbolTo(v)
 
 	case BlobType, ClobType:
 		return d.decodeLobTo(v)
@@ -489,6 +499,35 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 	return fmt.Errorf("ion: cannot decode timestamp to %v", v.Type().String())
 }
 
+func (d *Decoder) decodeSymbolTo(v reflect.Value) error {
+	val, err := d.r.SymbolValue()
+	if err != nil {
+		return err
+	}
+
+	switch v.Kind() {
+	case reflect.String:
+		if val != nil {
+			v.SetString(*val.Text)
+		}
+		return nil
+
+	case reflect.Struct:
+		if v.Type() == symbolType {
+			v.Set(reflect.ValueOf(val))
+			return d.attachAnnotations(v)
+		}
+		return d.decodeToStructWithAnnotation(v, symbolType.Kind())
+
+	case reflect.Interface:
+		if v.NumMethod() == 0 {
+			v.Set(reflect.ValueOf(val))
+			return nil
+		}
+	}
+	return fmt.Errorf("ion: cannot decode symbol to %v", v.Type().String())
+}
+
 func (d *Decoder) decodeStringTo(v reflect.Value) error {
 	val, err := d.r.StringValue()
 	if err != nil {
@@ -583,16 +622,21 @@ func (d *Decoder) decodeStructToStruct(v reflect.Value) error {
 	}
 
 	for d.r.Next() {
-		name := d.r.FieldName()
-		field := findField(fields, *name)
-		if field != nil {
-			subv, err := findSubvalue(v, field)
-			if err != nil {
-				return err
-			}
+		fieldName, err := d.r.FieldName()
+		if err != nil {
+			return err
+		}
+		if fieldName != nil && fieldName.Text != nil {
+			field := findField(fields, *fieldName.Text)
+			if field != nil {
+				subv, err := findSubvalue(v, field)
+				if err != nil {
+					return err
+				}
 
-			if err := d.decodeTo(subv); err != nil {
-				return err
+				if err := d.decodeTo(subv); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -649,21 +693,27 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 	}
 
 	for d.r.Next() {
-		name := d.r.FieldName()
-		if err := d.decodeTo(subv); err != nil {
+		fieldName, err := d.r.FieldName()
+		if err != nil {
 			return err
 		}
 
-		var kv reflect.Value
-		switch t.Key().Kind() {
-		case reflect.String:
-			kv = reflect.ValueOf(*name)
-		default:
-			panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
-		}
+		if fieldName != nil && fieldName.Text != nil {
+			if err := d.decodeTo(subv); err != nil {
+				return err
+			}
 
-		if kv.IsValid() {
-			v.SetMapIndex(kv, subv)
+			var kv reflect.Value
+			switch t.Key().Kind() {
+			case reflect.String:
+				kv = reflect.ValueOf(*fieldName.Text)
+			default:
+				panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
+			}
+
+			if kv.IsValid() {
+				v.SetMapIndex(kv, subv)
+			}
 		}
 	}
 
@@ -820,7 +870,11 @@ func (d *Decoder) attachAnnotations(v reflect.Value) error {
 			if err != nil {
 				return err
 			}
-			annotations := d.r.Annotations()
+
+			annotations, err := d.r.Annotations()
+			if err != nil {
+				return err
+			}
 			subValue.Set(reflect.ValueOf(annotations))
 			break
 		}

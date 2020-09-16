@@ -170,26 +170,29 @@ func (w *binaryWriter) writeBigInt(val *big.Int) error {
 
 // WriteFloat writes a floating-point value.
 func (w *binaryWriter) WriteFloat(val float64) error {
-	if val == 0 {
+	if val == 0 && !math.Signbit(val) {
+		// Positive zero is represented as just one byte.
 		return w.writeValue("Writer.WriteFloat", []byte{0x40})
+	} else if math.IsNaN(val) {
+		return w.writeValue("Writer.WriteFloat", []byte{0x44, 0x7F, 0xC0, 0x00, 0x00})
 	}
+
+	var bs []byte
 
 	// Can this be losslessly represented as a float32?
 	if val == float64(float32(val)) {
-		bs := make([]byte, 5)
+		bs = make([]byte, 5)
 		bs[0] = 0x44
 
 		bits := math.Float32bits(float32(val))
 		binary.BigEndian.PutUint32(bs[1:], bits)
+	} else {
+		bs = make([]byte, 9)
+		bs[0] = 0x48
 
-		return w.writeValue("Writer.WriteFloat", bs)
+		bits := math.Float64bits(val)
+		binary.BigEndian.PutUint64(bs[1:], bits)
 	}
-
-	bs := make([]byte, 9)
-	bs[0] = 0x48
-
-	bits := math.Float64bits(val)
-	binary.BigEndian.PutUint64(bs[1:], bits)
 
 	return w.writeValue("Writer.WriteFloat", bs)
 }

@@ -216,14 +216,20 @@ func (p *processor) process(in ion.Reader) error {
 
 	for in.Next() {
 		p.idx++
-		name := in.FieldName()
-		if name != nil {
-			if err = p.out.FieldName(*name); err != nil {
+		name, e := in.FieldName()
+		if e != nil {
+			return p.error(read, err)
+		}
+		if name != nil && name.Text != nil {
+			if err = p.out.FieldName(*name.Text); err != nil {
 				return p.error(write, err)
 			}
 		}
 
-		annos := in.Annotations()
+		annos, err := in.Annotations()
+		if err != nil {
+			return p.error(read, err)
+		}
 		if len(annos) > 0 {
 			if err = p.out.Annotations(annos...); err != nil {
 				return p.error(write, err)
