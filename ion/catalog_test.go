@@ -39,7 +39,7 @@ func TestCatalog(t *testing.T) {
 	out := NewBinaryWriter(&buf, sst)
 
 	for i := 0; i < 10; i++ {
-		out.Annotation("item")
+		out.Annotation(SymbolToken{Text: newString("item"), LocalSID: SymbolIDUnknown})
 		MarshalTo(out, &Item{
 			ID:          i,
 			Name:        fmt.Sprintf("Item %v", i),

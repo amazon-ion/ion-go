@@ -35,9 +35,9 @@ type testingFunc func(t *testing.T, path string)
 
 type ionItem struct {
 	ionType     Type
-	annotations []string
+	annotations []SymbolToken
 	value       []interface{}
-	fieldName   string
+	fieldName   SymbolToken
 }
 
 func (i *ionItem) equal(o ionItem) bool {
@@ -59,6 +59,8 @@ func (i *ionItem) equal(o ionItem) bool {
 		return cmpValueSlices(i.value, o.value)
 	case StructType:
 		return cmpStruct(i.value, o.value)
+	case SymbolType:
+		return cmpSymbols(i.value[0], o.value[0])
 	default:
 		return reflect.DeepEqual(i.value, o.value)
 	}
@@ -301,7 +303,11 @@ func testEquivalency(t *testing.T, fp string, eq bool) {
 	r := NewReader(file)
 	topLevelCounter := 0
 	for r.Next() {
-		embDoc := isEmbeddedDoc(r.Annotations())
+		annotations, err := r.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		embDoc := isEmbeddedDoc(annotations)
 		ionType := r.Type()
 		switch ionType {
 		case StructType, ListType, SexpType:
@@ -355,11 +361,9 @@ func handleEmbeddedDoc(t *testing.T, r Reader) [][]ionItem {
 	return values
 }
 
-func isEmbeddedDoc(an []string) bool {
-	for _, a := range an {
-		if a == "embedded_documents" {
-			return true
-		}
+func isEmbeddedDoc(an []SymbolToken) bool {
+	if len(an) >= 1 && an[0].Text != nil && *an[0].Text == "embedded_documents" {
+		return true
 	}
 	return false
 }
@@ -433,7 +437,7 @@ func isInSkipList(skipList []string, fn string) bool {
 // Read all the values in the reader and write them in the writer
 func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
-		fns, err := reader.FieldNameSymbol()
+		fns, err := reader.FieldName()
 		if err == nil && reader.IsInStruct() && fns != nil {
 			err = writer.FieldNameSymbol(*fns)
 			if err != nil {
@@ -441,7 +445,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			}
 		}
 
-		an := reader.Annotations()
+		an, err := reader.Annotations()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if len(an) > 0 {
 			err := writer.Annotations(an...)
 			if err != nil {
@@ -579,15 +587,17 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			}
 
 		case SymbolType:
-			val, err := reader.StringValue()
+			val, err := reader.SymbolValue()
 			if err != nil {
 				t.Errorf("Something went wrong while reading a Symbol value: " + err.Error())
 			}
 
 			if val != nil {
-				err = writer.WriteSymbol(*val)
-				if err != nil {
-					t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+				if val.Text != nil {
+					err = writer.WriteSymbol(*val.Text)
+					if err != nil {
+						t.Errorf("Something went wrong while writing a Symbol value: " + err.Error())
+					}
 				}
 			}
 
@@ -688,12 +698,19 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 func readCurrentValue(t *testing.T, reader Reader) ionItem {
 	var ionItem ionItem
 
-	an := reader.Annotations()
+	an, err := reader.Annotations()
+	if err != nil {
+		t.Errorf("Something went wrong when reading annotations. " + err.Error())
+	}
+
 	if len(an) > 0 {
 		ionItem.annotations = an
 	}
 
-	fn := reader.FieldName()
+	fn, err := reader.FieldName()
+	if err != nil {
+		t.Errorf("Something went wrong when reading field name. " + err.Error())
+	}
 	if fn != nil {
 		ionItem.fieldName = *fn
 	}
@@ -765,7 +782,7 @@ func readCurrentValue(t *testing.T, reader Reader) ionItem {
 		ionItem.ionType = TimestampType
 
 	case SymbolType:
-		val, err := reader.StringValue()
+		val, err := reader.SymbolValue()
 		if err != nil {
 			t.Errorf("Something went wrong when reading Symbol value. " + err.Error())
 		}
