@@ -21,6 +21,9 @@ import (
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadTextSymbols(t *testing.T) {
@@ -65,11 +68,8 @@ func TestReadTextFieldNames(t *testing.T) {
 				}`
 
 	r := NewReaderString(ionText)
-	r.Next()
-	err := r.StepIn()
-	if err != nil {
-		t.Errorf("stepin returned err: %v", err.Error())
-	}
+	assert.True(t, r.Next())
+	assert.NoError(t, r.StepIn())
 	_nextF(t, r, nil, SymbolToken{Text: nil, LocalSID: 0}, false, false)
 	_nextF(t, r, newString("$4"), SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
 	_nextF(t, r, newString("name"), SymbolToken{Text: newString("name"), LocalSID: 4}, false, false)
@@ -101,12 +101,8 @@ func TestReadSexps(t *testing.T) {
 	}
 
 	test("(\t)", func(t *testing.T, r Reader) {
-		if r.Next() {
-			t.Errorf("next returned true")
-		}
-		if r.Err() != nil {
-			t.Fatal(r.Err())
-		}
+		assert.False(t, r.Next())
+		require.NoError(t, r.Err())
 	})
 
 	test("(foo)", func(t *testing.T, r Reader) {
@@ -224,12 +220,9 @@ func TestClobs(t *testing.T) {
 			_next(t, r, ClobType)
 
 			val, err := r.ByteValue()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+
+			assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", eval, val)
 
 			_eof(t, r)
 		})
@@ -248,12 +241,9 @@ func TestBlobs(t *testing.T) {
 			_next(t, r, BlobType)
 
 			val, err := r.ByteValue()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+
+			assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", eval, val)
 
 			_eof(t, r)
 		})
@@ -271,13 +261,9 @@ func TestTimestamps(t *testing.T) {
 			_nextAF(t, r, TimestampType, nil, etas)
 
 			val, err := r.TimestampValue()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if !val.Equal(eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, val.Equal(eval), "expected %v, got %v", eval, val)
 
 			_eof(t, r)
 		})
@@ -314,12 +300,8 @@ func TestDecimals(t *testing.T) {
 			_nextAF(t, r, DecimalType, nil, etas)
 
 			val, err := r.DecimalValue()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !ee.Equal(val) {
-				t.Errorf("expected %v, got %v", ee, val)
-			}
+			require.NoError(t, err)
+			assert.True(t, ee.Equal(val), "expected %v, got %v", ee, val)
 
 			_eof(t, r)
 		})
@@ -374,20 +356,14 @@ func TestInts(t *testing.T) {
 	}
 
 	test("null.int", func(t *testing.T, r Reader) {
-		if !r.IsNull() {
-			t.Fatal("expected isnull=true, got false")
-		}
+		require.True(t, r.IsNull())
 	})
 
 	testInt := func(str string, eval int) {
 		test(str, func(t *testing.T, r Reader) {
 			val, err := r.IntValue()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -402,12 +378,8 @@ func TestInts(t *testing.T) {
 	testInt64 := func(str string, eval int64) {
 		test(str, func(t *testing.T, r Reader) {
 			val, err := r.Int64Value()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -417,14 +389,10 @@ func TestInts(t *testing.T) {
 	testBigInt := func(str string, estr string) {
 		test(str, func(t *testing.T, r Reader) {
 			val, err := r.BigIntValue()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			eval, _ := (&big.Int{}).SetString(estr, 0)
-			if eval.Cmp(val) != 0 {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, eval.Cmp(val) == 0, "expected %v, got %v", eval, val)
 		})
 	}
 
@@ -488,20 +456,13 @@ func TestTopLevelOperators(t *testing.T) {
 
 	_symbol(t, r, newString("a"), SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
 
-	if r.Next() {
-		t.Errorf("next returned true")
-	}
-	if r.Err() == nil {
-		t.Error("no error")
-	}
+	assert.False(t, r.Next())
+	assert.Error(t, r.Err())
 }
 
 func TestTrsToString(t *testing.T) {
 	for i := trsDone; i <= trsAfterValue+1; i++ {
-		str := i.String()
-		if str == "" {
-			t.Errorf("expected a non-empty string for trs %v", uint8(i))
-		}
+		assert.NotEmpty(t, i.String(), "expected a non-empty string for trs %v", uint8(i))
 	}
 }
 
@@ -509,32 +470,22 @@ func TestInStruct(t *testing.T) {
 	r := NewReaderString("[ { a:() } ]")
 
 	r.Next()
-	r.StepIn() // In the list, before the struct
-	if r.IsInStruct() {
-		t.Fatal("IsInStruct returned true before we were in a struct")
-	}
+	assert.NoError(t, r.StepIn()) // In the list, before the struct
+	require.False(t, r.IsInStruct(), "IsInStruct returned true before we were in a struct")
 
 	r.Next()
-	r.StepIn() // In the struct
-	if !r.IsInStruct() {
-		t.Fatal("We were in a struct, IsInStruct should have returned true")
-	}
+	assert.NoError(t, r.StepIn()) // In the struct
+	require.True(t, r.IsInStruct(), "We were in a struct, IsInStruct should have returned true")
 
 	r.Next()
-	r.StepIn() // In the Sexp
-	if r.IsInStruct() {
-		t.Fatal("IsInStruct returned true before we were in a struct")
-	}
+	assert.NoError(t, r.StepIn()) // In the Sexp
+	require.False(t, r.IsInStruct(), "IsInStruct returned true before we were in a struct")
 
-	r.StepOut() // Out of the Sexp, back in the struct again
-	if !r.IsInStruct() {
-		t.Fatal("We were in a struct, IsInStruct should have returned true")
-	}
+	assert.NoError(t, r.StepOut()) // Out of the Sexp, back in the struct again
+	require.True(t, r.IsInStruct(), "We were in a struct, IsInStruct should have returned true")
 
-	r.StepOut() // out of struct, back in the list again
-	if r.IsInStruct() {
-		t.Fatal("IsInStruct returned true before we were in a struct")
-	}
+	assert.NoError(t, r.StepOut()) // out of struct, back in the list again
+	require.False(t, r.IsInStruct(), "IsInStruct returned true before we were in a struct")
 }
 
 type containerhandler func(t *testing.T, r Reader)
@@ -565,19 +516,13 @@ func _listAF(t *testing.T, r Reader, efn *string, etas []string, f containerhand
 
 func _containerAF(t *testing.T, r Reader, et Type, efn *string, etas []string, f containerhandler) {
 	_nextAF(t, r, et, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.%v", et, et)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.%v", et, et)
 
-	if err := r.StepIn(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.StepIn())
 
 	f(t, r)
 
-	if err := r.StepOut(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, r.StepOut())
 }
 
 func _int(t *testing.T, r Reader, eval int) {
@@ -586,25 +531,15 @@ func _int(t *testing.T, r Reader, eval int) {
 
 func _intAF(t *testing.T, r Reader, efn *string, etas []string, eval int) {
 	_nextAF(t, r, IntType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.int", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.int", eval)
 
 	size, err := r.IntSize()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != Int32 {
-		t.Errorf("expected size=Int32, got %v", size)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, Int32, size)
 
 	val, err := r.IntValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, eval, val)
 }
 
 func _int64(t *testing.T, r Reader, eval int64) {
@@ -613,25 +548,15 @@ func _int64(t *testing.T, r Reader, eval int64) {
 
 func _int64AF(t *testing.T, r Reader, efn *string, etas []string, eval int64) {
 	_nextAF(t, r, IntType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.int", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.int", eval)
 
 	size, err := r.IntSize()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != Int64 {
-		t.Errorf("expected size=Int64, got %v", size)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, Int64, size)
 
 	val, err := r.Int64Value()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, eval, val)
 }
 
 func _uint(t *testing.T, r Reader, eval uint64) {
@@ -640,25 +565,15 @@ func _uint(t *testing.T, r Reader, eval uint64) {
 
 func _uintAF(t *testing.T, r Reader, efn *string, etas []string, eval uint64) {
 	_nextAF(t, r, IntType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.int", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.int", eval)
 
 	size, err := r.IntSize()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != Uint64 {
-		t.Errorf("expected size=Uint, got %v", size)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, Uint64, size)
 
 	val, err := r.Uint64Value()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, eval, val)
 }
 
 func _bigInt(t *testing.T, r Reader, eval *big.Int) {
@@ -667,25 +582,15 @@ func _bigInt(t *testing.T, r Reader, eval *big.Int) {
 
 func _bigIntAF(t *testing.T, r Reader, efn *string, etas []string, eval *big.Int) {
 	_nextAF(t, r, IntType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.int", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.int", eval)
 
 	size, err := r.IntSize()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size != BigInt {
-		t.Errorf("expected size=BigInt, got %v", size)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, BigInt, size)
 
 	val, err := r.BigIntValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val.Cmp(eval) != 0 {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.True(t, val.Cmp(eval) == 0, "expected %v, got %v", eval, val)
 }
 
 func _float(t *testing.T, r Reader, eval float64) {
@@ -694,21 +599,15 @@ func _float(t *testing.T, r Reader, eval float64) {
 
 func _floatAF(t *testing.T, r Reader, efn *string, etas []string, eval float64) {
 	_nextAF(t, r, FloatType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.float", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.float", eval)
 
 	val, err := r.FloatValue()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if math.IsNaN(eval) {
-		if !math.IsNaN(val) {
-			t.Errorf("expected %v, got %v", eval, val)
-		}
-	} else if eval != val {
-		t.Errorf("expected %v, got %v", eval, val)
+		assert.True(t, math.IsNaN(val), "expected %v, got %v", eval, val)
+	} else {
+		assert.Equal(t, eval, val)
 	}
 }
 
@@ -718,18 +617,12 @@ func _decimal(t *testing.T, r Reader, eval *Decimal) {
 
 func _decimalAF(t *testing.T, r Reader, efn *string, etas []string, eval *Decimal) {
 	_nextAF(t, r, DecimalType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.decimal", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.decimal", eval)
 
 	val, err := r.DecimalValue()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !eval.Equal(val) {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	assert.True(t, eval.Equal(val), "expected %v, got %v", eval, val)
 }
 
 func _timestamp(t *testing.T, r Reader, eval Timestamp) {
@@ -738,18 +631,12 @@ func _timestamp(t *testing.T, r Reader, eval Timestamp) {
 
 func _timestampAF(t *testing.T, r Reader, efn *string, etas []string, eval Timestamp) {
 	_nextAF(t, r, TimestampType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.timestamp", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.timestamp", eval)
 
 	val, err := r.TimestampValue()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if !val.Equal(eval) {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	assert.True(t, val.Equal(eval), "expected %v, got %v", eval, val)
 }
 
 func _string(t *testing.T, r Reader, eval *string) {
@@ -758,20 +645,15 @@ func _string(t *testing.T, r Reader, eval *string) {
 
 func _stringAF(t *testing.T, r Reader, efn *string, etas []string, eval *string) {
 	_nextAF(t, r, StringType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.string", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.string", eval)
 
 	val, err := r.StringValue()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if eval == nil {
-		if val != eval {
-			t.Errorf("expected %v, got %v", eval, val)
-		}
-	} else if *val != *eval {
-		t.Errorf("expected %v, got %v", *eval, *val)
+		assert.Equal(t, eval, val)
+	} else {
+		assert.Equal(t, *eval, *val)
 	}
 }
 
@@ -789,40 +671,26 @@ func _symbolAF(t *testing.T, r Reader, efn *string, etas []string, eval *string,
 		r.Next()
 	}
 
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.symbol", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.symbol", eval)
 
 	val, err := r.StringValue()
 	if isStringValueError {
-		if err == nil {
-			t.Fatal("stringvalue did not return an error")
-		}
+		require.Error(t, err)
 	} else {
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if eval == nil {
-			if eval != val {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
-		} else if *val != *eval {
-			t.Errorf("expected %v, got %v", *eval, *val)
+			assert.Equal(t, eval, val)
+		} else {
+			assert.Equal(t, *eval, *val)
 		}
 	}
 
 	symbolVal, err := r.SymbolValue()
 	if isSymbolValueError {
-		if err == nil {
-			t.Fatal("symboltoken did not return an error")
-		}
+		assert.Error(t, err)
 	} else {
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !symbolVal.Equal(&evalSt) {
-			t.Errorf("expected %v, got %v", &evalSt, symbolVal)
-		}
+		require.NoError(t, err)
+		assert.True(t, symbolVal.Equal(&evalSt), "expected %v, got %v", &evalSt, symbolVal)
 	}
 }
 
@@ -832,17 +700,11 @@ func _bool(t *testing.T, r Reader, eval bool) {
 
 func _boolAF(t *testing.T, r Reader, efn *string, etas []string, eval bool) {
 	_nextAF(t, r, BoolType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.bool", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.bool", eval)
 
 	val, err := r.BoolValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if val != eval {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, eval, val, "expected %v, got %v", eval, val)
 }
 
 func _clob(t *testing.T, r Reader, eval []byte) {
@@ -851,17 +713,11 @@ func _clob(t *testing.T, r Reader, eval []byte) {
 
 func _clobAF(t *testing.T, r Reader, efn *string, etas []string, eval []byte) {
 	_nextAF(t, r, ClobType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.clob", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.clob", eval)
 
 	val, err := r.ByteValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(val, eval) {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", eval, val)
 }
 
 func _blob(t *testing.T, r Reader, eval []byte) {
@@ -870,17 +726,11 @@ func _blob(t *testing.T, r Reader, eval []byte) {
 
 func _blobAF(t *testing.T, r Reader, efn *string, etas []string, eval []byte) {
 	_nextAF(t, r, BlobType, efn, etas)
-	if r.IsNull() {
-		t.Fatalf("expected %v, got null.blob", eval)
-	}
+	require.False(t, r.IsNull(), "expected %v, got null.blob", eval)
 
 	val, err := r.ByteValue()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(val, eval) {
-		t.Errorf("expected %v, got %v", eval, val)
-	}
+	require.NoError(t, err)
+	assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", eval, val)
 }
 
 func _null(t *testing.T, r Reader, et Type) {
@@ -889,9 +739,7 @@ func _null(t *testing.T, r Reader, et Type) {
 
 func _nullAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
 	_nextAF(t, r, et, efn, etas)
-	if !r.IsNull() {
-		t.Error("isnull returned false")
-	}
+	assert.True(t, r.IsNull())
 }
 
 func _next(t *testing.T, r Reader, et Type) {
@@ -899,20 +747,14 @@ func _next(t *testing.T, r Reader, et Type) {
 }
 
 func _nextAF(t *testing.T, r Reader, et Type, efn *string, etas []string) {
-	if !r.Next() {
-		t.Fatal(r.Err())
-	}
-	if r.Type() != et {
-		t.Fatalf("expected %v, got %v", et, r.Type())
-	}
+	require.True(t, r.Next(), "r.Next() failed with error: %v", r.Err())
+	require.Equal(t, et, r.Type())
 
 	fn := r.FieldName()
-	if efn != nil && fn != nil && *efn != *fn {
-		t.Errorf("expected fieldname=%v, got %v", *efn, *fn)
+	if efn != nil && fn != nil {
+		assert.Equal(t, *efn, *fn)
 	}
-	if !_strequals(etas, r.Annotations()) {
-		t.Errorf("expected type annotations=%v, got %v", etas, r.Annotations())
-	}
+	assert.True(t, _strequals(etas, r.Annotations()), "expected type annotations=%v, got %v", etas, r.Annotations())
 }
 
 func _nextF(t *testing.T, r Reader, efn *string, efns SymbolToken, isFieldNameSymbolError bool, isNextError bool) {
@@ -921,22 +763,16 @@ func _nextF(t *testing.T, r Reader, efn *string, efns SymbolToken, isFieldNameSy
 	}
 
 	fn := r.FieldName()
-	if efn != nil && fn != nil && *efn != *fn {
-		t.Errorf("expected fieldname=%v, got %v", *efn, *fn)
+	if efn != nil && fn != nil {
+		assert.Equal(t, *efn, *fn)
 	}
 
 	fns, err := r.FieldNameSymbol()
 	if isFieldNameSymbolError {
-		if err == nil {
-			t.Fatal("stringvalue did not return an error")
-		}
+		require.Error(t, err)
 	} else {
-		if err != nil {
-			t.Errorf("fieldnamesymbol returned an error: %v", err.Error())
-		}
-		if !efns.Equal(fns) {
-			t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fns)
-		}
+		assert.NoError(t, err)
+		assert.True(t, efns.Equal(fns), "expected fieldnamesymbol=%v, got %v", efns, fns)
 	}
 }
 
@@ -955,10 +791,6 @@ func _strequals(a, b []string) bool {
 }
 
 func _eof(t *testing.T, r Reader) {
-	if r.Next() {
-		t.Fatal("next returned true")
-	}
-	if r.Err() != nil {
-		t.Fatal(r.Err())
-	}
+	require.False(t, r.Next())
+	require.NoError(t, r.Err())
 }

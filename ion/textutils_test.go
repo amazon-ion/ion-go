@@ -19,26 +19,23 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseTimestamp(t *testing.T) {
 	test := func(str string, eval string, expectedPrecision TimestampPrecision, expectedKind TimezoneKind, expectedFractionSeconds uint8) {
 		t.Run(str, func(t *testing.T) {
 			val, err := parseTimestamp(str)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			et, err := time.Parse(time.RFC3339Nano, eval)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			expectedTimestamp := NewTimestampWithFractionalSeconds(et, expectedPrecision, expectedKind, expectedFractionSeconds)
 
-			if !val.Equal(expectedTimestamp) {
-				t.Errorf("expected %v, got %v", expectedTimestamp, val)
-			}
+			assert.True(t, val.Equal(expectedTimestamp), "expected %v, got %v", expectedTimestamp, val)
 		})
 	}
 
@@ -76,13 +73,9 @@ func TestWriteSymbol(t *testing.T) {
 	test := func(sym, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			buf := strings.Builder{}
-			if err := writeSymbol(sym, &buf); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writeSymbol(sym, &buf))
 			actual := buf.String()
-			if actual != expected {
-				t.Errorf("expected \"%v\", got \"%v\"", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -104,9 +97,7 @@ func TestSymbolNeedsQuoting(t *testing.T) {
 	test := func(sym string, expected bool) {
 		t.Run(sym, func(t *testing.T) {
 			actual := symbolNeedsQuoting(sym)
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -139,14 +130,9 @@ func TestWriteEscapedSymbol(t *testing.T) {
 	test := func(sym, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			buf := strings.Builder{}
-			if err := writeEscapedSymbol(sym, &buf); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writeEscapedSymbol(sym, &buf))
 			actual := buf.String()
-			if actual != expected {
-				t.Errorf("bad encoding of \"%v\": \"%v\"",
-					expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -160,14 +146,9 @@ func TestWriteEscapedChar(t *testing.T) {
 	test := func(c byte, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			buf := strings.Builder{}
-			if err := writeEscapedChar(c, &buf); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, writeEscapedChar(c, &buf))
 			actual := buf.String()
-			if actual != expected {
-				t.Errorf("bad encoding of '%v': \"%v\"",
-					expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
