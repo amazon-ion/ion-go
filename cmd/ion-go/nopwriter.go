@@ -36,11 +36,11 @@ func (nopwriter) FieldNameSymbol(val ion.SymbolToken) error {
 	return nil
 }
 
-func (nopwriter) Annotation(string) error {
+func (nopwriter) Annotation(ion.SymbolToken) error {
 	return nil
 }
 
-func (nopwriter) Annotations(...string) error {
+func (nopwriter) Annotations(...ion.SymbolToken) error {
 	return nil
 }
 

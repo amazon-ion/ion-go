@@ -29,6 +29,7 @@ type ionEqual interface {
 type ionFloat struct{ float64 }
 type ionDecimal struct{ *Decimal }
 type ionTimestamp struct{ Timestamp }
+type ionSymbol struct{ *SymbolToken }
 
 func (thisFloat ionFloat) eq(other ionEqual) bool {
 	return cmp.Equal(thisFloat.float64, other.(ionFloat).float64, cmpopts.EquateNaNs())
@@ -51,8 +52,32 @@ func (thisTimestamp ionTimestamp) eq(other ionEqual) bool {
 	return false
 }
 
-func cmpAnnotations(thisAnnotations, otherAnnotations []string) bool {
-	return reflect.DeepEqual(thisAnnotations, otherAnnotations)
+func (thisSymbol ionSymbol) eq(other ionEqual) bool {
+	if val, ok := other.(ionSymbol); ok {
+		return thisSymbol.SymbolToken.Equal(val.SymbolToken)
+	}
+	return false
+}
+
+func cmpAnnotations(thisAnnotations, otherAnnotations []SymbolToken) bool {
+	if len(thisAnnotations) == 0 && len(otherAnnotations) == 0 {
+		return true
+	}
+
+	if len(thisAnnotations) != len(otherAnnotations) {
+		return false
+	}
+
+	res := false
+	for idx, this := range thisAnnotations {
+		other := otherAnnotations[idx]
+		res = this.Equal(&other)
+
+		if !res {
+			return false
+		}
+	}
+	return res
 }
 
 func cmpFloats(thisValue, otherValue interface{}) bool {
@@ -101,6 +126,16 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func cmpSymbols(thisValue, otherValue interface{}) bool {
+	val1 := thisValue.(*SymbolToken)
+	val2 := otherValue.(*SymbolToken)
+
+	if val1 == nil || val2 == nil {
+		return val1 == nil && val2 == nil
+	}
+	return val1.Equal(val2)
 }
 
 func cmpValueSlices(thisValues, otherValues []interface{}) bool {
@@ -202,7 +237,7 @@ func containersEquality(this, other interface{}) bool {
 	default:
 		otherItem := other.(ionItem)
 		thisItem := this.(ionItem)
-		if thisItem.fieldName == otherItem.fieldName && thisItem.equal(otherItem) {
+		if thisItem.fieldName.Equal(&otherItem.fieldName) && thisItem.equal(otherItem) {
 			return true
 		}
 	}

@@ -267,7 +267,7 @@ func (r *binaryReader) readFieldName() error {
 		return err
 	}
 
-	r.fieldNameSymbol = &st
+	r.fieldName = &st
 	return nil
 }
 

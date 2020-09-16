@@ -183,13 +183,13 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		}
 
 		if tok == tokenSymbolQuoted {
-			t.fieldNameSymbol = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			t.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
 			st, err := NewSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return false, err
 			}
-			t.fieldNameSymbol = &st
+			t.fieldName = &st
 		}
 
 		// Skip over the following colon.
@@ -253,6 +253,10 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 			token, err := NewSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return false, err
+			}
+
+			if tok == tokenSymbolQuoted {
+				token = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 			}
 
 			t.annotations = append(t.annotations, token)
@@ -428,7 +432,7 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 	valueType := SymbolType
 	var value interface{} = val
 
-	if tok == tokenSymbol || tok == tokenSymbolOperator {
+	if tok == tokenSymbol || tok == tokenSymbolOperator || tok == tokenDot {
 		switch val {
 		case "null":
 			vt, err := t.onNull(ws)
