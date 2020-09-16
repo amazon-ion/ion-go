@@ -38,21 +38,23 @@ func (e *ParseError) Error() string {
 
 // Decimal is an arbitrary-precision decimal value.
 type Decimal struct {
-	n     *big.Int
-	scale int32
+	n         *big.Int
+	scale     int32
+	isNegZero bool
 }
 
 // NewDecimal creates a new decimal whose value is equal to n * 10^exp.
-func NewDecimal(n *big.Int, exp int32) *Decimal {
+func NewDecimal(n *big.Int, exp int32, negZero bool) *Decimal {
 	return &Decimal{
-		n:     n,
-		scale: -exp,
+		n:         n,
+		scale:     -exp,
+		isNegZero: negZero,
 	}
 }
 
 // NewDecimalInt creates a new decimal whose value is equal to n.
 func NewDecimalInt(n int64) *Decimal {
-	return NewDecimal(big.NewInt(n), 0)
+	return NewDecimal(big.NewInt(n), 0, false)
 }
 
 // MustParseDecimal parses the given string into a decimal object,
@@ -107,7 +109,9 @@ func ParseDecimal(in string) (*Decimal, error) {
 		return nil, &ParseError{in, "cannot parse coefficient"}
 	}
 
-	return NewDecimal(n, exponent), nil
+	isNegZero := n.Sign() == 0 && len(in) > 0 && in[0] == '-'
+
+	return NewDecimal(n, exponent, isNegZero), nil
 }
 
 // CoEx returns this decimal's coefficient and exponent.
@@ -340,19 +344,31 @@ func (d *Decimal) String() string {
 	switch {
 	case d.scale == 0:
 		// Value is an unscaled integer. Just mark it as a decimal.
+		if d.isNegZero {
+			return "-0."
+		}
 		return d.n.String() + "."
 
 	case d.scale < 0:
 		// Value is a upscaled integer, nn'd'ss
+		if d.isNegZero {
+			return "-0d" + fmt.Sprintf("%d", -d.scale)
+		}
 		return d.n.String() + "d" + fmt.Sprintf("%d", -d.scale)
 
 	default:
 		// Value is a downscaled integer nn.nn('d'-ss)?
-		str := d.n.String()
+		var str string
+		if d.isNegZero {
+			str = "-0"
+		} else {
+			str = d.n.String()
+		}
+
 		idx := len(str) - int(d.scale)
 
 		prefix := 1
-		if d.n.Sign() < 0 {
+		if len(str) > 0 && str[0] == '-' {
 			// Account for leading '-'.
 			prefix++
 		}

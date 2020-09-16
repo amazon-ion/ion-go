@@ -41,7 +41,7 @@ func (thisFloat ionFloat) eq(other ionEqual) bool {
 
 func (thisDecimal ionDecimal) eq(other ionEqual) bool {
 	if val, ok := other.(ionDecimal); ok {
-		if thisDecimal.scale != val.scale {
+		if thisDecimal.scale != val.scale || thisDecimal.isNegZero != val.isNegZero {
 			return false
 		}
 		return thisDecimal.Decimal.Equal(val.Decimal)
@@ -66,11 +66,11 @@ func cmpFloats(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.float
-		return strNullTypeCmp(val, otherValue)
 	case float64:
 		thisFloat := ionFloat{val}
 		return thisFloat.eq(ionFloat{otherValue.(float64)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
@@ -82,11 +82,11 @@ func cmpDecimals(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.decimal
-		return strNullTypeCmp(val, otherValue)
 	case *Decimal:
 		thisDecimal := ionDecimal{val}
 		return thisDecimal.eq(ionDecimal{otherValue.(*Decimal)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
@@ -98,11 +98,11 @@ func cmpTimestamps(thisValue, otherValue interface{}) bool {
 	}
 
 	switch val := thisValue.(type) {
-	case *string: // null.timestamp
-		return strNullTypeCmp(val, otherValue)
 	case Timestamp:
 		thisTimestamp := ionTimestamp{val}
 		return thisTimestamp.eq(ionTimestamp{otherValue.(Timestamp)})
+	case nil:
+		return otherValue == nil
 	default:
 		return false
 	}
@@ -175,15 +175,6 @@ func cmpStruct(thisValues, otherValues []interface{}) bool {
 	return res
 }
 
-func strNullTypeCmp(this, other interface{}) bool {
-	thisStr, thisOk := this.(*string)
-	otherStr, otherOk := other.(*string)
-	if thisOk && otherOk {
-		return cmp.Equal(thisStr, otherStr)
-	}
-	return false
-}
-
 func haveSameTypes(this, other interface{}) bool {
 	return reflect.TypeOf(this) == reflect.TypeOf(other)
 }
@@ -192,6 +183,8 @@ func getContainersType(in interface{}) interface{} {
 	switch in.(type) {
 	case *string:
 		return in.(*string)
+	case nil:
+		return nil
 	default:
 		return in.(ionItem)
 	}
@@ -209,10 +202,8 @@ func contains(list []int, idx int) bool {
 // non-null containers have ionItems inside them
 func containersEquality(this, other interface{}) bool {
 	switch this.(type) {
-	case *string: // null.list, null.sexp, null.struct
-		if strNullTypeCmp(this, other) {
-			return true
-		}
+	case nil:
+		return other == nil
 	default:
 		otherItem := other.(ionItem)
 		thisItem := this.(ionItem)
