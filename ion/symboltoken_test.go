@@ -149,7 +149,7 @@ func TestNewSymbolTokenThatDoesNotExistInSymbolTable(t *testing.T) {
 	actualSymbolToken, err := NewSymbolToken(V1SystemSymbolTable, "newToken")
 	assert.NoError(t, err, "expected NewSymbolToken() to execute without errors")
 
-	assert.True(t, actualSymbolToken.Equal(&expectedSymbolToken))
+	assert.True(t, actualSymbolToken.Equal(&expectedSymbolToken), "expected %v, got %v", expectedSymbolToken, actualSymbolToken)
 }
 
 func TestNewSymbolTokensThatAlreadyExistInSymbolTable(t *testing.T) {

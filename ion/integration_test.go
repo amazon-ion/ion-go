@@ -239,16 +239,19 @@ func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 	r := NewReader(file)
 	err = testInvalidReader(r)
 
-	if errorExpected && r.Err() == nil && err == nil {
-		t.Fatal("Should have failed loading \"" + fp + "\".")
-	} else if !errorExpected && (r.Err() != nil || err != nil) {
-		t.Fatal("Failed loading \"" + fp + "\" : " + r.Err().Error())
-	} else {
+	if errorExpected {
+		require.True(t, r.Err() != nil || err != nil, "Should have failed loading \"" + fp + "\".")
+
 		errMsg := "no"
 		if r.Err() != nil {
 			errMsg = r.Err().Error()
+		} else if err != nil {
+			errMsg = err.Error()
 		}
 		t.Log("Test passed for " + fp + " with \"" + errMsg + "\" error.")
+	} else {
+		require.NoError(t, r.Err(), "Failed loading \"" + fp + "\"")
+		require.NoError(t, err, "Failed loading \"" + fp + "\"")
 	}
 
 	require.NoError(t, file.Close())

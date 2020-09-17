@@ -70,8 +70,8 @@ func TestReadTextAnnotations(t *testing.T) {
 				]`
 
 	r := NewReaderString(ionText)
-	r.Next()
-	r.StepIn()
+	assert.True(t, r.Next())
+	assert.NoError(t, r.StepIn())
 
 	_nextA(t, r, []SymbolToken{SymbolToken{Text: nil, LocalSID: 0}}, false, false)
 	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}}, false, false)
@@ -103,6 +103,7 @@ func TestReadTextFieldNames(t *testing.T) {
 	r := NewReaderString(ionText)
 	assert.True(t, r.Next())
 	assert.NoError(t, r.StepIn())
+
 	_nextF(t, r, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, false, false)
@@ -342,6 +343,7 @@ func TestDecimals(t *testing.T) {
 
 			val, err := r.DecimalValue()
 			require.NoError(t, err)
+
 			assert.True(t, ee.Equal(val), "expected %v, got %v", ee, val)
 
 			_eof(t, r)
@@ -510,15 +512,15 @@ func TestTrsToString(t *testing.T) {
 func TestInStruct(t *testing.T) {
 	r := NewReaderString("[ { a:() } ]")
 
-	r.Next()
+	assert.True(t, r.Next())
 	assert.NoError(t, r.StepIn()) // In the list, before the struct
 	require.False(t, r.IsInStruct(), "IsInStruct returned true before we were in a struct")
 
-	r.Next()
+	assert.True(t, r.Next())
 	assert.NoError(t, r.StepIn()) // In the struct
 	require.True(t, r.IsInStruct(), "We were in a struct, IsInStruct should have returned true")
 
-	r.Next()
+	assert.True(t, r.Next())
 	assert.NoError(t, r.StepIn()) // In the Sexp
 	require.False(t, r.IsInStruct(), "IsInStruct returned true before we were in a struct")
 
@@ -770,9 +772,7 @@ func _nextAF(t *testing.T, r Reader, et Type, efn *SymbolToken, etas []SymbolTok
 	require.Equal(t, et, r.Type())
 
 	fn, err := r.FieldName()
-	if err != nil {
-		t.Errorf("fieldname returned error: %v", err.Error())
-	}
+	assert.NoError(t, err)
 
 	if efn != nil && fn != nil {
 		assert.True(t, efn.Equal(fn), "expected fieldname=%v, got %v", *efn, *fn)
@@ -806,21 +806,13 @@ func _nextF(t *testing.T, r Reader, efns *SymbolToken, isFieldNameError bool, is
 	fn, err := r.FieldName()
 
 	if isFieldNameError {
-		if err == nil {
-			t.Fatal("fieldName did not return an error")
-		}
+		require.Error(t, err, "fieldName did not return an error")
 	} else {
-		if err != nil {
-			t.Errorf("fieldname returned an error: %v", err.Error())
-		}
+		assert.NoError(t, err)
 		if efns != nil {
-			if !efns.Equal(fn) {
-				t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fn)
-			}
+			assert.True(t, efns.Equal(fn), "expected fieldnamesymbol=%v, got %v", efns, fn)
 		} else {
-			if fn != nil {
-				t.Errorf("expected fieldnamesymbol=%v, got %v", efns, fn)
-			}
+			assert.Nil(t, fn, "expected fieldnamesymbol=%v, got %v", efns, fn)
 		}
 	}
 }

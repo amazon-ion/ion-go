@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWriteBinaryStruct(t *testing.T) {
@@ -397,9 +398,7 @@ func writeBinary(t *testing.T, f func(w Writer)) []byte {
 
 	f(w)
 
-	if err := w.Finish(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, w.Finish())
 
 	return buf.Bytes()
 }

@@ -38,8 +38,8 @@ func TestReadBadBVMs(t *testing.T) {
 		assert.False(t, r.Next())
 		require.Error(t, r.Err())
 
-		uve, ok := r.Err().(*UnsupportedVersionError)
-		require.True(t, ok, "err is not an UnsupportedVersionError")
+		require.IsType(t, &UnsupportedVersionError{}, r.Err())
+		uve := r.Err().(*UnsupportedVersionError)
 		assert.Equal(t, 2, uve.Major)
 		assert.Equal(t, 0, uve.Minor)
 	})
@@ -99,7 +99,7 @@ func TestReadBinaryLST(t *testing.T) {
 
 	sym, ok = lst.FindByID(112)
 	require.True(t, ok, "no symbol defined for $112")
-	assert.Equal(t, "", sym, "expected $112='', got %v", sym)
+	assert.Empty(t, sym)
 
 	id, ok := lst.FindByName("foo")
 	require.True(t, ok, "no id defined for foo")

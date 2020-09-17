@@ -142,9 +142,7 @@ func cmpSymbols(thisValue, otherValue interface{}) bool {
 		if val2, ok := otherValue.(SymbolToken); ok {
 			return val1.Equal(&val2)
 		}
-	}
-
-	if val1, ok := thisValue.(*SymbolToken); ok {
+	} else if val1, ok := thisValue.(*SymbolToken); ok {
 		if val2, ok := otherValue.(*SymbolToken); ok {
 			return val1.Equal(val2)
 		}

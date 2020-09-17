@@ -77,9 +77,10 @@ func testReadFile(t *testing.T, path string, d drainfunc) {
 
 	file, err := os.Open(path)
 	require.NoError(t, err)
-	defer file.Close()
 
 	r := NewReader(file)
 
 	d(t, r, path)
+
+	require.NoError(t, file.Close())
 }
