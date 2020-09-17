@@ -628,7 +628,7 @@ func (t *tokenizer) readClob() ([]byte, error) {
 		case '"':
 			if ret == nil {
 				// The first character is the closing " , which means an empty clob.
-				ret = make([]byte, 1)
+				return []byte{}, nil
 			}
 			return ret, nil
 
@@ -706,7 +706,7 @@ func (t *tokenizer) readLongClob() ([]byte, error) {
 			if isEndOfString {
 				if ret == nil {
 					// The first character is the closing ''' , which means an empty clob.
-					ret = make([]byte, 1)
+					return []byte{}, nil
 				}
 				return ret, nil
 			}

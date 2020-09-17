@@ -279,7 +279,7 @@ func TestClobs(t *testing.T) {
 		})
 	}
 
-	test("{{\"\"}}", []byte{0})
+	test("{{\"\"}}", []byte{})
 	test("{{ \"hello world\" }}", []byte("hello world"))
 	test("{{'''hello world'''}}", []byte("hello world"))
 	test("{{'''hello'''\n'''world'''}}", []byte("helloworld"))
