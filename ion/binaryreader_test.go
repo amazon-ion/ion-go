@@ -88,7 +88,7 @@ func TestReadBinaryLST(t *testing.T) {
 	lst := r.SymbolTable()
 	require.NotNil(t, lst)
 
-	assert.Equal(t, uint64(112), lst.MaxID())
+	assert.Equal(t, 112, int(lst.MaxID()))
 
 	_, ok := lst.FindByID(109)
 	assert.False(t, ok, "found a symbol for $109")
@@ -103,7 +103,7 @@ func TestReadBinaryLST(t *testing.T) {
 
 	id, ok := lst.FindByName("foo")
 	require.True(t, ok, "no id defined for foo")
-	assert.Equal(t, uint64(110), id, "expected foo=$110, got $%v", id)
+	assert.Equal(t, 110, int(id), "expected foo=$110, got $%v", id)
 
 	_, ok = lst.FindByID(113)
 	assert.False(t, ok, "found a symbol for $113")

@@ -35,7 +35,7 @@ func TestSharedSymbolTable(t *testing.T) {
 
 	assert.Equal(t, "test", st.Name())
 	assert.Equal(t, 2, st.Version())
-	assert.Equal(t, uint64(6), st.MaxID())
+	assert.Equal(t, 6, int(st.MaxID()))
 
 	testFindByName(t, st, "def", 2)
 	testFindByName(t, st, "null", 4)
@@ -55,7 +55,7 @@ func TestSharedSymbolTable(t *testing.T) {
 func TestLocalSymbolTable(t *testing.T) {
 	st := NewLocalSymbolTable(nil, []string{"foo", "bar"})
 
-	assert.Equal(t, uint64(11), st.MaxID())
+	assert.Equal(t, 11, int(st.MaxID()))
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)
@@ -87,7 +87,7 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 		"bar2",
 	})
 
-	assert.Equal(t, uint64(13), st.MaxID())
+	assert.Equal(t, 13, int(st.MaxID()))
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "$ion_shared_symbol_table", 9)
@@ -119,18 +119,18 @@ func TestSymbolTableBuilder(t *testing.T) {
 
 	id, ok := b.Add("name")
 	assert.False(t, ok, "Add(name) returned true")
-	assert.Equal(t, uint64(4), id, "Add(name) returned %v", id)
+	assert.Equal(t, 4, int(id), "Add(name) returned %v", id)
 
 	id, ok = b.Add("foo")
 	assert.True(t, ok, "Add(foo) returned false")
-	assert.Equal(t, uint64(10), id, "Add(foo) returned %v", id)
+	assert.Equal(t, 10, int(id), "Add(foo) returned %v", id)
 
 	id, ok = b.Add("foo")
 	assert.False(t, ok, "Second Add(foo) returned true")
-	assert.Equal(t, uint64(10), id, "Second Add(foo) returned %v", id)
+	assert.Equal(t, 10, int(id), "Second Add(foo) returned %v", id)
 
 	st := b.Build()
-	assert.Equal(t, uint64(10), st.MaxID(), "maxid returned %v", st.MaxID())
+	assert.Equal(t, 10, int(st.MaxID()), "maxid returned %v", st.MaxID())
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)

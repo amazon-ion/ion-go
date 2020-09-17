@@ -240,7 +240,7 @@ func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 	err = testInvalidReader(r)
 
 	if errorExpected {
-		require.True(t, r.Err() != nil || err != nil, "Should have failed loading \"" + fp + "\".")
+		require.True(t, r.Err() != nil || err != nil, "Should have failed loading \""+fp+"\".")
 
 		errMsg := "no"
 		if r.Err() != nil {
@@ -250,8 +250,8 @@ func testLoadFile(t *testing.T, errorExpected bool, fp string) {
 		}
 		t.Log("Test passed for " + fp + " with \"" + errMsg + "\" error.")
 	} else {
-		require.NoError(t, r.Err(), "Failed loading \"" + fp + "\"")
-		require.NoError(t, err, "Failed loading \"" + fp + "\"")
+		require.NoError(t, r.Err(), "Failed loading \""+fp+"\"")
+		require.NoError(t, err, "Failed loading \""+fp+"\"")
 	}
 
 	require.NoError(t, file.Close())
