@@ -90,13 +90,9 @@ type Reader interface {
 	// even if the Type is not NullType (for example, null.struct has type Struct).
 	IsNull() bool
 
-	// FieldName returns the field name associated with the current value. It returns
-	// nil if there is no current value or the current value has no field name.
-	FieldName() *string
-
-	// Annotations returns the set of annotations associated with the current value.
+	// Annotations returns the annotations associated with the current value as a list of SymbolTokens.
 	// It returns nil if there is no current value or the current value has no annotations.
-	Annotations() []string
+	Annotations() ([]SymbolToken, error)
 
 	// StepIn steps in to the current value if it is a container. It returns an error if there
 	// is no current value or if the value is not a container. On success, the Reader is
@@ -109,47 +105,44 @@ type Reader interface {
 	// stream.
 	StepOut() error
 
-	// BoolValue returns the current value as a boolean (if that makes sense). It returns
-	// an error if the current value is not an Ion bool.
-	BoolValue() (bool, error)
+	// BoolValue returns the current value as a boolean (if that makes sense). It returns nil
+	// if the value is an Ion null. If the current value is not an Ion bool, it returns an error.
+	BoolValue() (*bool, error)
 
 	// IntSize returns the size of integer needed to losslessly represent the current value
 	// (if that makes sense). It returns an error if the current value is not an Ion int.
 	IntSize() (IntSize, error)
 
-	// IntValue returns the current value as a 32-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 32 bits to represent losslessly.
-	IntValue() (int, error)
+	// IntValue returns the current value as a 32-bit integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
+	// or requires more than 32 bits to represent losslessly.
+	IntValue() (*int, error)
 
-	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer or requires more than
-	// 64 bits to represent losslessly.
-	Int64Value() (int64, error)
-
-	// Uint64Value returns the current value as an unsigned 64-bit integer (if that makes
-	// sense). It returns an error if the current value is not an Ion integer, is negative,
+	// Int64Value returns the current value as a 64-bit integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer
 	// or requires more than 64 bits to represent losslessly.
-	Uint64Value() (uint64, error)
+	Int64Value() (*int64, error)
 
-	// BigIntValue returns the current value as a big.Integer (if that makes sense). It
-	// returns an error if the current value is not an Ion integer.
+	// BigIntValue returns the current value as a big.Integer (if that makes sense). It returns
+	// nil if the value is an Ion null. It returns an error if the current value is not an Ion integer.
 	BigIntValue() (*big.Int, error)
 
-	// FloatValue returns the current value as a 64-bit floating point number (if that
-	// makes sense). It returns an error if the current value is not an Ion float.
-	FloatValue() (float64, error)
+	// FloatValue returns the current value as a 64-bit floating point number (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value
+	// is not an Ion float.
+	FloatValue() (*float64, error)
 
-	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that
-	// makes sense). It returns an error if the current value is not an Ion decimal.
+	// DecimalValue returns the current value as an arbitrary-precision Decimal (if that makes
+	// sense). It returns nil if the value is null. It returns an error if the current value is
+	// not an Ion decimal.
 	DecimalValue() (*Decimal, error)
 
 	// TimestampValue returns the current value as a timestamp (if that makes sense). It returns
-	// an error if the current value is not an Ion timestamp.
-	TimestampValue() (Timestamp, error)
+	// nil if the value is null. It returns an error if the current value is not an Ion timestamp.
+	TimestampValue() (*Timestamp, error)
 
-	// StringValue returns the current value as a string (if that makes sense). It returns
-	// an error if the current value is not an Ion symbol or an Ion string.
+	// StringValue returns the current value as a string (if that makes sense). Returns `nil` for Ion null string.
+	// It returns an error if the current value is not an Ion string.
 	StringValue() (*string, error)
 
 	// ByteValue returns the current value as a byte slice (if that makes sense). It returns
@@ -159,9 +152,10 @@ type Reader interface {
 	// IsInStruct indicates if the reader is currently positioned in a struct.
 	IsInStruct() bool
 
-	// FieldNameSymbol returns the field name associated with the current value as a SymbolToken.
-	// It returns an error if the current value has no field name.
-	FieldNameSymbol() (*SymbolToken, error)
+	// FieldName returns the field name associated with the current value as a SymbolToken. It returns
+	// nil if there is no current value or the current value has no field name. It returns an error if
+	// the `SymbolToken` SID is not found in the symbol table.
+	FieldName() (*SymbolToken, error)
 
 	// SymbolValue returns the SymbolToken associated with the current value. It returns an
 	// error if the current value is not an Ion symbol.
@@ -207,11 +201,11 @@ type reader struct {
 	eof bool
 	err error
 
-	lst             SymbolTable
-	fieldNameSymbol *SymbolToken
-	annotations     []SymbolToken
-	valueType       Type
-	value           interface{}
+	lst         SymbolTable
+	fieldName   *SymbolToken
+	annotations []SymbolToken
+	valueType   Type
+	value       interface{}
 }
 
 // Err returns the current error.
@@ -229,42 +223,25 @@ func (r *reader) IsNull() bool {
 	return r.valueType != NoType && r.value == nil
 }
 
-// FieldName returns the current value's field name.
-func (r *reader) FieldName() *string {
-	if r.fieldNameSymbol != nil {
-		return r.fieldNameSymbol.Text
-	}
-	return nil
-}
-
 // Annotations returns the current value's annotations.
-func (r *reader) Annotations() []string {
-	var annotations []string
-	for _, an := range r.annotations {
-		if an.Text != nil {
-			sid, systemSymbolName := getSystemSymbolMapping(r.SymbolTable(), *an.Text)
-			if sid != SymbolIDUnknown {
-				annotations = append(annotations, systemSymbolName)
-			} else {
-				annotations = append(annotations, *an.Text)
-			}
-		} else {
-			annotations = append(annotations, "")
-		}
+func (r *reader) Annotations() ([]SymbolToken, error) {
+	if r.err != nil {
+		return nil, r.err
 	}
 
-	return annotations
+	return r.annotations, nil
 }
 
 // BoolValue returns the current value as a bool.
-func (r *reader) BoolValue() (bool, error) {
+func (r *reader) BoolValue() (*bool, error) {
 	if r.valueType != BoolType {
-		return false, &UsageError{"Reader.BoolValue", "value is not a bool"}
+		return nil, &UsageError{"Reader.BoolValue", "value is not an Ion bool"}
 	}
 	if r.value == nil {
-		return false, nil
+		return nil, nil
 	}
-	return r.value.(bool), nil
+	val := r.value.(bool)
+	return &val, nil
 }
 
 // IntSize returns the size of the current int value.
@@ -283,71 +260,42 @@ func (r *reader) IntSize() (IntSize, error) {
 		return Int32, nil
 	}
 
-	i := r.value.(*big.Int)
-	if i.IsUint64() {
-		return Uint64, nil
-	}
-
 	return BigInt, nil
 }
 
 // IntValue returns the current value as an int.
-func (r *reader) IntValue() (int, error) {
+func (r *reader) IntValue() (*int, error) {
 	i, err := r.Int64Value()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if i > math.MaxInt32 || i < math.MinInt32 {
-		return 0, &UsageError{"Reader.IntValue", "value too large for an int32"}
+	if *i > math.MaxInt32 || *i < math.MinInt32 {
+		return nil, &UsageError{"Reader.IntValue", "value too large for an int32"}
 	}
-	return int(i), nil
+	val := int(*i)
+	return &val, nil
 }
 
 // Int64Value returns the current value as an int64.
-func (r *reader) Int64Value() (int64, error) {
+func (r *reader) Int64Value() (*int64, error) {
 	if r.valueType != IntType {
-		return 0, &UsageError{"Reader.Int64Value", "value is not an int"}
+		return nil, &UsageError{"Reader.Int64Value", "value is not an Ion int"}
 	}
 	if r.value == nil {
-		return 0, nil
+		return nil, nil
 	}
 
 	if i, ok := r.value.(int64); ok {
-		return i, nil
+		return &i, nil
 	}
 
 	bi := r.value.(*big.Int)
 	if bi.IsInt64() {
-		return bi.Int64(), nil
+		val := bi.Int64()
+		return &val, nil
 	}
 
-	return 0, &UsageError{"Reader.Int64Value", "value too large for an int64"}
-}
-
-// Uint64Value returns the current value as a uint64.
-func (r *reader) Uint64Value() (uint64, error) {
-	if r.valueType != IntType {
-		return 0, &UsageError{"Reader.Uint64Value", "value is not an int"}
-	}
-	if r.value == nil {
-		return 0, nil
-	}
-
-	if i, ok := r.value.(int64); ok {
-		if i >= 0 {
-			return uint64(i), nil
-		}
-		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
-	}
-
-	bi := r.value.(*big.Int)
-	if bi.Sign() < 0 {
-		return 0, &UsageError{"Reader.Uint64Value", "value is negative"}
-	}
-	if !bi.IsUint64() {
-		return 0, &UsageError{"Reader.Uint64Value", "value too large for a uint64"}
-	}
-	return bi.Uint64(), nil
+	return nil, &UsageError{"Reader.Int64Value", "value too large for an int64"}
 }
 
 // BigIntValue returns the current value as a big int.
@@ -366,14 +314,15 @@ func (r *reader) BigIntValue() (*big.Int, error) {
 }
 
 // FloatValue returns the current value as a float.
-func (r *reader) FloatValue() (float64, error) {
+func (r *reader) FloatValue() (*float64, error) {
 	if r.valueType != FloatType {
-		return 0, &UsageError{"Reader.FloatValue", "value is not a float"}
+		return nil, &UsageError{"Reader.FloatValue", "value is not an Ion float"}
 	}
 	if r.value == nil {
-		return 0.0, nil
+		return nil, nil
 	}
-	return r.value.(float64), nil
+	val := r.value.(float64)
+	return &val, nil
 }
 
 // DecimalValue returns the current value as a Decimal.
@@ -388,14 +337,15 @@ func (r *reader) DecimalValue() (*Decimal, error) {
 }
 
 // TimestampValue returns the current value as a Timestamp.
-func (r *reader) TimestampValue() (Timestamp, error) {
+func (r *reader) TimestampValue() (*Timestamp, error) {
 	if r.valueType != TimestampType {
-		return Timestamp{}, &UsageError{"Reader.TimestampValue", "value is not a timestamp"}
+		return nil, &UsageError{"Reader.TimestampValue", "value is not an Ion timestamp"}
 	}
 	if r.value == nil {
-		return Timestamp{}, nil
+		return nil, nil
 	}
-	return r.value.(Timestamp), nil
+	val := r.value.(Timestamp)
+	return &val, nil
 }
 
 // ByteValue returns the current value as a byte slice.
@@ -411,8 +361,8 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	if r.fieldNameSymbol != nil {
-		r.fieldNameSymbol.Text = nil
+	if r.fieldName != nil {
+		r.fieldName.Text = nil
 	}
 	r.annotations = nil
 	r.valueType = NoType
@@ -430,21 +380,16 @@ func (r *reader) StringValue() (*string, error) {
 		return nil, r.err
 	}
 
-	if r.valueType != StringType && r.valueType != SymbolType {
-		return nil, &UsageError{"Reader.StringValue", "value is not a string or symbol"}
+	if r.valueType != StringType {
+		return nil, &UsageError{"Reader.StringValue", "value is not a string"}
 	}
 
 	if r.value == nil {
 		return nil, nil
 	}
 
-	// Check if value is symbol or string.
-	st, ok := r.value.(*SymbolToken)
-	if !ok {
-		val := r.value.(string)
-		return &val, nil
-	}
-	return st.Text, nil
+	val := r.value.(string)
+	return &val, nil
 }
 
 // SymbolValue returns the current value as a symbol token.
@@ -457,16 +402,20 @@ func (r *reader) SymbolValue() (*SymbolToken, error) {
 		return nil, &UsageError{"Reader.SymbolValue", "value is not a symbol"}
 	}
 
+	if r.value == nil {
+		return nil, nil
+	}
+
 	return r.value.(*SymbolToken), nil
 }
 
-// FieldNameSymbol returns the current field name as a symbol token.
-func (r *reader) FieldNameSymbol() (*SymbolToken, error) {
+// FieldName returns the current field name as a symbol token.
+func (r *reader) FieldName() (*SymbolToken, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 
-	return r.fieldNameSymbol, nil
+	return r.fieldName, nil
 }
 
 // SymbolTable returns the current symbol table.

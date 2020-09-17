@@ -38,11 +38,11 @@ func TestWriteBinaryStruct(t *testing.T) {
 		w.BeginStruct()
 		w.EndStruct()
 
-		w.Annotation("foo")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		w.BeginStruct()
 		{
 			w.FieldName("name")
-			w.Annotation("bar")
+			w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
 			w.WriteNull()
 
 			w.FieldName("max_id")
@@ -64,10 +64,10 @@ func TestWriteBinarySexp(t *testing.T) {
 		w.BeginSexp()
 		w.EndSexp()
 
-		w.Annotation("foo")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		w.BeginSexp()
 		{
-			w.Annotation("bar")
+			w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
 			w.WriteNull()
 
 			w.WriteInt(0)
@@ -88,10 +88,10 @@ func TestWriteBinaryList(t *testing.T) {
 		w.BeginList()
 		w.EndList()
 
-		w.Annotation("foo")
+		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
 		w.BeginList()
 		{
-			w.Annotation("bar")
+			w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
 			w.WriteNull()
 
 			w.WriteInt(0)
@@ -217,7 +217,7 @@ func TestWriteBinaryFloats(t *testing.T) {
 		0x48, 0xFF, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // -MaxFloat64
 		0x44, 0x7F, 0x80, 0x00, 0x00, // +inf (float32)
 		0x44, 0xFF, 0x80, 0x00, 0x00, // -inf (float32)
-		0x48, 0x7F, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // NaN
+		0x44, 0x7F, 0xC0, 0x00, 0x00, // NaN
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
@@ -289,7 +289,7 @@ func TestWriteBinaryBoolAnnotated(t *testing.T) {
 	}
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		w.Annotations("name", "version")
+		w.Annotations(SymbolToken{Text: newString("name"), LocalSID: 4}, SymbolToken{Text: newString("version"), LocalSID: 5})
 		w.WriteBool(false)
 	})
 }

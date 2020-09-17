@@ -300,6 +300,11 @@ func TestUnmarshalBinary(t *testing.T) {
 			case Timestamp:
 				thisTime := ionTimestamp{thisValue}
 				res = thisTime.eq(ionTimestamp{eval.(Timestamp)})
+			case *SymbolToken:
+				thisSymbol := ionSymbol{thisValue}
+				res = thisSymbol.eq(ionSymbol{eval.(*SymbolToken)})
+			case *interface{}:
+				res = reflect.DeepEqual(*thisValue, eval)
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
@@ -340,7 +345,7 @@ func TestUnmarshalBinary(t *testing.T) {
 
 	var symbolVal string
 	symbolBytes := prefixIVM([]byte{0x71, 0x09}) // $9
-	test(symbolBytes, symbolVal, newString("$ion_shared_symbol_table"))
+	test(symbolBytes, symbolVal, &SymbolToken{Text: newString("$ion_shared_symbol_table"), LocalSID: 9})
 
 	var stringVal string
 	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
@@ -626,7 +631,16 @@ func TestDecode(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(val, eval) {
+			res := false
+			switch thisValue := val.(type) {
+			case *float64:
+				res = cmpFloats(*thisValue, eval)
+			case *Timestamp:
+				res = cmpTimestamps(*thisValue, eval)
+			default:
+				res = reflect.DeepEqual(val, eval)
+			}
+			if !res {
 				t.Errorf("expected %v, got %v", eval, val)
 			}
 		})
@@ -654,7 +668,7 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", newString("hello"))
+	test("hello", &SymbolToken{Text: newString("hello"), LocalSID: SymbolIDUnknown})
 	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
@@ -669,14 +683,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": newString("two"),
+		"b": &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown},
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, newString("two")})
+	test("[1, two]", []interface{}{1, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, newString("+"), newString("two")})
+	test("(1 + two)", []interface{}{1, &SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown}, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
 
 	var result []interface{}
 	test("()", result)
@@ -717,7 +731,7 @@ func TestDecodeLotsOfInts(t *testing.T) {
 func TestUnmarshalWithAnnotation(t *testing.T) {
 	type foo struct {
 		Value   interface{}
-		AnyName []string `ion:",annotations"`
+		AnyName []SymbolToken `ion:",annotations"`
 	}
 
 	test := func(str, testName string, eval foo) {
@@ -734,24 +748,24 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 		})
 	}
 
-	test("with::multiple::annotations::null", "null", foo{nil, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::true", "bool", foo{true, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::2", "int", foo{2, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::null", "null", foo{nil, annotations})
+	test("with::multiple::annotations::true", "bool", foo{true, annotations})
+	test("with::multiple::annotations::2", "int", foo{2, annotations})
 	bi := new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF))
-	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::\"abc\"", "string", foo{newString("abc"), []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, annotations})
+	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, annotations})
+	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), annotations})
+	test("with::multiple::annotations::\"abc\"", "string", foo{newString("abc"), annotations})
 	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
-	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::{{/w==}}", "blob", foo{[]byte{255}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, annotations})
+	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, annotations})
+	test("with::multiple::annotations::{{/w==}}", "blob", foo{[]byte{255}, annotations})
 }
 
 func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 	type foo struct {
 		Value   []int
-		AnyName []string `ion:",annotations"`
+		AnyName []SymbolToken `ion:",annotations"`
 	}
 
 	test := func(str, testName string, eval interface{}) {
@@ -768,24 +782,24 @@ func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 		})
 	}
 
-	test("with::multiple::annotations::[1, 2, 3]", "list", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
-	test("with::multiple::annotations::(1 2 3)", "sexp", foo{[]int{1, 2, 3}, []string{"with", "multiple", "annotations"}})
+	test("with::multiple::annotations::[1, 2, 3]", "list", foo{[]int{1, 2, 3}, annotations})
+	test("with::multiple::annotations::(1 2 3)", "sexp", foo{[]int{1, 2, 3}, annotations})
 }
 
 func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 	type nestedInt struct {
 		Value           int
-		ValueAnnotation []string `ion:",annotations"`
+		ValueAnnotation []SymbolToken `ion:",annotations"`
 	}
 
 	type nestedStruct struct {
 		Field2                nestedInt
-		InnerStructAnnotation []string `ion:",annotations"`
+		InnerStructAnnotation []SymbolToken `ion:",annotations"`
 	}
 
 	type topLevelStruct struct {
 		Field1             nestedStruct
-		TopLevelAnnotation []string `ion:",annotations"`
+		TopLevelAnnotation []SymbolToken `ion:",annotations"`
 	}
 
 	test := func(str, testName string, eval interface{}) {
@@ -809,9 +823,14 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 		  }
 		}
 	*/
-	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []string{"baz"}}
-	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []string{"bar"}}
-	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []string{"foo"}}
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}}}
 
 	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
 }
+
+var symbolTokenWith = SymbolToken{Text: newString("with"), LocalSID: SymbolIDUnknown}
+var symbolTokenMultiple = SymbolToken{Text: newString("multiple"), LocalSID: SymbolIDUnknown}
+var symbolTokenAnnotations = SymbolToken{Text: newString("annotations"), LocalSID: SymbolIDUnknown}
+var annotations = []SymbolToken{symbolTokenWith, symbolTokenMultiple, symbolTokenAnnotations}

@@ -66,3 +66,4 @@ var hexChars = []byte{
 var timestampType = reflect.TypeOf(Timestamp{})
 var decimalType = reflect.TypeOf(Decimal{})
 var bigIntType = reflect.TypeOf(big.Int{})
+var symbolType = reflect.TypeOf(SymbolToken{})
