@@ -660,16 +660,15 @@ func (t *tokenizer) readLongString() (string, error) {
 
 		switch c {
 		case '\'':
-			startPosition := t.pos
-			ok, err := t.skipEndOfLongString(t.skipCommentsHandler)
+			isEndOfString, isConsumed, err := t.skipEndOfLongString(t.skipCommentsHandler)
 			if err != nil {
 				return "", err
 			}
-			if ok {
+			if isEndOfString {
 				return ret.String(), nil
 			}
-			if startPosition == t.pos {
-				// No character has been consumed. It is single '.
+			if !isConsumed {
+				// No character has been consumed. It is a single '.
 				ret.WriteByte(byte(c))
 			}
 		case '\\':
@@ -700,20 +699,19 @@ func (t *tokenizer) readLongClob() ([]byte, error) {
 
 		switch c {
 		case '\'':
-			startPosition := t.pos
-			ok, err := t.skipEndOfLongString(t.ensureNoCommentsHandler)
+			isEndOfString, isConsumed, err := t.skipEndOfLongString(t.ensureNoCommentsHandler)
 			if err != nil {
 				return nil, err
 			}
-			if ok {
+			if isEndOfString {
 				if ret == nil {
 					// The first character is the closing ''' , which means an empty clob.
 					ret = make([]byte, 1)
 				}
 				return ret, nil
 			}
-			if startPosition == t.pos {
-				// No character has been consumed. It is single '.
+			if !isConsumed {
+				// No character has been consumed. It is a single '.
 				ret = append(ret, byte(c))
 			}
 		case '\\':
