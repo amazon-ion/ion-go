@@ -540,8 +540,11 @@ func (t *tokenizer) skipLongStringHelper(handler commentHandler) error {
 	}
 }
 
-// SkipEndOfLongString is called after reading a ' to determine if we've
-// hit the end of the long string..
+// SkipEndOfLongString is called after reading a ' to determine if we've hit the end
+// of the long string, and if we have consumed any ' characters. Also, it can detect
+// if another long string starts after the current one; in that case, it returns
+// false indicating this is not the end of the long string, and true for consumed '
+// as we have read the closing ''' of the first long string.
 func (t *tokenizer) skipEndOfLongString(handler commentHandler) (bool, bool, error) {
 	isConsumed := false
 	// We just read a ', check for two more ''s.
