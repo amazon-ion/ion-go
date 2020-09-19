@@ -19,6 +19,9 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Item struct {
@@ -39,16 +42,15 @@ func TestCatalog(t *testing.T) {
 	out := NewBinaryWriter(&buf, sst)
 
 	for i := 0; i < 10; i++ {
-		out.Annotation(SymbolToken{Text: newString("item"), LocalSID: SymbolIDUnknown})
-		MarshalTo(out, &Item{
-			ID:          i,
-			Name:        fmt.Sprintf("Item %v", i),
-			Description: fmt.Sprintf("The %vth test item", i),
-		})
+		assert.NoError(t, out.Annotation(SymbolToken{Text: newString("item"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t,
+			MarshalTo(out, &Item{
+				ID:          i,
+				Name:        fmt.Sprintf("Item %v", i),
+				Description: fmt.Sprintf("The %vth test item", i),
+			}))
 	}
-	if err := out.Finish(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, out.Finish())
 
 	bs := buf.Bytes()
 
@@ -62,16 +64,10 @@ func TestCatalog(t *testing.T) {
 		if err == ErrNoInput {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if item.ID != i {
-			t.Errorf("expected id=%v, got %v", i, item.ID)
-		}
+		assert.Equal(t, i, item.ID)
 	}
 
-	if i != 10 {
-		t.Errorf("expected i=10, got %v", i)
-	}
+	assert.Equal(t, 10, i)
 }

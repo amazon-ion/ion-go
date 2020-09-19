@@ -18,18 +18,17 @@ package ion
 import (
 	"io"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNext(t *testing.T) {
 	tok := tokenizeString("foo::'foo':[] 123, {})")
 
 	next := func(tt token) {
-		if err := tok.Next(); err != nil {
-			t.Fatal(err)
-		}
-		if tok.Token() != tt {
-			t.Fatalf("expected %v, got %v", tt, tok.Token())
-		}
+		require.NoError(t, tok.Next())
+		require.Equal(t, tt, tok.Token())
 	}
 
 	next(tokenSymbol)
@@ -46,29 +45,17 @@ func TestReadSymbol(t *testing.T) {
 	test := func(str string, expected string, next token) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
-			if err := tok.Next(); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, tok.Next())
 
-			if tok.Token() != tokenSymbol {
-				t.Fatal("not a symbol")
-			}
+			require.Equal(t, tokenSymbol, tok.Token())
 
 			actual, err := tok.readSymbol()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if actual != expected {
-				t.Errorf("expected '%v', got '%v'", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 
-			if err := tok.Next(); err != nil {
-				t.Fatal(err)
-			}
-			if tok.Token() != next {
-				t.Errorf("expected next=%v, got next=%v", next, tok.Token())
-			}
+			require.NoError(t, tok.Next())
+			assert.Equal(t, next, tok.Token())
 		})
 	}
 
@@ -84,21 +71,13 @@ func TestReadSymbols(t *testing.T) {
 	expected := []string{"foo", "bar", "baz", "beep", "boop", "null"}
 
 	for i := 0; i < len(expected); i++ {
-		if err := tok.Next(); err != nil {
-			t.Fatal(err)
-		}
-		if tok.Token() != tokenSymbol {
-			t.Fatalf("expected %v, got %v", tokenSymbol, tok.Token())
-		}
+		require.NoError(t, tok.Next())
+		require.Equal(t, tokenSymbol, tok.Token())
 
 		val, err := tok.readSymbol()
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if val != expected[i] {
-			t.Errorf("expected %v, got %v", expected[i], val)
-		}
+		assert.Equal(t, expected[i], val)
 	}
 }
 
@@ -106,30 +85,19 @@ func TestReadQuotedSymbol(t *testing.T) {
 	test := func(str string, expected string, next int) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
-			if err := tok.Next(); err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, tok.Next())
 
-			if tok.Token() != tokenSymbolQuoted {
-				t.Fatal("not a quoted symbol")
-			}
+			require.Equal(t, tokenSymbolQuoted, tok.Token())
 
 			actual, err := tok.readQuotedSymbol()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if actual != expected {
-				t.Errorf("expected '%v', got '%v'", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 
 			c, err := tok.read()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if c != next {
-				t.Errorf("expected next=%q, got next=%q", next, c)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, next, c)
 		})
 	}
 
@@ -151,28 +119,19 @@ func TestReadTimestamp(t *testing.T) {
 	test := func(str string, eval string, next int) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
-			if err := tok.Next(); err != nil {
-				t.Fatal(err)
-			}
-			if tok.Token() != tokenTimestamp {
-				t.Fatalf("unexpected token %v", tok.Token())
-			}
+			require.NoError(t, tok.Next())
+
+			require.Equal(t, tokenTimestamp, tok.Token())
 
 			val, err := tok.ReadValue(tokenTimestamp)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, eval, val)
 
 			c, err := tok.read()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if c != next {
-				t.Errorf("expected %q, got %q", next, c)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, next, c)
 		})
 	}
 
@@ -198,12 +157,9 @@ func TestIsTripleQuote(t *testing.T) {
 			tok := tokenizeString(str)
 
 			ok, err := tok.IsTripleQuote()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if ok != eok {
-				t.Errorf("expected ok=%v, got ok=%v", eok, ok)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, eok, ok)
 
 			read(t, tok, next)
 		})
@@ -220,26 +176,17 @@ func TestIsInf(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, err := tok.read()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			ok, err := tok.isInf(c)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if ok != eok {
-				t.Errorf("expected %v, got %v", eok, ok)
-			}
+			assert.Equal(t, eok, ok)
 
 			c, err = tok.read()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if c != next {
-				t.Errorf("expected '%c', got '%c'", next, c)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, next, c)
 		})
 	}
 
@@ -273,17 +220,12 @@ func TestScanForNumericType(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, err := tok.read()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			tt, err := tok.scanForNumericType(c)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt != ett {
-				t.Errorf("expected %v, got %v", ett, tt)
-			}
+			require.NoError(t, err)
+
+			assert.Equal(t, ett, tt)
 		})
 	}
 
@@ -311,16 +253,10 @@ func TestSkipWhitespace(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, ok, err := tok.skipWhitespace()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if ok != eok {
-				t.Errorf("expected ok=%v, got ok=%v", eok, ok)
-			}
-			if c != ec {
-				t.Errorf("expected c='%c', got c='%c'", ec, c)
-			}
+			assert.Equal(t, eok, ok)
+			assert.Equal(t, ec, c)
 		})
 	}
 
@@ -338,16 +274,10 @@ func TestSkipLobWhitespace(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, ok, err := tok.skipLobWhitespace()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if ok != eok {
-				t.Errorf("expected ok=%v, got ok=%v", eok, ok)
-			}
-			if c != ec {
-				t.Errorf("expected c='%c', got c='%c'", ec, c)
-			}
+			assert.Equal(t, eok, ok)
+			assert.Equal(t, ec, c)
 		})
 	}
 
@@ -363,12 +293,9 @@ func TestSkipCommentsHandler(t *testing.T) {
 	t.Run("SingleLine", func(t *testing.T) {
 		tok := tokenizeString("/comment\nok")
 		ok, err := tok.skipCommentsHandler()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error("expected ok=true, got ok=false")
-		}
+		require.NoError(t, err)
+
+		assert.True(t, ok)
 
 		read(t, tok, 'o')
 		read(t, tok, 'k')
@@ -378,12 +305,9 @@ func TestSkipCommentsHandler(t *testing.T) {
 	t.Run("Block", func(t *testing.T) {
 		tok := tokenizeString("*comm\nent*/ok")
 		ok, err := tok.skipCommentsHandler()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ok {
-			t.Error("expected ok=true, got ok=false")
-		}
+		require.NoError(t, err)
+
+		assert.True(t, ok)
 
 		read(t, tok, 'o')
 		read(t, tok, 'k')
@@ -393,12 +317,9 @@ func TestSkipCommentsHandler(t *testing.T) {
 	t.Run("FalseAlarm", func(t *testing.T) {
 		tok := tokenizeString(" 0)")
 		ok, err := tok.skipCommentsHandler()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ok {
-			t.Error("expected ok=false, got ok=true")
-		}
+		require.NoError(t, err)
+
+		assert.False(t, ok)
 
 		read(t, tok, ' ')
 		read(t, tok, '0')
@@ -409,10 +330,7 @@ func TestSkipCommentsHandler(t *testing.T) {
 
 func TestSkipSingleLineComment(t *testing.T) {
 	tok := tokenizeString("single-line comment\r\nok")
-	err := tok.skipSingleLineComment()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tok.skipSingleLineComment())
 
 	read(t, tok, 'o')
 	read(t, tok, 'k')
@@ -421,20 +339,14 @@ func TestSkipSingleLineComment(t *testing.T) {
 
 func TestSkipSingleLineCommentOnLastLine(t *testing.T) {
 	tok := tokenizeString("single-line comment")
-	err := tok.skipSingleLineComment()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tok.skipSingleLineComment())
 
 	read(t, tok, -1)
 }
 
 func TestSkipBlockComment(t *testing.T) {
 	tok := tokenizeString("this is/ a\nmulti-line /** comment.**/ok")
-	err := tok.skipBlockComment()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tok.skipBlockComment())
 
 	read(t, tok, 'o')
 	read(t, tok, 'k')
@@ -443,10 +355,7 @@ func TestSkipBlockComment(t *testing.T) {
 
 func TestSkipInvalidBlockComment(t *testing.T) {
 	tok := tokenizeString("this is a comment that never ends")
-	err := tok.skipBlockComment()
-	if err == nil {
-		t.Error("did not fail on bad block comment")
-	}
+	require.Error(t, tok.skipBlockComment())
 }
 
 func TestPeekN(t *testing.T) {
@@ -480,12 +389,8 @@ func TestPeekN(t *testing.T) {
 
 func peekN(t *testing.T, tok *tokenizer, n int, ee error, ecs ...int) {
 	cs, err := tok.peekN(n)
-	if err != ee {
-		t.Fatalf("expected err=%v, got err=%v", ee, err)
-	}
-	if !equal(ecs, cs) {
-		t.Errorf("expected %v, got %v", ecs, cs)
-	}
+	require.Equal(t, ee, err)
+	assert.True(t, equal(ecs, cs), "expected %v, got %v", ecs, cs)
 }
 
 func equal(a, b []int) bool {
@@ -526,12 +431,9 @@ func TestPeek(t *testing.T) {
 
 func peek(t *testing.T, tok *tokenizer, expected int) {
 	c, err := tok.peek()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c != expected {
-		t.Errorf("expected %v, got %v", expected, c)
-	}
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, c)
 }
 
 func TestReadUnread(t *testing.T) {
@@ -568,19 +470,13 @@ func TestReadUnread(t *testing.T) {
 
 func TestTokenToString(t *testing.T) {
 	for i := tokenError; i <= tokenCloseDoubleBrace+1; i++ {
-		str := i.String()
-		if str == "" {
-			t.Errorf("expected non-empty string for token %v", int(i))
-		}
+		assert.NotEmpty(t, i.String(), "expected non-empty string for token %v", int(i))
 	}
 }
 
 func read(t *testing.T, tok *tokenizer, expected int) {
 	c, err := tok.read()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c != expected {
-		t.Errorf("expected %v, got %v", expected, c)
-	}
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, c)
 }

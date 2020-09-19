@@ -18,6 +18,9 @@ package ion
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSharedSymbolTable(t *testing.T) {
@@ -30,15 +33,9 @@ func TestSharedSymbolTable(t *testing.T) {
 		"ghi",
 	})
 
-	if st.Name() != "test" {
-		t.Errorf("wrong name: %v", st.Name())
-	}
-	if st.Version() != 2 {
-		t.Errorf("wrong version: %v", st.Version())
-	}
-	if st.MaxID() != 6 {
-		t.Errorf("wrong maxid: %v", st.MaxID())
-	}
+	assert.Equal(t, "test", st.Name())
+	assert.Equal(t, 2, st.Version())
+	assert.Equal(t, 6, int(st.MaxID()))
 
 	testFindByName(t, st, "def", 2)
 	testFindByName(t, st, "null", 4)
@@ -58,9 +55,7 @@ func TestSharedSymbolTable(t *testing.T) {
 func TestLocalSymbolTable(t *testing.T) {
 	st := NewLocalSymbolTable(nil, []string{"foo", "bar"})
 
-	if st.MaxID() != 11 {
-		t.Errorf("wrong maxid: %v", st.MaxID())
-	}
+	assert.Equal(t, 11, int(st.MaxID()))
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)
@@ -92,9 +87,7 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 		"bar2",
 	})
 
-	if st.MaxID() != 13 { // 9 from $ion.1, 2 from test.1, 2 local.
-		t.Errorf("wrong maxid: %v", st.MaxID())
-	}
+	assert.Equal(t, 13, int(st.MaxID()))
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "$ion_shared_symbol_table", 9)
@@ -125,33 +118,19 @@ func TestSymbolTableBuilder(t *testing.T) {
 	b := NewSymbolTableBuilder()
 
 	id, ok := b.Add("name")
-	if ok {
-		t.Error("Add(name) returned true")
-	}
-	if id != 4 {
-		t.Errorf("Add(name) returned %v", id)
-	}
+	assert.False(t, ok, "Add(name) returned true")
+	assert.Equal(t, 4, int(id), "Add(name) returned %v", id)
 
 	id, ok = b.Add("foo")
-	if !ok {
-		t.Error("Add(foo) returned false")
-	}
-	if id != 10 {
-		t.Errorf("Add(foo) returned %v", id)
-	}
+	assert.True(t, ok, "Add(foo) returned false")
+	assert.Equal(t, 10, int(id), "Add(foo) returned %v", id)
 
 	id, ok = b.Add("foo")
-	if ok {
-		t.Error("Second Add(foo) returned true")
-	}
-	if id != 10 {
-		t.Errorf("Second Add(foo) returned %v", id)
-	}
+	assert.False(t, ok, "Second Add(foo) returned true")
+	assert.Equal(t, 10, int(id), "Second Add(foo) returned %v", id)
 
 	st := b.Build()
-	if st.MaxID() != 10 {
-		t.Errorf("maxid returned %v", st.MaxID())
-	}
+	assert.Equal(t, 10, int(st.MaxID()), "maxid returned %v", st.MaxID())
 
 	testFindByName(t, st, "$ion", 1)
 	testFindByName(t, st, "foo", 10)
@@ -166,16 +145,10 @@ func testFindByName(t *testing.T, st SymbolTable, sym string, expected uint64) {
 	t.Run("FindByName("+sym+")", func(t *testing.T) {
 		actual, ok := st.FindByName(sym)
 		if expected == 0 {
-			if ok {
-				t.Fatalf("unexpectedly found: %v", actual)
-			}
+			require.False(t, ok)
 		} else {
-			if !ok {
-				t.Fatal("unexpectedly not found")
-			}
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
+			require.True(t, ok)
+			assert.Equal(t, expected, actual)
 		}
 	})
 }
@@ -184,16 +157,10 @@ func testFindByID(t *testing.T, st SymbolTable, id uint64, expected string) {
 	t.Run(fmt.Sprintf("FindByID(%v)", id), func(t *testing.T) {
 		actual, ok := st.FindByID(id)
 		if expected == "" {
-			if ok {
-				t.Fatalf("unexpectedly found: %v", actual)
-			}
+			require.False(t, ok)
 		} else {
-			if !ok {
-				t.Fatal("unexpectedly not found")
-			}
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
+			require.True(t, ok)
+			assert.Equal(t, expected, actual)
 		}
 	})
 }
@@ -201,23 +168,16 @@ func testFindByID(t *testing.T, st SymbolTable, id uint64, expected string) {
 func testFindSymbolToken(t *testing.T, st SymbolTable, sym string, expected SymbolToken) {
 	t.Run("Find("+sym+")", func(t *testing.T) {
 		actual := st.Find(sym)
+		require.NotNil(t, actual)
 
-		if actual == nil {
-			t.Fatal("unexpectedly not found")
-		}
-
-		if !actual.Equal(&expected) {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		assert.True(t, actual.Equal(&expected), "expected %v, got %v", expected, actual)
 	})
 }
 
 func testString(t *testing.T, st SymbolTable, expected string) {
 	t.Run("String()", func(t *testing.T) {
 		actual := st.String()
-		if actual != expected {
-			t.Errorf("expected %v, got %v", expected, actual)
-		}
+		assert.Equal(t, expected, actual)
 	})
 }
 

@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 var blacklist = map[string]bool{
@@ -37,17 +39,13 @@ type drainfunc func(t *testing.T, r Reader, f string)
 
 func TestDecodeFiles(t *testing.T) {
 	testReadDir(t, "../ion-tests/iontestdata/good", func(t *testing.T, r Reader, f string) {
-		// fmt.Println(f)
 		d := NewDecoder(r)
 		for {
 			v, err := d.Decode()
 			if err == ErrNoInput {
 				break
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			// fmt.Println(v)
+			require.NoError(t, err)
 			_ = v
 		}
 	})
@@ -55,9 +53,7 @@ func TestDecodeFiles(t *testing.T) {
 
 func testReadDir(t *testing.T, path string, d drainfunc) {
 	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for _, file := range files {
 		fp := filepath.Join(path, file.Name())
@@ -79,15 +75,12 @@ func testReadFile(t *testing.T, path string, d drainfunc) {
 		return
 	}
 
-	//fmt.Printf("**** PATH = %s\n", path)
-
 	file, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
+	require.NoError(t, err)
 
 	r := NewReader(file)
 
 	d(t, r, path)
+
+	require.NoError(t, file.Close())
 }

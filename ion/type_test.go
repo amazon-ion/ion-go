@@ -15,23 +15,21 @@
 
 package ion
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestTypeToString(t *testing.T) {
 	for i := NoType; i <= StructType+1; i++ {
-		str := i.String()
-		if str == "" {
-			t.Errorf("expected a non-empty string for type %v", uint8(i))
-		}
+		assert.NotEmpty(t, i.String(), "expected a non-empty string for type %v", uint8(i))
 	}
 }
 
 func TestIntSizeToString(t *testing.T) {
 	for i := NullInt; i <= BigInt+1; i++ {
-		str := i.String()
-		if str == "" {
-			t.Errorf("expected a non-empty string for size %v", uint8(i))
-		}
+		assert.NotEmpty(t, i.String(), "expected a non-empty string for type %v", uint8(i))
 	}
 }
 
@@ -40,17 +38,13 @@ func TestIsScalar(t *testing.T) {
 		TimestampType, SymbolType, StringType, ClobType, BlobType}
 
 	for _, ionType := range scalarTypes {
-		if !IsScalar(ionType) {
-			t.Errorf("Expected IsScalar() to return true for type %s", ionType.String())
-		}
+		assert.True(t, IsScalar(ionType))
 	}
 
 	nonScalarTypes := []Type{NoType, ListType, SexpType, StructType}
 
 	for _, ionType := range nonScalarTypes {
-		if IsScalar(ionType) {
-			t.Errorf("Expected IsScalar() to return false for type %s", ionType.String())
-		}
+		assert.False(t, IsScalar(ionType))
 	}
 }
 
@@ -58,17 +52,13 @@ func TestIsContainer(t *testing.T) {
 	containerTypes := []Type{ListType, SexpType, StructType}
 
 	for _, ionType := range containerTypes {
-		if !IsContainer(ionType) {
-			t.Errorf("Expected IsContainer() to return true for type %s", ionType.String())
-		}
+		assert.True(t, IsContainer(ionType))
 	}
 
 	nonContainerTypes := []Type{NoType, NullType, BoolType, IntType, FloatType, DecimalType,
 		TimestampType, SymbolType, StringType, ClobType, BlobType}
 
 	for _, ionType := range nonContainerTypes {
-		if IsContainer(ionType) {
-			t.Errorf("Expected IsContainer() to return false for type %s", ionType.String())
-		}
+		assert.False(t, IsContainer(ionType))
 	}
 }

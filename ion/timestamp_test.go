@@ -18,6 +18,9 @@ package ion
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewTimestampFromStr(t *testing.T) {
@@ -105,12 +108,8 @@ func TestNewTimestampFromStr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testCase, func(t *testing.T) {
 			actual, err := NewTimestampFromStr(tt.args.dateStr, tt.args.precision, tt.args.kind)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !actual.Equal(tt.expected) {
-				t.Fatalf("expected %v, got %v", tt.expected, actual)
-			}
+			require.NoError(t, err)
+			assert.True(t, actual.Equal(tt.expected), "expected %v, got %v", tt.expected, actual)
 		})
 	}
 }
@@ -205,9 +204,7 @@ func TestTimestampString(t *testing.T) {
 				kind:                 kind,
 				numFractionalSeconds: tt.fields.numFractionalSeconds,
 			}
-			if actual := ts.String(); actual != tt.expected {
-				t.Fatalf("expected %v, got %v", tt.expected, actual)
-			}
+			assert.Equal(t, tt.expected, ts.String())
 		})
 	}
 }

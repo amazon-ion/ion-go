@@ -103,18 +103,6 @@ func symbolIdentifier(symbolText string) (int64, bool) {
 	return SymbolIDUnknown, false
 }
 
-func getSystemSymbolMapping(symbolTable SymbolTable, symbolName string) (int64, string) {
-	// If we have a symbol name of the form '$n' for some integer n,
-	// then we want to use the corresponding system symbol name.
-	if sid, ok := symbolIdentifier(symbolName); ok {
-		if systemSymbolName, ok := symbolTable.FindByID(uint64(sid)); ok {
-			return sid, systemSymbolName
-		}
-	}
-
-	return SymbolIDUnknown, ""
-}
-
 // NewSymbolTokenBySID will check and return a symbol token if the given id exists in a symbol table,
 // otherwise return a new symbol token.
 func NewSymbolTokenBySID(symbolTable SymbolTable, sid int64) (SymbolToken, error) {
