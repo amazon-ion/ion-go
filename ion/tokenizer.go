@@ -363,9 +363,9 @@ func (t *tokenizer) ReadValue(tok token) (string, error) {
 	case tokenSymbolOperator, tokenDot:
 		str, err = t.readOperator()
 	case tokenString:
-		str, err = t.readString(nonClobText)
+		str, err = t.readString()
 	case tokenLongString:
-		str, err = t.readLongString(nonClobText)
+		str, err = t.readLongString()
 	case tokenBinary:
 		str, err = t.readBinary()
 	case tokenHex:
@@ -581,7 +581,7 @@ func (t *tokenizer) readOperator() (string, error) {
 }
 
 // ReadString reads a quoted string.
-func (t *tokenizer) readString(isClob bool) (string, error) {
+func (t *tokenizer) readString() (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -590,7 +590,7 @@ func (t *tokenizer) readString(isClob bool) (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF, and new lines are not allowed in short string
-		if c == -1 || c == '\n' || isProhibitedControlChar(c) || (isClob && !isASCII(c)) {
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) {
 			return "", t.invalidChar(c)
 		}
 
@@ -599,24 +599,10 @@ func (t *tokenizer) readString(isClob bool) (string, error) {
 			return ret.String(), nil
 
 		case '\\':
-			c, err = t.peek()
+			err = processBackslashInString(t, &ret)
 			if err != nil {
 				return "", err
 			}
-
-			if c == '\n' {
-				_, err = t.read()
-				if err != nil {
-					return "", err
-				}
-				continue
-			}
-
-			r, err := t.readEscapedChar(isClob)
-			if err != nil {
-				return "", err
-			}
-			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
@@ -624,8 +610,42 @@ func (t *tokenizer) readString(isClob bool) (string, error) {
 	}
 }
 
+// ReadClob reads a quoted clob.
+func (t *tokenizer) readClob() ([]byte, error) {
+	var ret []byte
+
+	for {
+		c, err := t.read()
+		if err != nil {
+			return nil, err
+		}
+		// -1 denotes EOF, and new lines are not allowed in short string
+		if c == -1 || c == '\n' || isProhibitedControlChar(c) || !isASCII(c) {
+			return nil, t.invalidChar(c)
+		}
+
+		switch c {
+		case '"':
+			if ret == nil {
+				// The first character is the closing " , which means an empty clob.
+				return []byte{}, nil
+			}
+			return ret, nil
+
+		case '\\':
+			err = processBackslashInClob(t, &ret)
+			if err != nil {
+				return nil, err
+			}
+
+		default:
+			ret = append(ret, byte(c))
+		}
+	}
+}
+
 // ReadLongString reads a triple-quoted string.
-func (t *tokenizer) readLongString(isClob bool) (string, error) {
+func (t *tokenizer) readLongString() (string, error) {
 	ret := strings.Builder{}
 
 	for {
@@ -634,47 +654,74 @@ func (t *tokenizer) readLongString(isClob bool) (string, error) {
 			return "", err
 		}
 		// -1 denotes EOF
-		if c == -1 || isProhibitedControlChar(c) || (isClob && !isASCII(c)) {
+		if c == -1 || isProhibitedControlChar(c) {
 			return "", t.invalidChar(c)
 		}
 
 		switch c {
 		case '\'':
-			startPosition := t.pos
-			handler := getLongStringCommentsHandler(t, isClob)
-			ok, err := t.skipEndOfLongString(handler)
+			isEndOfString, isConsumed, err := t.skipEndOfLongString(t.skipCommentsHandler)
 			if err != nil {
 				return "", err
 			}
-			if ok {
+			if isEndOfString {
 				return ret.String(), nil
 			}
-			if startPosition == t.pos {
-				// No character has been consumed. It is single '.
+			if !isConsumed {
+				// No character has been consumed. It is a single '.
 				ret.WriteByte(byte(c))
 			}
 		case '\\':
-			c, err = t.peek()
+			err = processBackslashInString(t, &ret)
 			if err != nil {
 				return "", err
 			}
-
-			if c == '\n' {
-				_, err = t.read()
-				if err != nil {
-					return "", err
-				}
-				continue
-			}
-
-			r, err := t.readEscapedChar(isClob)
-			if err != nil {
-				return "", err
-			}
-			writeCharToStringBuilder(r, &ret, isClob)
 
 		default:
 			ret.WriteByte(byte(c))
+		}
+	}
+}
+
+// ReadLongClob reads a triple-quoted clob.
+func (t *tokenizer) readLongClob() ([]byte, error) {
+	var ret []byte
+
+	for {
+		c, err := t.read()
+		if err != nil {
+			return nil, err
+		}
+		// -1 denotes EOF
+		if c == -1 || isProhibitedControlChar(c) || !isASCII(c) {
+			return nil, t.invalidChar(c)
+		}
+
+		switch c {
+		case '\'':
+			isEndOfString, isConsumed, err := t.skipEndOfLongString(t.ensureNoCommentsHandler)
+			if err != nil {
+				return nil, err
+			}
+			if isEndOfString {
+				if ret == nil {
+					// The first character is the closing ''' , which means an empty clob.
+					return []byte{}, nil
+				}
+				return ret, nil
+			}
+			if !isConsumed {
+				// No character has been consumed. It is a single '.
+				ret = append(ret, byte(c))
+			}
+		case '\\':
+			err = processBackslashInClob(t, &ret)
+			if err != nil {
+				return nil, err
+			}
+
+		default:
+			ret = append(ret, byte(c))
 		}
 	}
 }
@@ -1064,54 +1111,54 @@ func (t *tokenizer) ReadBlob() (string, error) {
 	return w.String(), nil
 }
 
-func (t *tokenizer) ReadShortClob() (string, error) {
-	str, err := t.readString(clobText)
+func (t *tokenizer) ReadShortClob() ([]byte, error) {
+	val, err := t.readClob()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	c, _, err := t.skipLobWhitespace()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if c != '}' {
-		return "", t.invalidChar(c)
+		return nil, t.invalidChar(c)
 	}
 
 	if c, err = t.read(); err != nil {
-		return "", err
+		return nil, err
 	}
 	if c != '}' {
-		return "", t.invalidChar(c)
+		return nil, t.invalidChar(c)
 	}
 
 	t.unfinished = false
-	return str, nil
+	return val, nil
 }
 
-func (t *tokenizer) ReadLongClob() (string, error) {
-	str, err := t.readLongString(clobText)
+func (t *tokenizer) ReadLongClob() ([]byte, error) {
+	val, err := t.readLongClob()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	c, _, err := t.skipLobWhitespace()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if c != '}' {
-		return "", t.invalidChar(c)
+		return nil, t.invalidChar(c)
 	}
 
 	if c, err = t.read(); err != nil {
-		return "", err
+		return nil, err
 	}
 	if c != '}' {
-		return "", t.invalidChar(c)
+		return nil, t.invalidChar(c)
 	}
 
 	t.unfinished = false
-	return str, nil
+	return val, nil
 }
 
 // IsTripleQuote returns true if this is a triple-quote sequence (''').
@@ -1396,22 +1443,46 @@ func isASCII(c int) bool {
 	return c < 0x80
 }
 
-func getLongStringCommentsHandler(t *tokenizer, isClob bool) commentHandler {
-	if isClob {
-		return t.ensureNoCommentsHandler
+func processBackslashInString(t *tokenizer, sb *strings.Builder) error {
+	c, err := t.peek()
+	if err != nil {
+		return err
 	}
-	return t.skipCommentsHandler
+
+	if c == '\n' {
+		_, err = t.read()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	r, err := t.readEscapedChar(nonClobText)
+	if err != nil {
+		return err
+	}
+	sb.WriteRune(r)
+	return nil
 }
 
-// If `isClob` is false, we write the UTF-8 encoding of `c` into the string builder. When
-// `writeCharToStringBuilder` returns, `sb` will contain a valid string.
-// If `isClob` is true, `c` is a single byte of an unknown encoding. We will write that byte to
-// the string builder as-is. When `writeCharToStringBuilder` returns, the contents of `sb`
-// must be treated as a byte array of unknown encoding.
-func writeCharToStringBuilder(c rune, sb *strings.Builder, isClob bool) {
-	if isClob {
-		sb.WriteByte(byte(c))
-	} else {
-		sb.WriteRune(c)
+func processBackslashInClob(t *tokenizer, ret *[]byte) error {
+	c, err := t.peek()
+	if err != nil {
+		return err
 	}
+
+	if c == '\n' {
+		_, err = t.read()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	r, err := t.readEscapedChar(clobText)
+	if err != nil {
+		return err
+	}
+	*ret = append(*ret, byte(r))
+	return nil
 }
