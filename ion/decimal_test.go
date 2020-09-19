@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecimalToString(t *testing.T) {
@@ -29,9 +32,7 @@ func TestDecimalToString(t *testing.T) {
 				scale: scale,
 			}
 			actual := d.String()
-			if actual != expected {
-				t.Errorf("expected '%v', got '%v'", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -68,16 +69,10 @@ func TestParseDecimal(t *testing.T) {
 	test := func(in string, n *big.Int, scale int32) {
 		t.Run(in, func(t *testing.T) {
 			d, err := ParseDecimal(in)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if n.Cmp(d.n) != 0 {
-				t.Errorf("wrong n; expected %v, got %v", n, d.n)
-			}
-			if scale != d.scale {
-				t.Errorf("wrong scale; expected %v, got %v", scale, d.scale)
-			}
+			assert.True(t, n.Cmp(d.n) == 0, "wrong n; expected %v, got %v", n, d.n)
+			assert.Equal(t, scale, d.scale)
 		})
 	}
 
@@ -114,9 +109,7 @@ func testUnaryOp(t *testing.T, a, e string, op *unaryop) {
 		aa, _ := ParseDecimal(a)
 		ee, _ := ParseDecimal(e)
 		actual := op.fun(aa)
-		if !actual.Equal(ee) {
-			t.Errorf("expected %v, got %v", ee, actual)
-		}
+		assert.True(t, actual.Equal(ee), "expected %v, got %v", ee, actual)
 	})
 }
 
@@ -149,12 +142,8 @@ func TestTrunc(t *testing.T) {
 		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
 			aa := MustParseDecimal(a)
 			val, err := aa.trunc()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -173,12 +162,8 @@ func TestRound(t *testing.T) {
 		t.Run(fmt.Sprintf("trunc(%v)=%v", a, eval), func(t *testing.T) {
 			aa := MustParseDecimal(a)
 			val, err := aa.round()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -213,9 +198,7 @@ func TestShiftL(t *testing.T) {
 		aa, _ := ParseDecimal(a)
 		ee, _ := ParseDecimal(e)
 		actual := aa.ShiftL(b)
-		if !actual.Equal(ee) {
-			t.Errorf("expected %v, got %v", ee, actual)
-		}
+		assert.True(t, actual.Equal(ee), "expected %v, got %v", ee, actual)
 	}
 
 	test("0", 10, "0")
@@ -230,9 +213,7 @@ func TestShiftR(t *testing.T) {
 		aa, _ := ParseDecimal(a)
 		ee, _ := ParseDecimal(e)
 		actual := aa.ShiftR(b)
-		if !actual.Equal(ee) {
-			t.Errorf("expected %v, got %v", ee, actual)
-		}
+		assert.True(t, actual.Equal(ee), "expected %v, got %v", ee, actual)
 	}
 
 	test("0", 10, "0")
@@ -253,9 +234,7 @@ func testBinaryOp(t *testing.T, a, b, e string, op *binop) {
 		ee, _ := ParseDecimal(e)
 
 		actual := op.fun(aa, bb)
-		if !actual.Equal(ee) {
-			t.Errorf("expected %v, got %v", ee, actual)
-		}
+		assert.True(t, actual.Equal(ee), "expected %v, got %v", ee, actual)
 	})
 }
 
@@ -307,9 +286,7 @@ func TestTruncate(t *testing.T) {
 		t.Run(fmt.Sprintf("trunc(%v,%v)", a, p), func(t *testing.T) {
 			aa := MustParseDecimal(a)
 			actual := aa.Truncate(p).String()
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -328,9 +305,7 @@ func TestCmp(t *testing.T) {
 			ad, _ := ParseDecimal(a)
 			bd, _ := ParseDecimal(b)
 			actual := ad.Cmp(bd)
-			if actual != expected {
-				t.Errorf("expected %v, got %v", expected, actual)
-			}
+			assert.Equal(t, expected, actual)
 		})
 	}
 
@@ -352,7 +327,5 @@ func TestCmp(t *testing.T) {
 func TestUpscale(t *testing.T) {
 	d, _ := ParseDecimal("1d1")
 	actual := d.upscale(4).String()
-	if actual != "10.0000" {
-		t.Errorf("expected 10.0000, got %v", actual)
-	}
+	assert.Equal(t, "10.0000", actual)
 }

@@ -22,20 +22,18 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnmarshalBool(t *testing.T) {
 	test := func(str string, eval bool) {
 		t.Run(str, func(t *testing.T) {
 			var val bool
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -49,15 +47,10 @@ func TestUnmarshalBoolPtr(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			var bval bool
 			val := &bval
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
 			if eval == nil {
-				if val != nil {
-					t.Errorf("expected <nil>, got %v", *val)
-				}
+				assert.Nil(t, val)
 			} else {
 				switch {
 				case val == nil:
@@ -79,14 +72,9 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt8 := func(str string, eval int8) {
 		t.Run(str, func(t *testing.T) {
 			var val int8
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testInt8("null", 0)
@@ -97,14 +85,9 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt16 := func(str string, eval int16) {
 		t.Run(str, func(t *testing.T) {
 			var val int16
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testInt16("0x7F", 0x7F)
@@ -115,14 +98,9 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt32 := func(str string, eval int32) {
 		t.Run(str, func(t *testing.T) {
 			var val int32
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testInt32("0x7FFF", 0x7FFF)
@@ -133,14 +111,9 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt := func(str string, eval int) {
 		t.Run(str, func(t *testing.T) {
 			var val int
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testInt("0x7FFF", 0x7FFF)
@@ -151,14 +124,9 @@ func TestUnmarshalInt(t *testing.T) {
 	testInt64 := func(str string, eval int64) {
 		t.Run(str, func(t *testing.T) {
 			var val int64
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testInt64("0x7FFFFFFF", 0x7FFFFFFF)
@@ -171,14 +139,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint8 := func(str string, eval uint8) {
 		t.Run(str, func(t *testing.T) {
 			var val uint8
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUint8("null", 0)
@@ -188,14 +151,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint16 := func(str string, eval uint16) {
 		t.Run(str, func(t *testing.T) {
 			var val uint16
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUint16("0xFF", 0xFF)
@@ -204,14 +162,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint32 := func(str string, eval uint32) {
 		t.Run(str, func(t *testing.T) {
 			var val uint32
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUint32("0xFFFF", 0xFFFF)
@@ -220,14 +173,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint := func(str string, eval uint) {
 		t.Run(str, func(t *testing.T) {
 			var val uint
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUint("0xFFFF", 0xFFFF)
@@ -236,14 +184,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUintptr := func(str string, eval uintptr) {
 		t.Run(str, func(t *testing.T) {
 			var val uintptr
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUintptr("0xFFFF", 0xFFFF)
@@ -252,14 +195,9 @@ func TestUnmarshalUint(t *testing.T) {
 	testUint64 := func(str string, eval uint64) {
 		t.Run(str, func(t *testing.T) {
 			var val uint64
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	testUint64("0xFFFFFFFF", 0xFFFFFFFF)
@@ -270,14 +208,9 @@ func TestUnmarshalBigInt(t *testing.T) {
 	test := func(str string, eval *big.Int) {
 		t.Run(str, func(t *testing.T) {
 			var val big.Int
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if val.Cmp(eval) != 0 {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, val.Cmp(eval) == 0, "expected %v, got %v", eval, val)
 		})
 	}
 	test("null", new(big.Int))
@@ -288,10 +221,8 @@ func TestUnmarshalBigInt(t *testing.T) {
 func TestUnmarshalBinary(t *testing.T) {
 	test := func(data []byte, val, eval interface{}) {
 		t.Run(reflect.TypeOf(val).String(), func(t *testing.T) {
-			err := Unmarshal(data, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, Unmarshal(data, &val))
+
 			res := false
 			switch thisValue := val.(type) {
 			case *Decimal:
@@ -308,9 +239,7 @@ func TestUnmarshalBinary(t *testing.T) {
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
-			if !res {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, res, "expected %v, got %v", eval, val)
 		})
 	}
 
@@ -364,14 +293,9 @@ func TestUnmarshalBinary(t *testing.T) {
 func TestUnmarshalStructBinary(t *testing.T) {
 	test := func(data []byte, testName string, val, eval interface{}) {
 		t.Run(testName, func(t *testing.T) {
-			err := Unmarshal(data, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, Unmarshal(data, &val))
 
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -395,14 +319,9 @@ func TestUnmarshalStructBinary(t *testing.T) {
 func TestUnmarshalListSexpBinary(t *testing.T) {
 	test := func(data []byte, testName string, val, eval interface{}) {
 		t.Run("reflect.TypeOf(val).String()", func(t *testing.T) {
-			err := Unmarshal(data, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, Unmarshal(data, &val))
 
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -423,14 +342,9 @@ func TestDecodeFloat(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val float32
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	test32("null", 0)
@@ -443,14 +357,9 @@ func TestDecodeFloat(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val float64
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 	test64("1e0", 1)
@@ -464,14 +373,9 @@ func TestDecodeDecimal(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val *Decimal
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if !val.Equal(eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, val.Equal(eval), "expected %v, got %v", eval, val)
 		})
 	}
 
@@ -485,14 +389,9 @@ func TestDecodeTimestampTo(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val Timestamp
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if !val.Equal(eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, val.Equal(eval), "expected %v, got %v", eval, val)
 		})
 	}
 	test("null", Timestamp{})
@@ -505,14 +404,9 @@ func TestDecodeStringTo(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val string
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if val != eval {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -527,14 +421,9 @@ func TestDecodeLobTo(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val []byte
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if !bytes.Equal(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, bytes.Equal(val, eval), "expected %v, got %v", eval, val)
 		})
 	}
 	testSlice("null", nil)
@@ -547,14 +436,9 @@ func TestDecodeLobTo(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
 			var val [8]byte
-			err := d.DecodeTo(&val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, d.DecodeTo(&val))
 
-			if !bytes.Equal(val[:], eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, bytes.Equal(val[:], eval), "expected %v, got %v", eval, val)
 		})
 	}
 	testArray("null", make([]byte, 8))
@@ -565,13 +449,9 @@ func TestDecodeStructTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
-			err := d.DecodeTo(val)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, d.DecodeTo(val))
+
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -595,13 +475,9 @@ func TestDecodeListTo(t *testing.T) {
 	test := func(str string, val, eval interface{}) {
 		t.Run(str, func(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
-			err := d.DecodeTo(val)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			require.NoError(t, d.DecodeTo(val))
+
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -628,9 +504,8 @@ func TestDecode(t *testing.T) {
 		t.Run(data, func(t *testing.T) {
 			d := NewDecoder(NewReaderString(data))
 			val, err := d.Decode()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+
 			res := false
 			switch thisValue := val.(type) {
 			case *float64:
@@ -640,9 +515,7 @@ func TestDecode(t *testing.T) {
 			default:
 				res = reflect.DeepEqual(val, eval)
 			}
-			if !res {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.True(t, res, "expected %v, got %v", eval, val)
 		})
 	}
 
@@ -702,9 +575,9 @@ func TestDecodeLotsOfInts(t *testing.T) {
 	buf := bytes.Buffer{}
 	w := NewBinaryWriter(&buf)
 	for i := 0; i < 512; i++ {
-		w.WriteInt(1570737066801085)
+		assert.NoError(t, w.WriteInt(1570737066801085))
 	}
-	w.Finish()
+	assert.NoError(t, w.Finish())
 	bs := buf.Bytes()
 
 	// The binary reader wraps a bufio.Reader with an internal 4096-byte
@@ -719,12 +592,8 @@ func TestDecodeLotsOfInts(t *testing.T) {
 		if err == ErrNoInput {
 			break
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if val.(int64) != 1570737066801085 {
-			t.Fatalf("expected %v, got %v", 1570737066801085, val)
-		}
+		require.NoError(t, err)
+		require.Equal(t, int64(1570737066801085), val.(int64))
 	}
 }
 
@@ -737,14 +606,9 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval foo) {
 		t.Run(testName, func(t *testing.T) {
 			var val foo
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -771,14 +635,9 @@ func TestUnmarshalContainersWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval interface{}) {
 		t.Run(testName, func(t *testing.T) {
 			var val foo
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 
@@ -805,14 +664,9 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 	test := func(str, testName string, eval interface{}) {
 		t.Run(testName, func(t *testing.T) {
 			var val topLevelStruct
-			err := UnmarshalString(str, &val)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, UnmarshalString(str, &val))
 
-			if !reflect.DeepEqual(val, eval) {
-				t.Errorf("expected %v, got %v", eval, val)
-			}
+			assert.Equal(t, eval, val)
 		})
 	}
 

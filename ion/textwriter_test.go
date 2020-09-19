@@ -21,114 +21,97 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWriteTextTopLevelFieldName(t *testing.T) {
 	writeText(func(w Writer) {
-		if err := w.FieldName("foo"); err == nil {
-			t.Error("expected an error")
-		}
+		assert.Error(t, w.FieldName("foo"))
 	})
 }
 
 func TestWriteTextEmptyStruct(t *testing.T) {
 	testTextWriter(t, "{}", func(w Writer) {
-		if err := w.BeginStruct(); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, w.BeginStruct())
 
-		if err := w.EndStruct(); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, w.EndStruct())
 
-		if err := w.EndStruct(); err == nil {
-			t.Fatal("no error from ending struct too many times")
-		}
+		require.Error(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextAnnotatedStruct(t *testing.T) {
 	testTextWriter(t, "foo::$bar::'.baz'::{}", func(w Writer) {
-		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
-		w.Annotation(SymbolToken{Text: newString("$bar"), LocalSID: SymbolIDUnknown})
-		w.Annotation(SymbolToken{Text: newString(".baz"), LocalSID: SymbolIDUnknown})
-		w.BeginStruct()
-		err := w.EndStruct()
-
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("$bar"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString(".baz"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.BeginStruct())
+		require.NoError(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextNestedStruct(t *testing.T) {
 	testTextWriter(t, "{foo:'true'::{},'null':{}}", func(w Writer) {
-		w.BeginStruct()
+		assert.NoError(t, w.BeginStruct())
 
-		w.FieldName("foo")
-		w.Annotation(SymbolToken{Text: newString("true"), LocalSID: SymbolIDUnknown})
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.FieldName("foo"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("true"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.FieldName("null")
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.FieldName("null"))
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.EndStruct()
+		assert.NoError(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextEmptyList(t *testing.T) {
 	testTextWriter(t, "[]", func(w Writer) {
-		if err := w.BeginList(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := w.EndList(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := w.EndList(); err == nil {
-			t.Error("no error calling endlist at top level")
-		}
+		require.NoError(t, w.BeginList())
+		require.NoError(t, w.EndList())
+		require.Error(t, w.EndList())
 	})
 }
 
 func TestWriteTextNestedLists(t *testing.T) {
 	testTextWriter(t, "[{},foo::{},'null'::[]]", func(w Writer) {
-		w.BeginList()
+		assert.NoError(t, w.BeginList())
 
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown})
-		w.BeginList()
-		w.EndList()
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.BeginList())
+		assert.NoError(t, w.EndList())
 
-		w.EndList()
+		assert.NoError(t, w.EndList())
 	})
 }
 
 func TestWriteTextSexps(t *testing.T) {
 	testTextWriter(t, "()\n(())\n(() ())", func(w Writer) {
-		w.BeginSexp()
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.EndSexp())
 
-		w.BeginSexp()
-		w.BeginSexp()
-		w.EndSexp()
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.EndSexp())
+		assert.NoError(t, w.EndSexp())
 
-		w.BeginSexp()
-		w.BeginSexp()
-		w.EndSexp()
-		w.BeginSexp()
-		w.EndSexp()
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.EndSexp())
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.EndSexp())
+		assert.NoError(t, w.EndSexp())
 	})
 }
 
@@ -138,116 +121,116 @@ func TestWriteTextNulls(t *testing.T) {
 		"null.list,'null'::null.sexp,null.struct]"
 
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginList()
+		assert.NoError(t, w.BeginList())
 
-		w.WriteNull()
-		w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown})
-		w.WriteNullType(NullType)
-		w.WriteNullType(BoolType)
-		w.WriteNullType(IntType)
-		w.WriteNullType(FloatType)
-		w.WriteNullType(DecimalType)
-		w.WriteNullType(TimestampType)
-		w.WriteNullType(SymbolType)
-		w.WriteNullType(StringType)
-		w.WriteNullType(ClobType)
-		w.WriteNullType(BlobType)
-		w.WriteNullType(ListType)
-		w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown})
-		w.WriteNullType(SexpType)
-		w.WriteNullType(StructType)
+		assert.NoError(t, w.WriteNull())
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteNullType(NullType))
+		assert.NoError(t, w.WriteNullType(BoolType))
+		assert.NoError(t, w.WriteNullType(IntType))
+		assert.NoError(t, w.WriteNullType(FloatType))
+		assert.NoError(t, w.WriteNullType(DecimalType))
+		assert.NoError(t, w.WriteNullType(TimestampType))
+		assert.NoError(t, w.WriteNullType(SymbolType))
+		assert.NoError(t, w.WriteNullType(StringType))
+		assert.NoError(t, w.WriteNullType(ClobType))
+		assert.NoError(t, w.WriteNullType(BlobType))
+		assert.NoError(t, w.WriteNullType(ListType))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("null"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteNullType(SexpType))
+		assert.NoError(t, w.WriteNullType(StructType))
 
-		w.EndList()
+		assert.NoError(t, w.EndList())
 	})
 }
 
 func TestWriteTextBool(t *testing.T) {
 	expected := "true\n(false '123'::true)\n'false'::false"
 	testTextWriter(t, expected, func(w Writer) {
-		w.WriteBool(true)
+		assert.NoError(t, w.WriteBool(true))
 
-		w.BeginSexp()
+		assert.NoError(t, w.BeginSexp())
 
-		w.WriteBool(false)
-		w.Annotation(SymbolToken{Text: newString("123"), LocalSID: SymbolIDUnknown})
-		w.WriteBool(true)
+		assert.NoError(t, w.WriteBool(false))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("123"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteBool(true))
 
-		w.EndSexp()
+		assert.NoError(t, w.EndSexp())
 
-		w.Annotation(SymbolToken{Text: newString("false"), LocalSID: SymbolIDUnknown})
-		w.WriteBool(false)
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("false"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteBool(false))
 	})
 }
 
 func TestWriteTextInt(t *testing.T) {
 	expected := "(zero::0 1 -1 (9223372036854775807 -9223372036854775808))"
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginSexp()
+		assert.NoError(t, w.BeginSexp())
 
-		w.Annotation(SymbolToken{Text: newString("zero"), LocalSID: SymbolIDUnknown})
-		w.WriteInt(0)
-		w.WriteInt(1)
-		w.WriteInt(-1)
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("zero"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteInt(0))
+		assert.NoError(t, w.WriteInt(1))
+		assert.NoError(t, w.WriteInt(-1))
 
-		w.BeginSexp()
-		w.WriteInt(math.MaxInt64)
-		w.WriteInt(math.MinInt64)
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.WriteInt(math.MaxInt64))
+		assert.NoError(t, w.WriteInt(math.MinInt64))
+		assert.NoError(t, w.EndSexp())
 
-		w.EndSexp()
+		assert.NoError(t, w.EndSexp())
 	})
 }
 
 func TestWriteTextBigInt(t *testing.T) {
 	expected := "[0,big::18446744073709551616]"
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginList()
+		assert.NoError(t, w.BeginList())
 
-		w.WriteBigInt(big.NewInt(0))
+		assert.NoError(t, w.WriteBigInt(big.NewInt(0)))
 
 		var val, max, one big.Int
 		max.SetUint64(math.MaxUint64)
 		one.SetInt64(1)
 		val.Add(&max, &one)
 
-		w.Annotation(SymbolToken{Text: newString("big"), LocalSID: SymbolIDUnknown})
-		w.WriteBigInt(&val)
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("big"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteBigInt(&val))
 
-		w.EndList()
+		assert.NoError(t, w.EndList())
 	})
 }
 
 func TestWriteTextFloat(t *testing.T) {
 	expected := "{z:0e+0,nz:-0e+0,s:1.234e+1,l:1.234e-55,n:nan,i:+inf,ni:-inf}"
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginStruct()
+		assert.NoError(t, w.BeginStruct())
 
-		w.FieldName("z")
-		w.WriteFloat(0.0)
-		w.FieldName("nz")
-		w.WriteFloat(-1.0 / math.Inf(1))
+		assert.NoError(t, w.FieldName("z"))
+		assert.NoError(t, w.WriteFloat(0.0))
+		assert.NoError(t, w.FieldName("nz"))
+		assert.NoError(t, w.WriteFloat(-1.0/math.Inf(1)))
 
-		w.FieldName("s")
-		w.WriteFloat(12.34)
-		w.FieldName("l")
-		w.WriteFloat(12.34e-56)
+		assert.NoError(t, w.FieldName("s"))
+		assert.NoError(t, w.WriteFloat(12.34))
+		assert.NoError(t, w.FieldName("l"))
+		assert.NoError(t, w.WriteFloat(12.34e-56))
 
-		w.FieldName("n")
-		w.WriteFloat(math.NaN())
-		w.FieldName("i")
-		w.WriteFloat(math.Inf(1))
-		w.FieldName("ni")
-		w.WriteFloat(math.Inf(-1))
+		assert.NoError(t, w.FieldName("n"))
+		assert.NoError(t, w.WriteFloat(math.NaN()))
+		assert.NoError(t, w.FieldName("i"))
+		assert.NoError(t, w.WriteFloat(math.Inf(1)))
+		assert.NoError(t, w.FieldName("ni"))
+		assert.NoError(t, w.WriteFloat(math.Inf(-1)))
 
-		w.EndStruct()
+		assert.NoError(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextDecimal(t *testing.T) {
 	expected := "0.\n-1.23d-98"
 	testTextWriter(t, expected, func(w Writer) {
-		w.WriteDecimal(MustParseDecimal("0"))
-		w.WriteDecimal(MustParseDecimal("-123d-100"))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("0")))
+		assert.NoError(t, w.WriteDecimal(MustParseDecimal("-123d-100")))
 	})
 }
 
@@ -255,87 +238,85 @@ func TestWriteTextTimestamp(t *testing.T) {
 	expected := "1970-01-01T00:00:00.001Z\n1970-01-01T01:23:00+01:23"
 	testTextWriter(t, expected, func(w Writer) {
 		dateTime := time.Unix(0, 1000000).In(time.UTC)
-		w.WriteTimestamp(NewTimestampWithFractionalSeconds(dateTime, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+		assert.NoError(t, w.WriteTimestamp(NewTimestampWithFractionalSeconds(dateTime, TimestampPrecisionNanosecond, TimezoneUTC, 3)))
 		dateTime = time.Unix(0, 0).In(time.FixedZone("foo", 4980))
-		w.WriteTimestamp(NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneLocal))
+		assert.NoError(t, w.WriteTimestamp(NewTimestamp(dateTime, TimestampPrecisionSecond, TimezoneLocal)))
 	})
 }
 
 func TestWriteTextSymbol(t *testing.T) {
 	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸',$123:$456}"
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginStruct()
+		assert.NoError(t, w.BeginStruct())
 
-		w.FieldName("foo")
-		w.WriteSymbol("bar")
-		w.FieldName("empty")
-		w.WriteSymbol("")
-		w.FieldName("null")
-		w.WriteSymbol("null")
+		assert.NoError(t, w.FieldName("foo"))
+		assert.NoError(t, w.WriteSymbol("bar"))
+		assert.NoError(t, w.FieldName("empty"))
+		assert.NoError(t, w.WriteSymbol(""))
+		assert.NoError(t, w.FieldName("null"))
+		assert.NoError(t, w.WriteSymbol("null"))
 
-		w.FieldName("f")
-		w.Annotation(SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown})
-		w.Annotation(SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown})
-		w.Annotation(SymbolToken{Text: newString("u"), LocalSID: SymbolIDUnknown})
-		w.WriteSymbol("lo🇺🇸")
+		assert.NoError(t, w.FieldName("f"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("u"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteSymbol("lo🇺🇸"))
 
-		w.FieldName("$123")
-		w.WriteSymbol("$456")
+		assert.NoError(t, w.FieldName("$123"))
+		assert.NoError(t, w.WriteSymbol("$456"))
 
-		w.EndStruct()
+		assert.NoError(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextString(t *testing.T) {
 	expected := `("hello" "" ("\\\"\n\"\\" zany::"🤪"))`
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginSexp()
-		w.WriteString("hello")
-		w.WriteString("")
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.WriteString("hello"))
+		assert.NoError(t, w.WriteString(""))
 
-		w.BeginSexp()
-		w.WriteString("\\\"\n\"\\")
-		w.Annotation(SymbolToken{Text: newString("zany"), LocalSID: SymbolIDUnknown})
-		w.WriteString("🤪")
-		w.EndSexp()
+		assert.NoError(t, w.BeginSexp())
+		assert.NoError(t, w.WriteString("\\\"\n\"\\"))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("zany"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteString("🤪"))
+		assert.NoError(t, w.EndSexp())
 
-		w.EndSexp()
+		assert.NoError(t, w.EndSexp())
 	})
 }
 
 func TestWriteTextBlob(t *testing.T) {
 	expected := "{{AAEC/f7/}}\n{{SGVsbG8gV29ybGQ=}}\nempty::{{}}"
 	testTextWriter(t, expected, func(w Writer) {
-		w.WriteBlob([]byte{0, 1, 2, 0xFD, 0xFE, 0xFF})
-		w.WriteBlob([]byte("Hello World"))
-		w.Annotation(SymbolToken{Text: newString("empty"), LocalSID: SymbolIDUnknown})
-		w.WriteBlob(nil)
+		assert.NoError(t, w.WriteBlob([]byte{0, 1, 2, 0xFD, 0xFE, 0xFF}))
+		assert.NoError(t, w.WriteBlob([]byte("Hello World")))
+		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("empty"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.WriteBlob(nil))
 	})
 }
 
 func TestWriteTextClob(t *testing.T) {
 	expected := "{hello:{{\"world\"}},bits:{{\"\\0\\x01\\xFE\\xFF\"}}}"
 	testTextWriter(t, expected, func(w Writer) {
-		w.BeginStruct()
-		w.FieldName("hello")
-		w.WriteClob([]byte("world"))
-		w.FieldName("bits")
-		w.WriteClob([]byte{0, 1, 0xFE, 0xFF})
-		w.EndStruct()
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.FieldName("hello"))
+		assert.NoError(t, w.WriteClob([]byte("world")))
+		assert.NoError(t, w.FieldName("bits"))
+		assert.NoError(t, w.WriteClob([]byte{0, 1, 0xFE, 0xFF}))
+		assert.NoError(t, w.EndStruct())
 	})
 }
 
 func TestWriteTextFinish(t *testing.T) {
 	expected := "1\nfoo\n\"bar\"\n{}\n"
 	testTextWriter(t, expected, func(w Writer) {
-		w.WriteInt(1)
-		w.WriteSymbol("foo")
-		w.WriteString("bar")
-		w.BeginStruct()
-		w.EndStruct()
-		if err := w.Finish(); err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, w.WriteInt(1))
+		assert.NoError(t, w.WriteSymbol("foo"))
+		assert.NoError(t, w.WriteString("bar"))
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
+		require.NoError(t, w.Finish())
 	})
 }
 
@@ -343,61 +324,59 @@ func TestWriteTextBadFinish(t *testing.T) {
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
 
-	w.BeginStruct()
-	err := w.Finish()
-
-	if err == nil {
-		t.Error("should not be able to finish in the middle of a struct")
-	}
+	assert.NoError(t, w.BeginStruct())
+	require.Error(t, w.Finish())
 }
 
 func TestWriteTextPretty(t *testing.T) {
 	buf := strings.Builder{}
 	w := NewTextWriterOpts(&buf, TextWriterPretty)
 
-	w.BeginStruct()
+	assert.NoError(t, w.BeginStruct())
 	{
-		w.FieldName("struct")
-		w.BeginStruct()
-		w.EndStruct()
+		assert.NoError(t, w.FieldName("struct"))
+		assert.NoError(t, w.BeginStruct())
+		assert.NoError(t, w.EndStruct())
 
-		w.FieldName("list")
-		w.Annotations(SymbolToken{Text: newString("i"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("am"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("list"), LocalSID: SymbolIDUnknown})
-		w.BeginList()
+		assert.NoError(t, w.FieldName("list"))
+		assert.NoError(t, w.Annotations(
+			SymbolToken{Text: newString("i"), LocalSID: SymbolIDUnknown},
+			SymbolToken{Text: newString("am"), LocalSID: SymbolIDUnknown},
+			SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown},
+			SymbolToken{Text: newString("list"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.BeginList())
 		{
-			w.WriteString("value")
-			w.WriteNullType(StringType)
-			w.BeginStruct()
+			assert.NoError(t, w.WriteString("value"))
+			assert.NoError(t, w.WriteNullType(StringType))
+			assert.NoError(t, w.BeginStruct())
 			{
-				w.FieldName("1")
-				w.WriteString("one")
-				w.FieldName("2")
-				w.WriteString("two")
+				assert.NoError(t, w.FieldName("1"))
+				assert.NoError(t, w.WriteString("one"))
+				assert.NoError(t, w.FieldName("2"))
+				assert.NoError(t, w.WriteString("two"))
 			}
-			w.EndStruct()
+			assert.NoError(t, w.EndStruct())
 		}
-		w.EndList()
+		assert.NoError(t, w.EndList())
 
-		w.FieldName("sexp")
-		w.BeginSexp()
+		assert.NoError(t, w.FieldName("sexp"))
+		assert.NoError(t, w.BeginSexp())
 		{
-			w.WriteSymbol("+")
-			w.WriteInt(123)
-			w.BeginSexp()
+			assert.NoError(t, w.WriteSymbol("+"))
+			assert.NoError(t, w.WriteInt(123))
+			assert.NoError(t, w.BeginSexp())
 			{
-				w.WriteSymbol("*")
-				w.WriteInt(456)
-				w.WriteInt(789)
+				assert.NoError(t, w.WriteSymbol("*"))
+				assert.NoError(t, w.WriteInt(456))
+				assert.NoError(t, w.WriteInt(789))
 			}
-			w.EndSexp()
+			assert.NoError(t, w.EndSexp())
 		}
-		w.EndSexp()
+		assert.NoError(t, w.EndSexp())
 	}
-	w.EndStruct()
+	assert.NoError(t, w.EndStruct())
 
-	if err := w.Finish(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, w.Finish())
 
 	actual := buf.String()
 	expected := `{
@@ -421,16 +400,12 @@ func TestWriteTextPretty(t *testing.T) {
 	)
 }
 `
-	if actual != expected {
-		t.Errorf("expected:\n%v\ngot:\n%v", expected, actual)
-	}
+	assert.Equal(t, expected, actual)
 }
 
 func testTextWriter(t *testing.T, expected string, f func(Writer)) {
 	actual := writeText(f)
-	if actual != expected {
-		t.Errorf("expected: %v, actual: %v", expected, actual)
-	}
+	assert.Equal(t, expected, actual)
 }
 
 func writeText(f func(Writer)) string {

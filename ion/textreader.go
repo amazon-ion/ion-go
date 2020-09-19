@@ -638,13 +638,10 @@ func (t *textReader) onLob() error {
 		// Short clob.
 		valType = ClobType
 
-		str, err := t.tok.ReadShortClob()
+		val, err = t.tok.ReadShortClob()
 		if err != nil {
 			return err
 		}
-
-		val = []byte(str)
-
 	} else if c == '\'' {
 		// Long clob.
 		ok, err := t.tok.IsTripleQuote()
@@ -657,13 +654,10 @@ func (t *textReader) onLob() error {
 
 		valType = ClobType
 
-		str, err := t.tok.ReadLongClob()
+		val, err = t.tok.ReadLongClob()
 		if err != nil {
 			return err
 		}
-
-		val = []byte(str)
-
 	} else {
 		// Normal blob.
 		valType = BlobType

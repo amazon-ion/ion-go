@@ -2,6 +2,8 @@ package ion
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLocalSymbolTableAppend(t *testing.T) {
@@ -17,7 +19,7 @@ func TestLocalSymbolTableAppend(t *testing.T) {
 			null`
 
 	r := NewReaderString(text)
-	r.Next()
+	assert.True(t, r.Next())
 	st := r.SymbolTable()
 
 	imports := st.Imports()
@@ -56,7 +58,7 @@ func TestLocalSymbolTableMultiAppend(t *testing.T) {
 			null`
 
 	r := NewReaderString(text)
-	r.Next()
+	assert.True(t, r.Next())
 	st := r.SymbolTable()
 
 	imports := st.Imports()
@@ -89,19 +91,18 @@ func TestLocalSymbolTableAppendEmptyList(t *testing.T) {
 		null`
 
 	r := NewReaderString(original + "null")
-	r.Next()
+	assert.True(t, r.Next())
 	ost := r.SymbolTable()
 
 	originalSymbol := ost.Find("s1")
 
 	r = NewReaderString(appended)
-	r.Next()
+	assert.True(t, r.Next())
 	ast := r.SymbolTable()
 	appendedSymbol := ast.Find("s1")
 
-	if originalSymbol.LocalSID != appendedSymbol.LocalSID {
-		t.Errorf("Original symbol SID: %v,did not match Appended symbol SID: %v", originalSymbol.LocalSID, appendedSymbol.LocalSID)
-	}
+	assert.Equal(t, originalSymbol.LocalSID, appendedSymbol.LocalSID,
+		"Original symbol SID: %v,did not match Appended symbol SID: %v", originalSymbol.LocalSID, appendedSymbol.LocalSID)
 }
 
 func TestLocalSymbolTableAppendNonUnique(t *testing.T) {
@@ -119,8 +120,8 @@ func TestLocalSymbolTableAppendNonUnique(t *testing.T) {
 			$12`
 
 	r := NewReaderString(text)
-	r.Next()
-	r.Next()
+	assert.True(t, r.Next())
+	assert.True(t, r.Next())
 	st := r.SymbolTable()
 	systemMaxID := getSystemMaxID(st)
 
@@ -144,8 +145,8 @@ func TestLocalSymbolTableAppendOutOfBounds(t *testing.T) {
 			$12`
 
 	r := NewReaderString(text)
-	r.Next()
-	r.Next()
+	assert.True(t, r.Next())
+	assert.True(t, r.Next())
 	st := r.SymbolTable()
 	systemMaxID := getSystemMaxID(st)
 
@@ -162,28 +163,18 @@ func getSystemMaxID(st SymbolTable) uint64 {
 
 func checkSymbol(t *testing.T, eval string, SID uint64, st SymbolTable) {
 	val, ok := st.FindByID(SID)
-	if !ok {
-		t.Errorf("Failed on checking symbol. Symbol table could not find symbol given the ID: %v", SID)
-	}
-	if val != eval {
-		t.Errorf("Failed on checking symbol. Symbol table returned the symbol name: %v, did not match the expected name: %v", val, eval)
-	}
+	assert.True(t, ok, "Failed on checking symbol. Symbol table could not find symbol given the ID: %v", SID)
+	assert.Equal(t, eval, val, "Failed on checking symbol. Symbol table returned the symbol name: %v, did not match the expected name: %v", val, eval)
 }
 
 func checkUnknownSymbolText(t *testing.T, val string, st SymbolTable) {
 	symbolToken := st.Find(val)
-	if symbolToken != nil {
-		t.Errorf("Failed on checking unknown symbol. Symbol table found symbol given the name: %v", val)
-	}
+	assert.Nil(t, symbolToken, "Failed on checking unknown symbol. Symbol table found symbol given the name: %v", val)
 	_, ok := st.FindByName(val)
-	if ok {
-		t.Errorf("Failed on checking unknown symbol. Symbol table found symbol given the name: %v", val)
-	}
+	assert.False(t, ok, "Failed on checking unknown symbol. Symbol table found symbol given the name: %v", val)
 }
 
 func checkUnknownSymbolID(t *testing.T, val uint64, st SymbolTable) {
 	_, ok := st.FindByID(val)
-	if ok {
-		t.Errorf("Failed on checking unknown symbol. Symbol table found symbol given the SID: %v", val)
-	}
+	assert.False(t, ok, "Failed on checking unknown symbol. Symbol table found symbol given the SID: %v", val)
 }

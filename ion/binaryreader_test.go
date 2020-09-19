@@ -20,39 +20,28 @@ import (
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadBadBVMs(t *testing.T) {
 	t.Run("E00200E9", func(t *testing.T) {
 		// Need a good first one or we'll get sent to the text reader.
 		r := NewReaderBytes([]byte{0xE0, 0x01, 0x00, 0xEA, 0xE0, 0x02, 0x00, 0xE9})
-		if r.Next() {
-			t.Errorf("next returned true")
-		}
-		if r.Err() == nil {
-			t.Fatal("err is nil")
-		}
+		assert.False(t, r.Next())
+		require.Error(t, r.Err())
 	})
 
 	t.Run("E00200EA", func(t *testing.T) {
 		r := NewReaderBytes([]byte{0xE0, 0x02, 0x00, 0xEA})
-		if r.Next() {
-			t.Errorf("next returned true")
-		}
-		if r.Err() == nil {
-			t.Fatal("err is nil")
-		}
+		assert.False(t, r.Next())
+		require.Error(t, r.Err())
 
-		uve, ok := r.Err().(*UnsupportedVersionError)
-		if !ok {
-			t.Fatal("err is not an UnsupportedVersionError")
-		}
-		if uve.Major != 2 {
-			t.Errorf("expected major=2, got %v", uve.Major)
-		}
-		if uve.Minor != 0 {
-			t.Errorf("expected minor=0, got %v", uve.Minor)
-		}
+		require.IsType(t, &UnsupportedVersionError{}, r.Err())
+		uve := r.Err().(*UnsupportedVersionError)
+		assert.Equal(t, 2, uve.Major)
+		assert.Equal(t, 0, uve.Minor)
 	})
 }
 
@@ -88,12 +77,8 @@ func TestReadBadLST(t *testing.T) {
 		0x0F, // null
 	}
 	r := NewReaderBytes(ion)
-	if r.Next() {
-		t.Fatal("next returned true")
-	}
-	if r.Err() == nil {
-		t.Fatal("err is nil")
-	}
+	require.False(t, r.Next())
+	require.Error(t, r.Err())
 }
 
 func TestReadBinaryLST(t *testing.T) {
@@ -101,49 +86,30 @@ func TestReadBinaryLST(t *testing.T) {
 	_next(t, r, NullType)
 
 	lst := r.SymbolTable()
-	if lst == nil {
-		t.Fatal("symbolTable is nil")
-	}
+	require.NotNil(t, lst)
 
-	if lst.MaxID() != 112 {
-		t.Errorf("expected maxid=112, got %v", lst.MaxID())
-	}
+	assert.Equal(t, 112, int(lst.MaxID()))
 
-	if _, ok := lst.FindByID(109); ok {
-		t.Error("found a symbol for $109")
-	}
+	_, ok := lst.FindByID(109)
+	assert.False(t, ok, "found a symbol for $109")
 
 	sym, ok := lst.FindByID(111)
-	if !ok {
-		t.Fatal("no symbol defined for $111")
-	}
-	if sym != "bar" {
-		t.Errorf("expected $111=bar, got %v", sym)
-	}
+	require.True(t, ok, "no symbol defined for $111")
+	assert.Equal(t, "bar", sym, "expected $111=bar, got %v", sym)
 
 	sym, ok = lst.FindByID(112)
-	if !ok {
-		t.Fatal("no symbol defined for $112")
-	}
-	if sym != "" {
-		t.Errorf("expected $112='', got %v", sym)
-	}
+	require.True(t, ok, "no symbol defined for $112")
+	assert.Empty(t, sym)
 
 	id, ok := lst.FindByName("foo")
-	if !ok {
-		t.Fatal("no id defined for foo")
-	}
-	if id != 110 {
-		t.Errorf("expected foo=$110, got $%v", id)
-	}
+	require.True(t, ok, "no id defined for foo")
+	assert.Equal(t, 110, int(id), "expected foo=$110, got $%v", id)
 
-	if _, ok := lst.FindByID(113); ok {
-		t.Error("found a symbol for $113")
-	}
+	_, ok = lst.FindByID(113)
+	assert.False(t, ok, "found a symbol for $113")
 
-	if _, ok := lst.FindByName("bogus"); ok {
-		t.Error("found a symbol for bogus")
-	}
+	_, ok = lst.FindByName("bogus")
+	assert.False(t, ok, "found a symbol for bogus")
 }
 
 func TestReadBinaryStructs(t *testing.T) {
@@ -276,7 +242,7 @@ func TestReadBinaryFieldNames(t *testing.T) {
 		// }
 	})
 	r.Next()
-	r.StepIn()
+	require.NoError(t, r.StepIn())
 	_nextF(t, r, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: 110}, false, false)

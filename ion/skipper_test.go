@@ -17,6 +17,9 @@ package ion
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSkipNumber(t *testing.T) {
@@ -172,21 +175,16 @@ func testSkip(t *testing.T, f skipFunc) (skipTestFunc, skipTestErrFunc) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			c, err := f(tok)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if c != ec {
-				t.Errorf("expected '%c', got '%c'", ec, c)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, ec, c)
 		})
 	}
 	testErr := func(str string, e string) {
 		t.Run(str, func(t *testing.T) {
 			tok := tokenizeString(str)
 			_, err := f(tok)
-			if err == nil || err.Error() != e {
-				t.Errorf("expected err=%v, got err=%v", e, err)
-			}
+			require.Error(t, err)
+			assert.Equal(t, e, err.Error())
 		})
 	}
 	return test, testErr

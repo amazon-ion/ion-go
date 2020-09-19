@@ -17,6 +17,9 @@ package ion
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBitstream(t *testing.T) {
@@ -45,44 +48,28 @@ func TestBitstream(t *testing.T) {
 	b.InitBytes(ion)
 
 	next := func(code bitcode, null bool, length uint64) {
-		if err := b.Next(); err != nil {
-			t.Fatal(err)
-		}
-		if b.Code() != code {
-			t.Errorf("expected code=%v, got %v", code, b.Code())
-		}
-		if b.IsNull() != null {
-			t.Errorf("expected null=%v, got %v", null, b.IsNull())
-		}
-		if b.Len() != length {
-			t.Errorf("expected length=%v, got %v", length, b.Len())
-		}
+		require.NoError(t, b.Next())
+		assert.Equal(t, code, b.Code())
+		assert.Equal(t, null, b.IsNull())
+		assert.Equal(t, length, b.Len())
 	}
 
 	fieldid := func(eid uint64) {
 		id, err := b.ReadFieldID()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if id != eid {
-			t.Errorf("expected %v, got %v", eid, id)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, eid, id)
 	}
 
 	next(bitcodeBVM, false, 3)
 	maj, min, err := b.ReadBVM()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if maj != 1 && min != 0 {
 		t.Errorf("expected $ion_1.0, got $ion_%v.%v", maj, min)
 	}
 
 	next(bitcodeAnnotation, false, 31)
 	as, err := b.ReadAnnotations(V1SystemSymbolTable)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if len(as) != 1 || as[0].LocalSID != 3 { // $ion_symbol_table
 		t.Errorf("expected [3], got %v", as)
 	}
@@ -98,19 +85,15 @@ func TestBitstream(t *testing.T) {
 		{
 			next(bitcodeStruct, false, 13)
 		}
-		if err := b.StepOut(); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, b.StepOut())
 
 		next(bitcodeFieldID, false, 0)
-		// fieldid(7) // symbols
+		fieldid(7) // symbols
 
 		next(bitcodeList, false, 8)
 		next(bitcodeEOF, false, 0)
 	}
-	if err := b.StepOut(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, b.StepOut())
 
 	next(bitcodeStruct, false, 0)
 	next(bitcodeAnnotation, false, 10)
@@ -120,10 +103,7 @@ func TestBitstream(t *testing.T) {
 
 func TestBitcodeString(t *testing.T) {
 	for i := bitcodeNone; i <= bitcodeAnnotation+1; i++ {
-		str := i.String()
-		if str == "" {
-			t.Errorf("expected non-empty string for bitcode %v", uint8(i))
-		}
+		assert.NotEmpty(t, i.String(), "expected non-empty string for bitcode %v", uint8(i))
 	}
 }
 
@@ -132,21 +112,15 @@ func TestBinaryReadTimestamp(t *testing.T) {
 		t.Run(expectedValue, func(t *testing.T) {
 			b := bitstream{}
 			b.InitBytes(ion)
-			b.Next()
+			assert.NoError(t, b.Next())
 
 			val, err := b.ReadTimestamp()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			expectedTimestamp, err := NewTimestampFromStr(expectedValue, expectedPrecision, expectedKind)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			if !val.Equal(expectedTimestamp) {
-				t.Errorf("expected %v, got %v", expectedTimestamp, val)
-			}
+			assert.True(t, val.Equal(expectedTimestamp), "expected %v, got %v", expectedTimestamp, val)
 		})
 	}
 
