@@ -251,9 +251,30 @@ func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }
 
-// WriteSymbol writes a symbol value.
-func (w *binaryWriter) WriteSymbol(val string) error {
-	id, err := w.resolve("Writer.WriteSymbol", val)
+func (w *binaryWriter) WriteSymbol(val SymbolToken) error {
+	var id uint64
+	if val.LocalSID == SymbolIDUnknown {
+		id, w.err = w.resolve1("Writer.WriteSymbol", *val.Text)
+		if w.err != nil {
+			return w.err
+		}
+	} else {
+		id = uint64(val.LocalSID)
+	}
+
+	vlength := uintLen(id)
+	bufLength := vlength + tagLen(vlength)
+	buf := make([]byte, 0, bufLength)
+
+	buf = appendTag(buf, 0x70, vlength)
+	buf = appendUint(buf, id)
+
+	return w.writeValue("Writer.WriteSymbol", buf)
+}
+
+// WriteSymbolFromString writes a symbol value.
+func (w *binaryWriter) WriteSymbolFromString(val string) error {
+	id, err := w.resolve("Writer.WriteSymbolFromString", val)
 	if err != nil {
 		w.err = err
 		return err
@@ -266,7 +287,7 @@ func (w *binaryWriter) WriteSymbol(val string) error {
 	buf = appendTag(buf, 0x70, vlength)
 	buf = appendUint(buf, id)
 
-	return w.writeValue("Writer.WriteSymbol", buf)
+	return w.writeValue("Writer.WriteSymbolFromString", buf)
 }
 
 // WriteString writes a string.
@@ -492,9 +513,15 @@ func (w *binaryWriter) beginValue(api string) error {
 			return &UsageError{api, "field name not set"}
 		}
 
-		id, err := w.resolve(api, *name)
-		if err != nil {
-			return err
+		var id uint64
+		if name.LocalSID == SymbolIDUnknown {
+			var err error
+			id, err = w.resolve(api, *name.Text)
+			if err != nil {
+				return err
+			}
+		} else {
+			id = uint64(name.LocalSID)
 		}
 
 		buf := make([]byte, 0, 10)
@@ -598,12 +625,20 @@ func (w *binaryWriter) resolve(api, sym string) (uint64, error) {
 		}
 	}
 
+	return w.resolve1(api, sym)
+}
+
+func (w *binaryWriter) resolve1(api, sym string) (uint64, error) {
 	if w.lst != nil {
 		id, ok := w.lst.FindByName(sym)
 		if !ok {
 			return 0, &UsageError{api, fmt.Sprintf("symbol '%v' not defined", sym)}
 		}
 		return id, nil
+	}
+
+	if _, ok := symbolIdentifier(sym); ok {
+		sym = fmt.Sprintf("'%v'", sym)
 	}
 
 	id, _ := w.lstb.Add(sym)

@@ -353,6 +353,14 @@ func equivalencyAssertion(t *testing.T, values [][]ionItem, eq bool) {
 
 // Read and load the files in testing path and pass them to testing functions.
 func readFilesAndTest(t *testing.T, path string, skipList []string, testingFunc testingFunc) {
+	// fp := "../ion-tests/iontestdata/good/symbols.ion"
+	// fp := "../ion-tests/iontestdata/good/symbolZero.ion"
+	// fp := "../ion-tests/iontestdata/good/commentMultiLineThenEof.ion"
+	// fp := "../ion-tests/iontestdata/good/item1.10n"
+	// t.Run(fp, func(t *testing.T) {
+	// 	testingFunc(t, fp)
+	// })
+
 	files, err := ioutil.ReadDir(path)
 	require.NoError(t, err)
 
@@ -491,7 +499,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			if val == nil {
 				assert.NoError(t, writer.WriteNullType(SymbolType))
 			} else if val.Text != nil {
-				assert.NoError(t, writer.WriteSymbol(*val.Text), "Something went wrong while writing a Symbol value")
+				assert.NoError(t, writer.WriteSymbol(*val), "Something went wrong while writing a Symbol value")
 			}
 
 		case StringType:
@@ -544,6 +552,8 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			require.NoError(t, writer.EndStruct())
 		}
 	}
+
+	assert.NoError(t, reader.Err(), "Something went wrong executing reader.Next()")
 }
 
 // Read the current value in the reader and put that in an ionItem struct (defined in this file).

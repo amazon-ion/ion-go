@@ -274,7 +274,7 @@ func (m marshalme) String() string {
 }
 
 func (m marshalme) MarshalIon(w Writer) error {
-	return w.WriteSymbol(m.String())
+	return w.WriteSymbolFromString(m.String())
 }
 
 func TestMarshalCustomMarshaler(t *testing.T) {

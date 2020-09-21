@@ -113,12 +113,26 @@ func (w *textWriter) WriteTimestamp(val Timestamp) error {
 	return w.writeValue("Writer.WriteTimestamp", val.String())
 }
 
-// WriteSymbol writes a symbol.
-func (w *textWriter) WriteSymbol(val string) error {
+func (w *textWriter) WriteSymbol(val SymbolToken) error {
+	text := ""
+	if val.Text != nil {
+		text = *val.Text
+		if _, ok := symbolIdentifier(text); ok {
+			text = fmt.Sprintf("'%v'", text)
+		}
+	} else if val.LocalSID == 0 {
+		text = "$0"
+	}
+
+	return w.WriteSymbolFromString(text)
+}
+
+// WriteSymbolFromString writes a symbol.
+func (w *textWriter) WriteSymbolFromString(val string) error {
 	if w.err != nil {
 		return w.err
 	}
-	if w.err = w.beginValue("Writer.WriteSymbol"); w.err != nil {
+	if w.err = w.beginValue("Writer.WriteSymbolFromString"); w.err != nil {
 		return w.err
 	}
 
@@ -398,7 +412,7 @@ func (w *textWriter) writeFieldName(api string) error {
 	name := w.fieldName
 	w.fieldName = nil
 
-	if err := writeSymbol(*name, w.out); err != nil {
+	if err := writeSymbol(*name.Text, w.out); err != nil {
 		return err
 	}
 

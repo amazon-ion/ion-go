@@ -160,11 +160,11 @@ func TestWriteBinarySymbol(t *testing.T) {
 		0x74, 0xFF, 0xFF, 0xFF, 0xFF, // $4294967295
 	}
 	testBinaryWriter(t, eval, func(w Writer) {
-		assert.NoError(t, w.WriteSymbol("$ion"))
-		assert.NoError(t, w.WriteSymbol("name"))
-		assert.NoError(t, w.WriteSymbol("version"))
-		assert.NoError(t, w.WriteSymbol("$ion_shared_symbol_table"))
-		assert.NoError(t, w.WriteSymbol("$4294967295"))
+		assert.NoError(t, w.WriteSymbolFromString("$ion"))
+		assert.NoError(t, w.WriteSymbolFromString("name"))
+		assert.NoError(t, w.WriteSymbolFromString("version"))
+		assert.NoError(t, w.WriteSymbolFromString("$ion_shared_symbol_table"))
+		assert.NoError(t, w.WriteSymbolFromString("$4294967295"))
 	})
 }
 

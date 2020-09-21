@@ -250,20 +250,20 @@ func TestWriteTextSymbol(t *testing.T) {
 		assert.NoError(t, w.BeginStruct())
 
 		assert.NoError(t, w.FieldName("foo"))
-		assert.NoError(t, w.WriteSymbol("bar"))
+		assert.NoError(t, w.WriteSymbolFromString("bar"))
 		assert.NoError(t, w.FieldName("empty"))
-		assert.NoError(t, w.WriteSymbol(""))
+		assert.NoError(t, w.WriteSymbolFromString(""))
 		assert.NoError(t, w.FieldName("null"))
-		assert.NoError(t, w.WriteSymbol("null"))
+		assert.NoError(t, w.WriteSymbolFromString("null"))
 
 		assert.NoError(t, w.FieldName("f"))
 		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("u"), LocalSID: SymbolIDUnknown}))
-		assert.NoError(t, w.WriteSymbol("lo🇺🇸"))
+		assert.NoError(t, w.WriteSymbolFromString("lo🇺🇸"))
 
 		assert.NoError(t, w.FieldName("$123"))
-		assert.NoError(t, w.WriteSymbol("$456"))
+		assert.NoError(t, w.WriteSymbolFromString("$456"))
 
 		assert.NoError(t, w.EndStruct())
 	})
@@ -312,7 +312,7 @@ func TestWriteTextFinish(t *testing.T) {
 	expected := "1\nfoo\n\"bar\"\n{}\n"
 	testTextWriter(t, expected, func(w Writer) {
 		assert.NoError(t, w.WriteInt(1))
-		assert.NoError(t, w.WriteSymbol("foo"))
+		assert.NoError(t, w.WriteSymbolFromString("foo"))
 		assert.NoError(t, w.WriteString("bar"))
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
@@ -362,11 +362,11 @@ func TestWriteTextPretty(t *testing.T) {
 		assert.NoError(t, w.FieldName("sexp"))
 		assert.NoError(t, w.BeginSexp())
 		{
-			assert.NoError(t, w.WriteSymbol("+"))
+			assert.NoError(t, w.WriteSymbolFromString("+"))
 			assert.NoError(t, w.WriteInt(123))
 			assert.NoError(t, w.BeginSexp())
 			{
-				assert.NoError(t, w.WriteSymbol("*"))
+				assert.NoError(t, w.WriteSymbolFromString("*"))
 				assert.NoError(t, w.WriteInt(456))
 				assert.NoError(t, w.WriteInt(789))
 			}

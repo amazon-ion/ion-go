@@ -16,7 +16,6 @@
 package ion
 
 import (
-	"fmt"
 	"io"
 	"math/big"
 )
@@ -32,7 +31,7 @@ import (
 // 	w.BeginSexp()
 // 	{
 // 		w.WriteInt(1)
-// 		w.WriteSymbol("+")
+// 		w.WriteSymbolFromString("+")
 // 		w.WriteInt(1)
 // 	}
 // 	w.EndSexp()
@@ -106,7 +105,9 @@ type Writer interface {
 	WriteTimestamp(val Timestamp) error
 
 	// WriteSymbol writes a symbol value.
-	WriteSymbol(val string) error
+	WriteSymbol(val SymbolToken) error
+
+	WriteSymbolFromString(val string) error
 
 	// WriteString writes a string value.
 	WriteString(val string) error
@@ -148,7 +149,7 @@ type writer struct {
 	ctx ctxstack
 	err error
 
-	fieldName   *string
+	fieldName   *SymbolToken
 	annotations []SymbolToken
 }
 
@@ -163,7 +164,7 @@ func (w *writer) FieldName(val string) error {
 		return w.err
 	}
 
-	w.fieldName = &val
+	w.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 	return nil
 }
 
@@ -175,13 +176,7 @@ func (w *writer) FieldNameSymbol(val SymbolToken) error {
 		return w.err
 	}
 
-	if val.Text == nil {
-		sid := fmt.Sprintf("$%v", val.LocalSID)
-		w.fieldName = &sid
-		return nil
-	}
-
-	w.fieldName = val.Text
+	w.fieldName = &val
 	return nil
 }
 

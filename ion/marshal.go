@@ -226,7 +226,7 @@ func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 
 	case reflect.String:
 		if hint == SymbolType {
-			return m.w.WriteSymbol(v.String())
+			return m.w.WriteSymbolFromString(v.String())
 		}
 		return m.w.WriteString(v.String())
 
