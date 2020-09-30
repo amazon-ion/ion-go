@@ -76,9 +76,19 @@ var readGoodFilesSkipList = []string{
 	"whitespace.ion",
 }
 
-var binaryRoundTripSkipList = []string{}
+var binaryRoundTripSkipList = []string{
+	"T7-large.10n",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
 
-var textRoundTripSkipList = []string{}
+var textRoundTripSkipList = []string{
+	"T7-large.10n",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
 
 var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_0_0.ion",
@@ -353,14 +363,6 @@ func equivalencyAssertion(t *testing.T, values [][]ionItem, eq bool) {
 
 // Read and load the files in testing path and pass them to testing functions.
 func readFilesAndTest(t *testing.T, path string, skipList []string, testingFunc testingFunc) {
-	// fp := "../ion-tests/iontestdata/good/symbols.ion"
-	// fp := "../ion-tests/iontestdata/good/symbolZero.ion"
-	// fp := "../ion-tests/iontestdata/good/commentMultiLineThenEof.ion"
-	// fp := "../ion-tests/iontestdata/good/item1.10n"
-	// t.Run(fp, func(t *testing.T) {
-	// 	testingFunc(t, fp)
-	// })
-
 	files, err := ioutil.ReadDir(path)
 	require.NoError(t, err)
 
@@ -410,10 +412,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 		}
 
 		an, err := reader.Annotations()
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		require.NoError(t, err)
 		if len(an) > 0 {
 			require.NoError(t, writer.Annotations(an...))
 		}
@@ -498,7 +497,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 
 			if val == nil {
 				assert.NoError(t, writer.WriteNullType(SymbolType))
-			} else if val.Text != nil {
+			} else {
 				assert.NoError(t, writer.WriteSymbol(*val), "Something went wrong while writing a Symbol value")
 			}
 

@@ -120,8 +120,8 @@ func (w *textWriter) WriteSymbol(val SymbolToken) error {
 		if _, ok := symbolIdentifier(text); ok {
 			text = fmt.Sprintf("'%v'", text)
 		}
-	} else if val.LocalSID == 0 {
-		text = "$0"
+	} else if val.LocalSID != SymbolIDUnknown {
+		text = fmt.Sprintf("$%v", val.LocalSID)
 	}
 
 	return w.WriteSymbolFromString(text)
@@ -412,7 +412,14 @@ func (w *textWriter) writeFieldName(api string) error {
 	name := w.fieldName
 	w.fieldName = nil
 
-	if err := writeSymbol(*name.Text, w.out); err != nil {
+	text := ""
+	if name.Text != nil {
+		text = *name.Text
+	} else if name.LocalSID != SymbolIDUnknown {
+		text = fmt.Sprintf("$%v", name.LocalSID)
+	}
+
+	if err := writeSymbol(text, w.out); err != nil {
 		return err
 	}
 
