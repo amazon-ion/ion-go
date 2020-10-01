@@ -92,6 +92,17 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
+func (st *SymbolToken) toText() string {
+	text := ""
+	if st.Text != nil {
+		text = *st.Text
+	} else if st.LocalSID != SymbolIDUnknown {
+		text = fmt.Sprintf("$%v", st.LocalSID)
+	}
+
+	return text
+}
+
 // Parses text of the form '$n' for some integer n.
 func symbolIdentifier(symbolText string) (int64, bool) {
 	if len(symbolText) > 1 && symbolText[0] == '$' {

@@ -66,12 +66,12 @@ func NewTextWriterOpts(out io.Writer, opts TextWriterOpts, sts ...SharedSymbolTa
 
 // WriteNull writes an untyped null.
 func (w *textWriter) WriteNull() error {
-	return w.writeValue("Writer.WriteNull", textNulls[NoType])
+	return w.writeValue("Writer.WriteNull", textNulls[NoType], writeRawString)
 }
 
 // WriteNullType writes a typed null.
 func (w *textWriter) WriteNullType(t Type) error {
-	return w.writeValue("Writer.WriteNullType", textNulls[t])
+	return w.writeValue("Writer.WriteNullType", textNulls[t], writeRawString)
 }
 
 // WriteBool writes a boolean value.
@@ -80,68 +80,55 @@ func (w *textWriter) WriteBool(val bool) error {
 	if val {
 		str = "true"
 	}
-	return w.writeValue("Writer.WriteBool", str)
+	return w.writeValue("Writer.WriteBool", str, writeRawString)
 }
 
 // WriteInt writes an integer value.
 func (w *textWriter) WriteInt(val int64) error {
-	return w.writeValue("Writer.WriteInt", fmt.Sprintf("%d", val))
+	return w.writeValue("Writer.WriteInt", fmt.Sprintf("%d", val), writeRawString)
 }
 
 // WriteUint writes an unsigned integer value.
 func (w *textWriter) WriteUint(val uint64) error {
-	return w.writeValue("Writer.WriteUint", fmt.Sprintf("%d", val))
+	return w.writeValue("Writer.WriteUint", fmt.Sprintf("%d", val), writeRawString)
 }
 
 // WriteBigInt writes a (big) integer value.
 func (w *textWriter) WriteBigInt(val *big.Int) error {
-	return w.writeValue("Writer.WriteBigInt", val.String())
+	return w.writeValue("Writer.WriteBigInt", val.String(), writeRawString)
 }
 
 // WriteFloat writes a floating-point value.
 func (w *textWriter) WriteFloat(val float64) error {
-	return w.writeValue("Writer.WriteFloat", formatFloat(val))
+	return w.writeValue("Writer.WriteFloat", formatFloat(val), writeRawString)
 }
 
 // WriteDecimal writes an arbitrary-precision decimal value.
 func (w *textWriter) WriteDecimal(val *Decimal) error {
-	return w.writeValue("Writer.WriteDecimal", val.String())
+	return w.writeValue("Writer.WriteDecimal", val.String(), writeRawString)
 }
 
 // WriteTimestamp writes a timestamp.
 func (w *textWriter) WriteTimestamp(val Timestamp) error {
-	return w.writeValue("Writer.WriteTimestamp", val.String())
+	return w.writeValue("Writer.WriteTimestamp", val.String(), writeRawString)
 }
 
+// WriteSymbol writes a symbol given a SymbolToken.
 func (w *textWriter) WriteSymbol(val SymbolToken) error {
-	text := ""
+	text := val.toText()
 	if val.Text != nil {
-		text = *val.Text
+		// Wrap text value in single quotes if the symbol's text is a symbol identifier
+		// (ie. of form $n for some integer n)
 		if _, ok := symbolIdentifier(text); ok {
 			text = fmt.Sprintf("'%v'", text)
 		}
-	} else if val.LocalSID != SymbolIDUnknown {
-		text = fmt.Sprintf("$%v", val.LocalSID)
 	}
-
-	return w.WriteSymbolFromString(text)
+	return w.writeValue("Writer.WriteSymbol", text, writeSymbol)
 }
 
-// WriteSymbolFromString writes a symbol.
+// WriteSymbolFromString writes a symbol given a string.
 func (w *textWriter) WriteSymbolFromString(val string) error {
-	if w.err != nil {
-		return w.err
-	}
-	if w.err = w.beginValue("Writer.WriteSymbolFromString"); w.err != nil {
-		return w.err
-	}
-
-	if w.err = writeSymbol(val, w.out); w.err != nil {
-		return w.err
-	}
-
-	w.endValue()
-	return nil
+	return w.writeValue("Writer.WriteSymbolFromString", val, writeSymbol)
 }
 
 // WriteString writes a string.
@@ -302,8 +289,10 @@ func (w *textWriter) pretty() bool {
 	return w.opts&TextWriterPretty == TextWriterPretty
 }
 
+type writeFunction func(string, io.Writer) error
+
 // writeValue writes a stringified value to the output stream.
-func (w *textWriter) writeValue(api string, val string) error {
+func (w *textWriter) writeValue(api string, val string, fn writeFunction) error {
 	if w.err != nil {
 		return w.err
 	}
@@ -311,7 +300,7 @@ func (w *textWriter) writeValue(api string, val string) error {
 		return w.err
 	}
 
-	if w.err = writeRawString(val, w.out); w.err != nil {
+	if w.err = fn(val, w.out); w.err != nil {
 		return w.err
 	}
 
@@ -367,7 +356,7 @@ func (w *textWriter) beginValue(api string) error {
 
 	w.annotations = append(w.annotations, as...)
 	if len(w.annotations) > 0 {
-		if err := w.writeAnnotations(api); err != nil {
+		if err := w.writeAnnotations(); err != nil {
 			return err
 		}
 	}
@@ -412,14 +401,7 @@ func (w *textWriter) writeFieldName(api string) error {
 	name := w.fieldName
 	w.fieldName = nil
 
-	text := ""
-	if name.Text != nil {
-		text = *name.Text
-	} else if name.LocalSID != SymbolIDUnknown {
-		text = fmt.Sprintf("$%v", name.LocalSID)
-	}
-
-	if err := writeSymbol(text, w.out); err != nil {
+	if err := writeSymbol(name.toText(), w.out); err != nil {
 		return err
 	}
 
@@ -432,21 +414,12 @@ func (w *textWriter) writeFieldName(api string) error {
 }
 
 // writeAnnotations writes out the annotations for a value.
-func (w *textWriter) writeAnnotations(api string) error {
+func (w *textWriter) writeAnnotations() error {
 	as := w.annotations
 	w.annotations = nil
 
-	var text string
 	for _, a := range as {
-		if a.Text != nil {
-			text = *a.Text
-		} else if a.LocalSID != SymbolIDUnknown {
-			text = fmt.Sprintf("$%v", a.LocalSID)
-		} else {
-			return &UsageError{api, "invalid annotation symbol token"}
-		}
-
-		if err := writeSymbol(text, w.out); err != nil {
+		if err := writeSymbol(a.toText(), w.out); err != nil {
 			return err
 		}
 		if err := writeRawString("::", w.out); err != nil {
