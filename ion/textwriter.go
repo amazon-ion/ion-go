@@ -119,10 +119,12 @@ func (w *textWriter) WriteSymbol(val SymbolToken) error {
 	if val.Text != nil {
 		// Wrap text value in single quotes if the symbol's text is a symbol identifier
 		// (ie. of form $n for some integer n)
+		// This is done to distinguish from actual symbol table mappings.
 		if _, ok := symbolIdentifier(text); ok {
 			text = fmt.Sprintf("'%v'", text)
 		}
 	}
+
 	return w.writeValue("Writer.WriteSymbol", text, writeSymbol)
 }
 

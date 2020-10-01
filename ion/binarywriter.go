@@ -21,8 +21,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -251,35 +249,43 @@ func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }
 
+// WriteSymbol writes a symbol value given a SymbolToken.
 func (w *binaryWriter) WriteSymbol(val SymbolToken) error {
 	var id uint64
-	if val.LocalSID == SymbolIDUnknown {
-		id, w.err = w.resolve1("Writer.WriteSymbol", *val.Text)
+	if val.LocalSID != SymbolIDUnknown {
+		id = uint64(val.LocalSID)
+	} else if val.Text != nil {
+		text := *val.Text
+		if _, ok := symbolIdentifier(text); ok {
+			// Wrap text value in single quotes if the symbol's text is a symbol identifier
+			// (ie. of form $n for some integer n)
+			// This is done to distinguish from actual symbol table mappings.
+			text = fmt.Sprintf("'%v'", text)
+		}
+
+		id, w.err = w.resolveFromSymbolTable("Writer.WriteSymbol", text)
 		if w.err != nil {
 			return w.err
 		}
 	} else {
-		id = uint64(val.LocalSID)
+		return &UsageError{"Writer.WriteSymbol", "invalid symbol token"}
 	}
 
-	vlength := uintLen(id)
-	bufLength := vlength + tagLen(vlength)
-	buf := make([]byte, 0, bufLength)
-
-	buf = appendTag(buf, 0x70, vlength)
-	buf = appendUint(buf, id)
-
-	return w.writeValue("Writer.WriteSymbol", buf)
+	return w.writeSymbolFromID("Writer.WriteSymbol", id)
 }
 
-// WriteSymbolFromString writes a symbol value.
+// WriteSymbolFromString writes a symbol value given a string.
 func (w *binaryWriter) WriteSymbolFromString(val string) error {
-	id, err := w.resolve("Writer.WriteSymbolFromString", val)
-	if err != nil {
-		w.err = err
-		return err
+	var id uint64
+	id, w.err = w.resolve("Writer.WriteSymbolFromString", val)
+	if w.err != nil {
+		return w.err
 	}
 
+	return w.writeSymbolFromID("Writer.WriteSymbolFromString", id)
+}
+
+func (w *binaryWriter) writeSymbolFromID(api string, id uint64) error {
 	vlength := uintLen(id)
 	bufLength := vlength + tagLen(vlength)
 	buf := make([]byte, 0, bufLength)
@@ -287,7 +293,7 @@ func (w *binaryWriter) WriteSymbolFromString(val string) error {
 	buf = appendTag(buf, 0x70, vlength)
 	buf = appendUint(buf, id)
 
-	return w.writeValue("Writer.WriteSymbolFromString", buf)
+	return w.writeValue(api, buf)
 }
 
 // WriteString writes a string.
@@ -618,27 +624,20 @@ func (w *binaryWriter) end(api string, t ctx) error {
 
 // Resolve resolves a symbol to its ID.
 func (w *binaryWriter) resolve(api, sym string) (uint64, error) {
-	if strings.HasPrefix(sym, "$") {
-		id, err := strconv.ParseUint(sym[1:], 10, 64)
-		if err == nil {
-			return id, nil
-		}
+	if id, ok := symbolIdentifier(sym); ok {
+		return uint64(id), nil
 	}
 
-	return w.resolve1(api, sym)
+	return w.resolveFromSymbolTable(api, sym)
 }
 
-func (w *binaryWriter) resolve1(api, sym string) (uint64, error) {
+func (w *binaryWriter) resolveFromSymbolTable(api, sym string) (uint64, error) {
 	if w.lst != nil {
 		id, ok := w.lst.FindByName(sym)
 		if !ok {
 			return 0, &UsageError{api, fmt.Sprintf("symbol '%v' not defined", sym)}
 		}
 		return id, nil
-	}
-
-	if _, ok := symbolIdentifier(sym); ok {
-		sym = fmt.Sprintf("'%v'", sym)
 	}
 
 	id, _ := w.lstb.Add(sym)
