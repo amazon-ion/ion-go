@@ -66,10 +66,7 @@ import (
 type Writer interface {
 
 	// FieldName sets the field name for the next value written.
-	FieldName(val string) error
-
-	// FieldName sets the field name symbol for the next value written.
-	FieldNameSymbol(val SymbolToken) error
+	FieldName(val SymbolToken) error
 
 	// Annotation adds a single annotation to the next value written.
 	Annotation(val SymbolToken) error
@@ -156,22 +153,25 @@ type writer struct {
 
 // FieldName sets the field name for the next value written.
 // It may only be called while writing a struct.
-func (w *writer) FieldName(val string) error {
-	if w.err != nil {
-		return w.err
-	}
-	if !w.IsInStruct() {
-		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
-		return w.err
-	}
-
-	w.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
-	return nil
-}
+// func (w *writer) FieldName(val string) error {
+// 	if w.err != nil {
+// 		return w.err
+// 	}
+// 	if !w.IsInStruct() {
+// 		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
+// 		return w.err
+// 	}
+//
+// 	w.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+// 	return nil
+// }
 
 // FieldNameSymbol sets the field name symbol for the next value written.
 // It may only be called while writing a struct.
-func (w *writer) FieldNameSymbol(val SymbolToken) error {
+func (w *writer) FieldName(val SymbolToken) error {
+	if w.err != nil {
+		return w.err
+	}
 	if !w.IsInStruct() {
 		w.err = &UsageError{"Writer.FieldNameSymbol", "called when not writing a struct"}
 		return w.err

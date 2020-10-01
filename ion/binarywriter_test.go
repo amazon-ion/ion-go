@@ -41,14 +41,14 @@ func TestWriteBinaryStruct(t *testing.T) {
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("foo")))
 		assert.NoError(t, w.BeginStruct())
 		{
-			assert.NoError(t, w.FieldName("name"))
-			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
+			assert.NoError(t, w.FieldName(newSimpleSymbolToken("name")))
+			assert.NoError(t, w.Annotation(newSimpleSymbolToken("bar")))
 			assert.NoError(t, w.WriteNull())
 
-			assert.NoError(t, w.FieldName("max_id"))
+			assert.NoError(t, w.FieldName(newSimpleSymbolToken("max_id")))
 			assert.NoError(t, w.WriteInt(0))
 		}
 		assert.NoError(t, w.EndStruct())

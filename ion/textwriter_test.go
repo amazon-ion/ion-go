@@ -28,7 +28,7 @@ import (
 
 func TestWriteTextTopLevelFieldName(t *testing.T) {
 	writeText(func(w Writer) {
-		assert.Error(t, w.FieldName("foo"))
+		assert.Error(t, w.FieldName(newSimpleSymbolToken("foo")))
 	})
 }
 
@@ -56,12 +56,12 @@ func TestWriteTextNestedStruct(t *testing.T) {
 	testTextWriter(t, "{foo:'true'::{},'null':{}}", func(w Writer) {
 		assert.NoError(t, w.BeginStruct())
 
-		assert.NoError(t, w.FieldName("foo"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("foo")))
 		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("true"), LocalSID: SymbolIDUnknown}))
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
-		assert.NoError(t, w.FieldName("null"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("null")))
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
@@ -205,21 +205,21 @@ func TestWriteTextFloat(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		assert.NoError(t, w.BeginStruct())
 
-		assert.NoError(t, w.FieldName("z"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("z")))
 		assert.NoError(t, w.WriteFloat(0.0))
-		assert.NoError(t, w.FieldName("nz"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("nz")))
 		assert.NoError(t, w.WriteFloat(-1.0/math.Inf(1)))
 
-		assert.NoError(t, w.FieldName("s"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("s")))
 		assert.NoError(t, w.WriteFloat(12.34))
-		assert.NoError(t, w.FieldName("l"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("l")))
 		assert.NoError(t, w.WriteFloat(12.34e-56))
 
-		assert.NoError(t, w.FieldName("n"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("n")))
 		assert.NoError(t, w.WriteFloat(math.NaN()))
-		assert.NoError(t, w.FieldName("i"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("i")))
 		assert.NoError(t, w.WriteFloat(math.Inf(1)))
-		assert.NoError(t, w.FieldName("ni"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("ni")))
 		assert.NoError(t, w.WriteFloat(math.Inf(-1)))
 
 		assert.NoError(t, w.EndStruct())
@@ -249,20 +249,20 @@ func TestWriteTextSymbol(t *testing.T) {
 	testTextWriter(t, expected, func(w Writer) {
 		assert.NoError(t, w.BeginStruct())
 
-		assert.NoError(t, w.FieldName("foo"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("foo")))
 		assert.NoError(t, w.WriteSymbolFromString("bar"))
-		assert.NoError(t, w.FieldName("empty"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("empty")))
 		assert.NoError(t, w.WriteSymbolFromString(""))
-		assert.NoError(t, w.FieldName("null"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("null")))
 		assert.NoError(t, w.WriteSymbolFromString("null"))
 
-		assert.NoError(t, w.FieldName("f"))
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}))
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}))
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("u"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("f")))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("a")))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("b")))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("u")))
 		assert.NoError(t, w.WriteSymbolFromString("lo🇺🇸"))
 
-		assert.NoError(t, w.FieldName("$123"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("$123")))
 		assert.NoError(t, w.WriteSymbolFromString("$456"))
 
 		assert.NoError(t, w.EndStruct())
@@ -300,9 +300,9 @@ func TestWriteTextClob(t *testing.T) {
 	expected := "{hello:{{\"world\"}},bits:{{\"\\0\\x01\\xFE\\xFF\"}}}"
 	testTextWriter(t, expected, func(w Writer) {
 		assert.NoError(t, w.BeginStruct())
-		assert.NoError(t, w.FieldName("hello"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("hello")))
 		assert.NoError(t, w.WriteClob([]byte("world")))
-		assert.NoError(t, w.FieldName("bits"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("bits")))
 		assert.NoError(t, w.WriteClob([]byte{0, 1, 0xFE, 0xFF}))
 		assert.NoError(t, w.EndStruct())
 	})
@@ -334,32 +334,32 @@ func TestWriteTextPretty(t *testing.T) {
 
 	assert.NoError(t, w.BeginStruct())
 	{
-		assert.NoError(t, w.FieldName("struct"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("struct")))
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
-		assert.NoError(t, w.FieldName("list"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("list")))
 		assert.NoError(t, w.Annotations(
-			SymbolToken{Text: newString("i"), LocalSID: SymbolIDUnknown},
-			SymbolToken{Text: newString("am"), LocalSID: SymbolIDUnknown},
-			SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown},
-			SymbolToken{Text: newString("list"), LocalSID: SymbolIDUnknown}))
+			newSimpleSymbolToken("i"),
+			newSimpleSymbolToken("am"),
+			newSimpleSymbolToken("a"),
+			newSimpleSymbolToken("list")))
 		assert.NoError(t, w.BeginList())
 		{
 			assert.NoError(t, w.WriteString("value"))
 			assert.NoError(t, w.WriteNullType(StringType))
 			assert.NoError(t, w.BeginStruct())
 			{
-				assert.NoError(t, w.FieldName("1"))
+				assert.NoError(t, w.FieldName(newSimpleSymbolToken("1")))
 				assert.NoError(t, w.WriteString("one"))
-				assert.NoError(t, w.FieldName("2"))
+				assert.NoError(t, w.FieldName(newSimpleSymbolToken("2")))
 				assert.NoError(t, w.WriteString("two"))
 			}
 			assert.NoError(t, w.EndStruct())
 		}
 		assert.NoError(t, w.EndList())
 
-		assert.NoError(t, w.FieldName("sexp"))
+		assert.NoError(t, w.FieldName(newSimpleSymbolToken("sexp")))
 		assert.NoError(t, w.BeginSexp())
 		{
 			assert.NoError(t, w.WriteSymbolFromString("+"))

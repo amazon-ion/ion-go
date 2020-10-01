@@ -408,7 +408,7 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		fns, err := reader.FieldName()
 		if err == nil && reader.IsInStruct() && fns != nil {
-			require.NoError(t, writer.FieldNameSymbol(*fns))
+			require.NoError(t, writer.FieldName(*fns))
 		}
 
 		an, err := reader.Annotations()

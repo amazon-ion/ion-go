@@ -164,21 +164,33 @@ func (s *sst) WriteTo(w Writer) error {
 		return err
 	}
 	{
-		if err := w.FieldName("name"); err != nil {
+		st, err := NewSymbolToken(s, "name")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.WriteString(s.name); err != nil {
 			return err
 		}
 
-		if err := w.FieldName("version"); err != nil {
+		st, err = NewSymbolToken(s, "version")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.WriteInt(int64(s.version)); err != nil {
 			return err
 		}
 
-		if err := w.FieldName("symbols"); err != nil {
+		st, err = NewSymbolToken(s, "symbols")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.BeginList(); err != nil {
@@ -284,13 +296,16 @@ func (s *bogusSST) String() string {
 	w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
 	w.BeginStruct()
 
-	w.FieldName("name")
+	st, _ := NewSymbolToken(s, "name")
+	w.FieldName(st)
 	w.WriteString(s.name)
 
-	w.FieldName("version")
+	st, _ = NewSymbolToken(s, "version")
+	w.FieldName(st)
 	w.WriteInt(int64(s.version))
 
-	w.FieldName("max_id")
+	st, _ = NewSymbolToken(s, "max_id")
+	w.FieldName(st)
 	w.WriteUint(s.maxID)
 
 	w.EndStruct()
@@ -418,7 +433,11 @@ func (t *lst) WriteTo(w Writer) error {
 	}
 
 	if len(t.imports) > 1 {
-		if err := w.FieldName("imports"); err != nil {
+		st, err := NewSymbolToken(t, "imports")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.BeginList(); err != nil {
@@ -430,21 +449,33 @@ func (t *lst) WriteTo(w Writer) error {
 				return err
 			}
 
-			if err := w.FieldName("name"); err != nil {
+			st, err := NewSymbolToken(t, "name")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteString(imp.Name()); err != nil {
 				return err
 			}
 
-			if err := w.FieldName("version"); err != nil {
+			st, err = NewSymbolToken(t, "version")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteInt(int64(imp.Version())); err != nil {
 				return err
 			}
 
-			if err := w.FieldName("max_id"); err != nil {
+			st, err = NewSymbolToken(t, "max_id")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteUint(imp.MaxID()); err != nil {
@@ -461,7 +492,11 @@ func (t *lst) WriteTo(w Writer) error {
 	}
 
 	if len(t.symbols) > 0 {
-		if err := w.FieldName("symbols"); err != nil {
+		st, err := NewSymbolToken(t, "symbols")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 
