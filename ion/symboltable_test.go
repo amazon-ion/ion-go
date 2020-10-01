@@ -46,8 +46,8 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 4, "null")
 	testFindByID(t, st, 7, "")
 
-	testFindSymbolToken(t, st, "def", SymbolToken{Text: newString("def"), LocalSID: -1})
-	testFindSymbolToken(t, st, "foo'bar", SymbolToken{Text: newString("foo'bar"), LocalSID: -1})
+	testFindSymbolToken(t, st, "def", newSimpleSymbolToken("def"))
+	testFindSymbolToken(t, st, "foo'bar", newSimpleSymbolToken("foo'bar"))
 
 	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
 }
@@ -68,9 +68,9 @@ func TestLocalSymbolTable(t *testing.T) {
 	testFindByID(t, st, 11, "bar")
 	testFindByID(t, st, 12, "")
 
-	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
-	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
-	testFindSymbolToken(t, st, "$ion", SymbolToken{Text: newString("$ion"), LocalSID: -1})
+	testFindSymbolToken(t, st, "foo", newSimpleSymbolToken("foo"))
+	testFindSymbolToken(t, st, "bar", newSimpleSymbolToken("bar"))
+	testFindSymbolToken(t, st, "$ion", newSimpleSymbolToken("$ion"))
 
 	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar"]}`)
 }
@@ -106,10 +106,10 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 13, "bar2")
 	testFindByID(t, st, 14, "")
 
-	testFindSymbolToken(t, st, "foo", SymbolToken{Text: newString("foo"), LocalSID: -1})
-	testFindSymbolToken(t, st, "bar", SymbolToken{Text: newString("bar"), LocalSID: -1})
-	testFindSymbolToken(t, st, "foo2", SymbolToken{Text: newString("foo2"), LocalSID: -1})
-	testFindSymbolToken(t, st, "bar2", SymbolToken{Text: newString("bar2"), LocalSID: -1})
+	testFindSymbolToken(t, st, "foo", newSimpleSymbolToken("foo"))
+	testFindSymbolToken(t, st, "bar", newSimpleSymbolToken("bar"))
+	testFindSymbolToken(t, st, "foo2", newSimpleSymbolToken("foo2"))
+	testFindSymbolToken(t, st, "bar2", newSimpleSymbolToken("bar2"))
 
 	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
 }

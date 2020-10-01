@@ -677,14 +677,14 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 		  }
 		}
 	*/
-	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}}}
-	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}}}
-	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}}}
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{newSimpleSymbolToken("baz")}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{newSimpleSymbolToken("bar")}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{newSimpleSymbolToken("foo")}}
 
 	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
 }
 
-var symbolTokenWith = SymbolToken{Text: newString("with"), LocalSID: SymbolIDUnknown}
-var symbolTokenMultiple = SymbolToken{Text: newString("multiple"), LocalSID: SymbolIDUnknown}
-var symbolTokenAnnotations = SymbolToken{Text: newString("annotations"), LocalSID: SymbolIDUnknown}
+var symbolTokenWith = newSimpleSymbolToken("with")
+var symbolTokenMultiple = newSimpleSymbolToken("multiple")
+var symbolTokenAnnotations = newSimpleSymbolToken("annotations")
 var annotations = []SymbolToken{symbolTokenWith, symbolTokenMultiple, symbolTokenAnnotations}

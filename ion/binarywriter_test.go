@@ -67,10 +67,10 @@ func TestWriteBinarySexp(t *testing.T) {
 		assert.NoError(t, w.BeginSexp())
 		assert.NoError(t, w.EndSexp())
 
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("foo")))
 		assert.NoError(t, w.BeginSexp())
 		{
-			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
+			assert.NoError(t, w.Annotation(newSimpleSymbolToken("bar")))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))
@@ -91,10 +91,10 @@ func TestWriteBinaryList(t *testing.T) {
 		assert.NoError(t, w.BeginList())
 		assert.NoError(t, w.EndList())
 
-		assert.NoError(t, w.Annotation(SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}))
+		assert.NoError(t, w.Annotation(newSimpleSymbolToken("foo")))
 		assert.NoError(t, w.BeginList())
 		{
-			assert.NoError(t, w.Annotation(SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}))
+			assert.NoError(t, w.Annotation(newSimpleSymbolToken("bar")))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))

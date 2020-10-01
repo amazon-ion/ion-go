@@ -135,7 +135,7 @@ func TestImportSourceEqualsOperator(t *testing.T) {
 }
 
 func TestNewSymbolTokenThatAlreadyExistInSymbolTable(t *testing.T) {
-	expectedSymbolToken := SymbolToken{Text: newString("$ion"), LocalSID: SymbolIDUnknown}
+	expectedSymbolToken := newSimpleSymbolToken("$ion")
 
 	actualSymbolToken, err := NewSymbolToken(V1SystemSymbolTable, "$ion")
 	assert.NoError(t, err, "expected NewSymbolToken() to execute without errors")
@@ -144,7 +144,7 @@ func TestNewSymbolTokenThatAlreadyExistInSymbolTable(t *testing.T) {
 }
 
 func TestNewSymbolTokenThatDoesNotExistInSymbolTable(t *testing.T) {
-	expectedSymbolToken := SymbolToken{Text: newString("newToken"), LocalSID: SymbolIDUnknown}
+	expectedSymbolToken := newSimpleSymbolToken("newToken")
 
 	actualSymbolToken, err := NewSymbolToken(V1SystemSymbolTable, "newToken")
 	assert.NoError(t, err, "expected NewSymbolToken() to execute without errors")
@@ -154,8 +154,8 @@ func TestNewSymbolTokenThatDoesNotExistInSymbolTable(t *testing.T) {
 
 func TestNewSymbolTokensThatAlreadyExistInSymbolTable(t *testing.T) {
 	expectedSymbolTokens := []SymbolToken{
-		{Text: newString("$ion"), LocalSID: SymbolIDUnknown},
-		{Text: newString("$ion_1_0"), LocalSID: SymbolIDUnknown}}
+		newSimpleSymbolToken("$ion"),
+		newSimpleSymbolToken("$ion_1_0")}
 
 	actualSymbolTokens, err := NewSymbolTokens(V1SystemSymbolTable, []string{"$ion", "$ion_1_0"})
 	assert.NoError(t, err, "expected NewSymbolTokens() to execute without errors")
@@ -167,8 +167,8 @@ func TestNewSymbolTokensThatAlreadyExistInSymbolTable(t *testing.T) {
 
 func TestNewSymbolTokensThatDoNotExistInSymbolTable(t *testing.T) {
 	expectedSymbolTokens := []SymbolToken{
-		{Text: newString("newToken1"), LocalSID: SymbolIDUnknown},
-		{Text: newString("newToken2"), LocalSID: SymbolIDUnknown}}
+		newSimpleSymbolToken("newToken1"),
+		newSimpleSymbolToken("newToken2")}
 
 	actualSymbolTokens, err := NewSymbolTokens(V1SystemSymbolTable, []string{"newToken1", "newToken2"})
 	assert.NoError(t, err, "expected NewSymbolTokens() to execute without errors")
