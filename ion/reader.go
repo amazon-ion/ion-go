@@ -361,9 +361,7 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	if r.fieldName != nil {
-		r.fieldName.Text = nil
-	}
+	r.fieldName = nil
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil
