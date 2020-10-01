@@ -104,9 +104,10 @@ type Writer interface {
 	// WriteTimestamp writes a timestamp value.
 	WriteTimestamp(val Timestamp) error
 
-	// WriteSymbol writes a symbol value.
+	// WriteSymbol writes a symbol value given a SymbolToken.
 	WriteSymbol(val SymbolToken) error
 
+	// WriteSymbolFromString writes a symbol value given a string.
 	WriteSymbolFromString(val string) error
 
 	// WriteString writes a string value.

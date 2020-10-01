@@ -520,14 +520,16 @@ func (w *binaryWriter) beginValue(api string) error {
 		}
 
 		var id uint64
-		if name.LocalSID == SymbolIDUnknown {
+		if name.LocalSID != SymbolIDUnknown {
+			id = uint64(name.LocalSID)
+		} else if name.Text != nil {
 			var err error
 			id, err = w.resolve(api, *name.Text)
 			if err != nil {
 				return err
 			}
 		} else {
-			id = uint64(name.LocalSID)
+			return &UsageError{api, "invalid field name symbol token"}
 		}
 
 		buf := make([]byte, 0, 10)
