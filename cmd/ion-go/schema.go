@@ -56,13 +56,13 @@ func (e eventtype) String() string {
 }
 
 func (e eventtype) MarshalIon(w ion.Writer) error {
-	return w.WriteSymbol(e.String())
+	return w.WriteSymbolFromString(e.String())
 }
 
 type iontype ion.Type
 
 func (i iontype) MarshalIon(w ion.Writer) error {
-	return w.WriteSymbol(strings.ToUpper(ion.Type(i).String()))
+	return w.WriteSymbolFromString(strings.ToUpper(ion.Type(i).String()))
 }
 
 // event describes an Ion processing event.
@@ -99,7 +99,7 @@ func (e errortype) String() string {
 }
 
 func (e errortype) MarshalIon(w ion.Writer) error {
-	return w.WriteSymbol(e.String())
+	return w.WriteSymbolFromString(e.String())
 }
 
 // errordescription describes an error during Ion processing.
