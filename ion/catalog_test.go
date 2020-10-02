@@ -42,7 +42,7 @@ func TestCatalog(t *testing.T) {
 	out := NewBinaryWriter(&buf, sst)
 
 	for i := 0; i < 10; i++ {
-		assert.NoError(t, out.Annotation(newSimpleSymbolToken("item")))
+		assert.NoError(t, out.Annotation(NewSimpleSymbolToken("item")))
 		assert.NoError(t,
 			MarshalTo(out, &Item{
 				ID:          i,

@@ -151,21 +151,6 @@ type writer struct {
 	annotations []SymbolToken
 }
 
-// FieldName sets the field name for the next value written.
-// It may only be called while writing a struct.
-// func (w *writer) FieldName(val string) error {
-// 	if w.err != nil {
-// 		return w.err
-// 	}
-// 	if !w.IsInStruct() {
-// 		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
-// 		return w.err
-// 	}
-//
-// 	w.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
-// 	return nil
-// }
-
 // FieldNameSymbol sets the field name symbol for the next value written.
 // It may only be called while writing a struct.
 func (w *writer) FieldName(val SymbolToken) error {

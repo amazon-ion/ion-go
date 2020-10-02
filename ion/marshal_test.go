@@ -311,7 +311,7 @@ func TestMarshalValuesWithAnnotation(t *testing.T) {
 	}
 
 	buildValue := func(val interface{}) foo {
-		return foo{val, []SymbolToken{newSimpleSymbolToken("symbols or string"), newSimpleSymbolToken("annotations")}}
+		return foo{val, []SymbolToken{NewSimpleSymbolToken("symbols or string"), NewSimpleSymbolToken("annotations")}}
 	}
 
 	test(buildValue(nil), "null", "'symbols or string'::annotations::null")

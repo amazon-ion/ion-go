@@ -43,11 +43,11 @@ func TestReadTextSymbols(t *testing.T) {
 
 	r := NewReaderString(ionText)
 	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
-	_symbol(t, r, newSimpleSymbolToken("$4"))
+	_symbol(t, r, NewSimpleSymbolToken("$4"))
 	_symbol(t, r, SymbolToken{Text: newString("name"), LocalSID: 4})
 	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10})
 	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10})
-	_symbol(t, r, newSimpleSymbolToken("bar"))
+	_symbol(t, r, NewSimpleSymbolToken("bar"))
 	_symbol(t, r, SymbolToken{Text: newString("$ion"), LocalSID: 1})
 	_symbolAF(t, r, nil, nil, nil, false, false)
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
@@ -74,11 +74,11 @@ func TestReadTextAnnotations(t *testing.T) {
 	assert.NoError(t, r.StepIn())
 
 	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
-	_nextA(t, r, []SymbolToken{newSimpleSymbolToken("$4")}, false, false)
+	_nextA(t, r, []SymbolToken{NewSimpleSymbolToken("$4")}, false, false)
 	_nextA(t, r, []SymbolToken{{Text: newString("name"), LocalSID: 4}}, false, false)
 	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 10}}, false, false)
 	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 10}}, false, false)
-	_nextA(t, r, []SymbolToken{newSimpleSymbolToken("bar")}, false, false)
+	_nextA(t, r, []SymbolToken{NewSimpleSymbolToken("bar")}, false, false)
 	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
 	_nextA(t, r, nil, true, true)
 }
@@ -132,7 +132,7 @@ func TestIgnoreValues(t *testing.T) {
 	_next(t, r, StructType)
 	_next(t, r, ListType)
 
-	_symbol(t, r, newSimpleSymbolToken("foo"))
+	_symbol(t, r, NewSimpleSymbolToken("foo"))
 	_eof(t, r)
 }
 
@@ -151,13 +151,13 @@ func TestReadSexps(t *testing.T) {
 	})
 
 	test("(foo)", func(t *testing.T, r Reader) {
-		_symbol(t, r, newSimpleSymbolToken("foo"))
+		_symbol(t, r, NewSimpleSymbolToken("foo"))
 	})
 
 	test("(foo bar baz :: boop)", func(t *testing.T, r Reader) {
-		_symbol(t, r, newSimpleSymbolToken("foo"))
-		_symbol(t, r, newSimpleSymbolToken("bar"))
-		_symbolAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbol(t, r, NewSimpleSymbolToken("foo"))
+		_symbol(t, r, NewSimpleSymbolToken("bar"))
+		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
 	})
 }
 
@@ -175,7 +175,7 @@ func TestStructs(t *testing.T) {
 	})
 
 	test("{foo : bar :: baz}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, []SymbolToken{newSimpleSymbolToken("bar")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, []SymbolToken{NewSimpleSymbolToken("bar")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
 	})
 
 	test("{foo: a, bar: b, baz: c}", func(t *testing.T, r Reader) {
@@ -205,7 +205,7 @@ func TestNullStructs(t *testing.T) {
 	r := NewReaderString("null.struct 'null'::{foo:bar}")
 
 	_null(t, r, StructType)
-	_nextAF(t, r, StructType, nil, []SymbolToken{newSimpleSymbolToken("null")})
+	_nextAF(t, r, StructType, nil, []SymbolToken{NewSimpleSymbolToken("null")})
 	_eof(t, r)
 }
 
@@ -223,14 +223,14 @@ func TestLists(t *testing.T) {
 	})
 
 	test("[foo]", func(t *testing.T, r Reader) {
-		_symbol(t, r, newSimpleSymbolToken("foo"))
+		_symbol(t, r, NewSimpleSymbolToken("foo"))
 		_eof(t, r)
 	})
 
 	test("[foo, bar, baz::boop]", func(t *testing.T, r Reader) {
-		_symbol(t, r, newSimpleSymbolToken("foo"))
-		_symbol(t, r, newSimpleSymbolToken("bar"))
-		_symbolAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbol(t, r, NewSimpleSymbolToken("foo"))
+		_symbol(t, r, NewSimpleSymbolToken("bar"))
+		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
 		_eof(t, r)
 	})
 }
@@ -330,7 +330,7 @@ func TestTimestamps(t *testing.T) {
 	et2 := time.Date(2001, time.January, 1, 0, 0, 0, 1, time.UTC)
 	test("2001-01-01T00:00:00.000000000999Z", NewTimestampWithFractionalSeconds(et2, TimestampPrecisionNanosecond, TimezoneUTC, 12))
 
-	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []SymbolToken{newSimpleSymbolToken("foo"), newSimpleSymbolToken("bar")}, NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
+	testA("foo::'bar'::2001-01-01T00:00:00.000Z", []SymbolToken{NewSimpleSymbolToken("foo"), NewSimpleSymbolToken("bar")}, NewTimestampWithFractionalSeconds(et, TimestampPrecisionNanosecond, TimezoneUTC, 3))
 }
 
 func TestDecimals(t *testing.T) {
@@ -361,7 +361,7 @@ func TestDecimals(t *testing.T) {
 	test("123d+2", "12300")
 	test("123d-2", "1.23")
 
-	testA("  foo :: 'bar' :: 123.  ", []SymbolToken{newSimpleSymbolToken("foo"), newSimpleSymbolToken("bar")}, "123")
+	testA("  foo :: 'bar' :: 123.  ", []SymbolToken{NewSimpleSymbolToken("foo"), NewSimpleSymbolToken("bar")}, "123")
 }
 
 func TestFloats(t *testing.T) {
@@ -383,7 +383,7 @@ func TestFloats(t *testing.T) {
 	test("+inf", math.Inf(1))
 	test("-inf", math.Inf(-1))
 
-	testA("foo::'bar'::1e100", []SymbolToken{newSimpleSymbolToken("foo"), newSimpleSymbolToken("bar")}, 1e100)
+	testA("foo::'bar'::1e100", []SymbolToken{NewSimpleSymbolToken("foo"), NewSimpleSymbolToken("bar")}, 1e100)
 }
 
 func TestInts(t *testing.T) {
@@ -447,9 +447,9 @@ func TestInts(t *testing.T) {
 func TestStrings(t *testing.T) {
 	r := NewReaderString(`foo::"bar" "baz" 'a'::'b'::'''beep''' '''boop''' null.string`)
 
-	_stringAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("foo")}, newString("bar"))
+	_stringAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("foo")}, newString("bar"))
 	_string(t, r, newString("baz"))
-	_stringAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("a"), newSimpleSymbolToken("b")}, newString("beepboop"))
+	_stringAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("a"), NewSimpleSymbolToken("b")}, newString("beepboop"))
 	_null(t, r, StringType)
 
 	_eof(t, r)
@@ -458,9 +458,9 @@ func TestStrings(t *testing.T) {
 func TestSymbols(t *testing.T) {
 	r := NewReaderString("'null'::foo bar a::b::'baz' null.symbol")
 
-	_symbolAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("null")}, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, false, false)
+	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("null")}, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, false, false)
 	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-	_symbolAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("a"), newSimpleSymbolToken("b")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
+	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("a"), NewSimpleSymbolToken("b")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
 	_null(t, r, SymbolType)
 
 	_eof(t, r)
@@ -482,12 +482,12 @@ func TestOperators(t *testing.T) {
 	r := NewReaderString("(a*(b+c))")
 
 	_sexp(t, r, func(t *testing.T, r Reader) {
-		_symbol(t, r, newSimpleSymbolToken("a"))
-		_symbol(t, r, newSimpleSymbolToken("*"))
+		_symbol(t, r, NewSimpleSymbolToken("a"))
+		_symbol(t, r, NewSimpleSymbolToken("*"))
 		_sexp(t, r, func(t *testing.T, r Reader) {
-			_symbol(t, r, newSimpleSymbolToken("b"))
-			_symbol(t, r, newSimpleSymbolToken("+"))
-			_symbol(t, r, newSimpleSymbolToken("c"))
+			_symbol(t, r, NewSimpleSymbolToken("b"))
+			_symbol(t, r, NewSimpleSymbolToken("+"))
+			_symbol(t, r, NewSimpleSymbolToken("c"))
 			_eof(t, r)
 		})
 		_eof(t, r)
@@ -497,7 +497,7 @@ func TestOperators(t *testing.T) {
 func TestTopLevelOperators(t *testing.T) {
 	r := NewReaderString("a + b")
 
-	_symbol(t, r, newSimpleSymbolToken("a"))
+	_symbol(t, r, NewSimpleSymbolToken("a"))
 
 	assert.False(t, r.Next())
 	assert.Error(t, r.Err())

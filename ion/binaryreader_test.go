@@ -126,14 +126,14 @@ func TestReadBinaryStructs(t *testing.T) {
 	_struct(t, r, func(t *testing.T, r Reader) {
 		_eof(t, r)
 	})
-	_structAF(t, r, nil, []SymbolToken{newSimpleSymbolToken("foo")}, func(t *testing.T, r Reader) {
-		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{newSimpleSymbolToken("bar")}, func(t *testing.T, r Reader) {
+	_structAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("foo")}, func(t *testing.T, r Reader) {
+		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{NewSimpleSymbolToken("bar")}, func(t *testing.T, r Reader) {
 			_eof(t, r)
 		})
 		_intAF(t, r, &SymbolToken{Text: newString("max_id"), LocalSID: 8}, nil, 0)
 	})
 	_structAF(t, r, nil, nil, func(t *testing.T, r Reader) {
-		st := newSimpleSymbolToken("")
+		st := NewSimpleSymbolToken("")
 		_intAF(t, r, &st, nil, 15)
 	})
 	_eof(t, r)
@@ -457,7 +457,7 @@ func TestReadBinaryNulls(t *testing.T) {
 
 	_null(t, r, NullType)
 	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
-	_nullAF(t, r, NullType, nil, []SymbolToken{newSimpleSymbolToken("foo"), {Text: newString("bar"), LocalSID: SymbolIDUnknown}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{NewSimpleSymbolToken("foo"), {Text: newString("bar"), LocalSID: SymbolIDUnknown}})
 	_eof(t, r)
 }
 

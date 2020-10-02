@@ -114,7 +114,7 @@ func symbolIdentifier(symbolText string) (int64, bool) {
 	return SymbolIDUnknown, false
 }
 
-func newSimpleSymbolToken(text string) SymbolToken {
+func NewSimpleSymbolToken(text string) SymbolToken {
 	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 

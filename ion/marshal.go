@@ -276,7 +276,7 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	}
 
 	for _, key := range keys {
-		err = m.w.FieldName(newSimpleSymbolToken(key.s))
+		err = m.w.FieldName(NewSimpleSymbolToken(key.s))
 		if err != nil {
 			return err
 		}
@@ -405,7 +405,7 @@ FieldLoop:
 			continue
 		}
 
-		if err := m.w.FieldName(newSimpleSymbolToken(f.name)); err != nil {
+		if err := m.w.FieldName(NewSimpleSymbolToken(f.name)); err != nil {
 			return err
 		}
 		if err := m.encodeValue(fv, f.hint); err != nil {
