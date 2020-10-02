@@ -293,7 +293,7 @@ func (s *bogusSST) String() string {
 
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
-	w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, NewSimpleSymbolToken(bogusText))
+	w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
 	w.BeginStruct()
 
 	st, _ := NewSymbolToken(s, "name")

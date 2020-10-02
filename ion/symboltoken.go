@@ -114,8 +114,13 @@ func symbolIdentifier(symbolText string) (int64, bool) {
 	return SymbolIDUnknown, false
 }
 
+// NewSimpleSymbolToken returns a Symbol Token with the given text value and undefined SID and Source.
 func NewSimpleSymbolToken(text string) SymbolToken {
 	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+}
+
+func newSimpleSymbolTokenPtr(text string) *SymbolToken {
+	return &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 
 // NewSymbolTokenBySID will check and return a symbol token if the given id exists in a symbol table,

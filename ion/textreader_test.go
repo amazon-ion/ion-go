@@ -105,11 +105,11 @@ func TestReadTextFieldNames(t *testing.T) {
 	assert.NoError(t, r.StepIn())
 
 	_nextF(t, r, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
-	_nextF(t, r, &SymbolToken{Text: newString("$4"), LocalSID: SymbolIDUnknown}, false, false)
+	_nextF(t, r, newSimpleSymbolTokenPtr("$4"), false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: 10}, false, false)
-	_nextF(t, r, &SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}, false, false)
+	_nextF(t, r, newSimpleSymbolTokenPtr("bar"), false, false)
 	_nextF(t, r, &SymbolToken{Text: newString("$ion"), LocalSID: 1}, false, false)
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
@@ -157,7 +157,7 @@ func TestReadSexps(t *testing.T) {
 	test("(foo bar baz :: boop)", func(t *testing.T, r Reader) {
 		_symbol(t, r, NewSimpleSymbolToken("foo"))
 		_symbol(t, r, NewSimpleSymbolToken("bar"))
-		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, newSimpleSymbolTokenPtr("boop"), false, false)
 	})
 }
 
@@ -175,17 +175,17 @@ func TestStructs(t *testing.T) {
 	})
 
 	test("{foo : bar :: baz}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, []SymbolToken{NewSimpleSymbolToken("bar")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, newSimpleSymbolTokenPtr("foo"), []SymbolToken{NewSimpleSymbolToken("bar")}, newSimpleSymbolTokenPtr("baz"), false, false)
 	})
 
 	test("{foo: a, bar: b, baz: c}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, nil, &SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false)
-		_symbolAF(t, r, &SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}, nil, &SymbolToken{Text: newString("b"), LocalSID: SymbolIDUnknown}, false, false)
-		_symbolAF(t, r, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, nil, &SymbolToken{Text: newString("c"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, newSimpleSymbolTokenPtr("foo"), nil, newSimpleSymbolTokenPtr("a"), false, false)
+		_symbolAF(t, r, newSimpleSymbolTokenPtr("bar"), nil, newSimpleSymbolTokenPtr("b"), false, false)
+		_symbolAF(t, r, newSimpleSymbolTokenPtr("baz"), nil, newSimpleSymbolTokenPtr("c"), false, false)
 	})
 
 	test("{\"\": a}", func(t *testing.T, r Reader) {
-		_symbolAF(t, r, &SymbolToken{Text: newString(""), LocalSID: SymbolIDUnknown}, nil, &SymbolToken{Text: newString("a"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, newSimpleSymbolTokenPtr(""), nil, newSimpleSymbolTokenPtr("a"), false, false)
 	})
 }
 
@@ -230,7 +230,7 @@ func TestLists(t *testing.T) {
 	test("[foo, bar, baz::boop]", func(t *testing.T, r Reader) {
 		_symbol(t, r, NewSimpleSymbolToken("foo"))
 		_symbol(t, r, NewSimpleSymbolToken("bar"))
-		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, &SymbolToken{Text: newString("boop"), LocalSID: SymbolIDUnknown}, false, false)
+		_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("baz")}, newSimpleSymbolTokenPtr("boop"), false, false)
 		_eof(t, r)
 	})
 }
@@ -458,9 +458,9 @@ func TestStrings(t *testing.T) {
 func TestSymbols(t *testing.T) {
 	r := NewReaderString("'null'::foo bar a::b::'baz' null.symbol")
 
-	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("null")}, &SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, false, false)
-	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown})
-	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("a"), NewSimpleSymbolToken("b")}, &SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}, false, false)
+	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("null")}, newSimpleSymbolTokenPtr("foo"), false, false)
+	_symbol(t, r, NewSimpleSymbolToken("bar"))
+	_symbolAF(t, r, nil, []SymbolToken{NewSimpleSymbolToken("a"), NewSimpleSymbolToken("b")}, newSimpleSymbolTokenPtr("baz"), false, false)
 	_null(t, r, SymbolType)
 
 	_eof(t, r)

@@ -457,7 +457,7 @@ func TestReadBinaryNulls(t *testing.T) {
 
 	_null(t, r, NullType)
 	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
-	_nullAF(t, r, NullType, nil, []SymbolToken{NewSimpleSymbolToken("foo"), {Text: newString("bar"), LocalSID: SymbolIDUnknown}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{NewSimpleSymbolToken("foo"), NewSimpleSymbolToken("bar")})
 	_eof(t, r)
 }
 

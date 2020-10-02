@@ -541,7 +541,7 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", &SymbolToken{Text: newString("hello"), LocalSID: SymbolIDUnknown})
+	test("hello", newSimpleSymbolTokenPtr("hello"))
 	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
@@ -556,14 +556,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown},
+		"b": newSimpleSymbolTokenPtr("two"),
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
+	test("[1, two]", []interface{}{1, newSimpleSymbolTokenPtr("two")})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, &SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown}, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
+	test("(1 + two)", []interface{}{1, newSimpleSymbolTokenPtr("+"), newSimpleSymbolTokenPtr("two")})
 
 	var result []interface{}
 	test("()", result)

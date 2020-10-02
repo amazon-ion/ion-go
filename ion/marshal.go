@@ -276,10 +276,12 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	}
 
 	for _, key := range keys {
-		err = m.w.FieldName(NewSimpleSymbolToken(key.s))
+		text := key.s
+		err = m.w.FieldName(SymbolToken{Text: &text, LocalSID: SymbolIDUnknown})
 		if err != nil {
 			return err
 		}
+
 		value := v.MapIndex(key.v)
 		if err := m.encodeValue(value, hint); err != nil {
 			return err
@@ -405,7 +407,8 @@ FieldLoop:
 			continue
 		}
 
-		if err := m.w.FieldName(NewSimpleSymbolToken(f.name)); err != nil {
+		text := f.name
+		if err := m.w.FieldName(SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}); err != nil {
 			return err
 		}
 		if err := m.encodeValue(fv, f.hint); err != nil {
