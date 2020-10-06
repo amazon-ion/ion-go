@@ -27,7 +27,6 @@ const (
 
 // ImportSource is a reference to a SID within a shared symbol table.
 type ImportSource struct {
-
 	// The name of the shared symbol table that this token refers to.
 	Table string
 

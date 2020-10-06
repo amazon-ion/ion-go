@@ -214,7 +214,7 @@ func (s *sst) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
-	s.WriteTo(w)
+	_ = s.WriteTo(w)
 
 	return buf.String()
 }
@@ -293,22 +293,22 @@ func (s *bogusSST) String() string {
 
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
-	w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
-	w.BeginStruct()
+	_ = w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
+	_ = w.BeginStruct()
 
 	st, _ := NewSymbolToken(s, "name")
-	w.FieldName(st)
-	w.WriteString(s.name)
+	_ = w.FieldName(st)
+	_ = w.WriteString(s.name)
 
 	st, _ = NewSymbolToken(s, "version")
-	w.FieldName(st)
-	w.WriteInt(int64(s.version))
+	_ = w.FieldName(st)
+	_ = w.WriteInt(int64(s.version))
 
 	st, _ = NewSymbolToken(s, "max_id")
-	w.FieldName(st)
-	w.WriteUint(s.maxID)
+	_ = w.FieldName(st)
+	_ = w.WriteUint(s.maxID)
 
-	w.EndStruct()
+	_ = w.EndStruct()
 	return buf.String()
 }
 
@@ -520,7 +520,7 @@ func (t *lst) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
-	t.WriteTo(w)
+	_ = t.WriteTo(w)
 
 	return buf.String()
 }

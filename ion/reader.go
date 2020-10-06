@@ -73,7 +73,6 @@ import (
 // 	}
 //
 type Reader interface {
-
 	// Next advances the Reader to the next position in the current value stream.
 	// It returns true if this is the position of an Ion value, and false if it
 	// is not. On error, it returns false and sets Err.

@@ -151,6 +151,9 @@ func (d *Decoder) decode() (interface{}, error) {
 	switch d.r.Type() {
 	case BoolType:
 		val, err := d.r.BoolValue()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 
 	case IntType:
@@ -196,9 +199,15 @@ func (d *Decoder) decodeInt() (interface{}, error) {
 		return nil, nil
 	case Int32:
 		val, err := d.r.IntValue()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 	case Int64:
 		val, err := d.r.Int64Value()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 	default:
 		return d.r.BigIntValue()

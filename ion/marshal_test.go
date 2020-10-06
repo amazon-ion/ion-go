@@ -247,18 +247,18 @@ func TestMarshalHints(t *testing.T) {
 	assert.Equal(t, eval, string(val))
 }
 
-type marshalme uint8
+type marshalMe uint8
 
-var _ Marshaler = marshalme(0)
+var _ Marshaler = marshalMe(0)
 
 const (
-	one marshalme = iota
+	one marshalMe = iota
 	two
 	three
 	four
 )
 
-func (m marshalme) String() string {
+func (m marshalMe) String() string {
 	switch m {
 	case one:
 		return "ONE"
@@ -273,7 +273,7 @@ func (m marshalme) String() string {
 	}
 }
 
-func (m marshalme) MarshalIon(w Writer) error {
+func (m marshalMe) MarshalIon(w Writer) error {
 	return w.WriteSymbolFromString(m.String())
 }
 
@@ -282,10 +282,10 @@ func TestMarshalCustomMarshaler(t *testing.T) {
 	enc := NewTextEncoder(&buf)
 
 	require.NoError(t, enc.Encode(one))
-	require.NoError(t, enc.EncodeAs([]marshalme{two, three}, SexpType))
+	require.NoError(t, enc.EncodeAs([]marshalMe{two, three}, SexpType))
 
 	v := struct {
-		Num marshalme `ion:"num"`
+		Num marshalMe `ion:"num"`
 	}{four}
 	require.NoError(t, enc.Encode(v))
 	require.NoError(t, enc.Finish())

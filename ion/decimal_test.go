@@ -96,15 +96,15 @@ func TestParseDecimal(t *testing.T) {
 func absF(d *Decimal) *Decimal { return d.Abs() }
 func negF(d *Decimal) *Decimal { return d.Neg() }
 
-type unaryop struct {
+type unaryOp struct {
 	sym string
 	fun func(d *Decimal) *Decimal
 }
 
-var abs = &unaryop{"abs", absF}
-var neg = &unaryop{"neg", negF}
+var abs = &unaryOp{"abs", absF}
+var neg = &unaryOp{"neg", negF}
 
-func testUnaryOp(t *testing.T, a, e string, op *unaryop) {
+func testUnaryOp(t *testing.T, a, e string, op *unaryOp) {
 	t.Run(op.sym+"("+a+")="+e, func(t *testing.T) {
 		aa, _ := ParseDecimal(a)
 		ee, _ := ParseDecimal(e)

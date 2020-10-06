@@ -229,8 +229,6 @@ func rescale(a, b *Decimal) (*Decimal, *Decimal) {
 	}
 }
 
-var ten = big.NewInt(10)
-
 // Make 'n' bigger by making 'scale' smaller, since we know we can
 // do that. (1d100 -> 10d99). Makes comparisons and math easier, at the
 // expense of more storage space. Technically speaking implies adding
@@ -241,7 +239,7 @@ func (d *Decimal) upscale(scale int32) *Decimal {
 		panic("can't upscale to a smaller scale")
 	}
 
-	pow := new(big.Int).Exp(ten, big.NewInt(diff), nil)
+	pow := new(big.Int).Exp(big.NewInt(10), big.NewInt(diff), nil)
 	n := new(big.Int).Mul(d.n, pow)
 
 	return &Decimal{
@@ -263,7 +261,7 @@ func (d *Decimal) checkToUpscale() (*Decimal, error) {
 				Err:  strconv.ErrRange,
 			}
 		}
-		d = d.upscale(0)
+		return d.upscale(0), nil
 	}
 	return d, nil
 }
@@ -274,10 +272,9 @@ func (d *Decimal) trunc() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	d = ud
-	str := d.n.String()
+	str := ud.n.String()
 
-	truncateTo := len(str) - int(d.scale)
+	truncateTo := len(str) - int(ud.scale)
 	if truncateTo <= 0 {
 		return 0, nil
 	}
@@ -291,9 +288,8 @@ func (d *Decimal) round() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	d = ud
 
-	floatValue := float64(d.n.Int64()) / math.Pow10(int(d.scale))
+	floatValue := float64(ud.n.Int64()) / math.Pow10(int(ud.scale))
 	roundedValue := math.Round(floatValue)
 	return int64(roundedValue), nil
 }

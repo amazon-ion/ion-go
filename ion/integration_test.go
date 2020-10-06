@@ -114,7 +114,7 @@ var equivsSkipList = []string{
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 }
 
-var nonEquivsSkipList = []string{}
+var nonEquivsSkipList []string
 
 func TestLoadGood(t *testing.T) {
 	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {

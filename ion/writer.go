@@ -64,7 +64,6 @@ import (
 // 	}
 //
 type Writer interface {
-
 	// FieldName sets the field name for the next value written.
 	FieldName(val SymbolToken) error
 

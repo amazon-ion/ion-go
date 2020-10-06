@@ -546,44 +546,42 @@ func (t *tokenizer) skipLongStringHelper(handler commentHandler) error {
 // false indicating this is not the end of the long string, and true for consumed '
 // as we have read the closing ''' of the first long string.
 func (t *tokenizer) skipEndOfLongString(handler commentHandler) (bool, bool, error) {
-	isConsumed := false
 	// We just read a ', check for two more ''s.
 	cs, err := t.peekN(2)
 	if err != nil && err != io.EOF {
-		return false, isConsumed, err
+		return false, false, err
 	}
 
 	// If it's not a triple-quote, keep going.
 	if len(cs) < 2 || cs[0] != '\'' || cs[1] != '\'' {
-		return false, isConsumed, nil
+		return false, false, nil
 	}
 
 	// Consume the triple-quote.
 	err = t.skipN(2)
-	isConsumed = true
 	if err != nil {
-		return false, isConsumed, err
+		return false, true, err
 	}
 
 	// Consume any additional whitespace/comments.
 	c, _, err := t.skipWhitespaceWith(handler)
 	if err != nil {
-		return false, isConsumed, err
+		return false, true, err
 	}
 
 	// Check if it's another triple-quote; if so, keep going.
 	if c == '\'' {
 		ok, err := t.IsTripleQuote()
 		if err != nil {
-			return false, isConsumed, err
+			return false, true, err
 		}
 		if ok {
-			return false, isConsumed, nil
+			return false, true, nil
 		}
 	}
 
 	t.unread(c)
-	return true, isConsumed, nil
+	return true, true, nil
 }
 
 // SkipBlob skips over a blob value, returning the next character.

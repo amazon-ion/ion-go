@@ -258,7 +258,7 @@ func TestReadBinaryNullFieldName(t *testing.T) {
 		// }
 	})
 	r.Next()
-	r.StepIn()
+	assert.NoError(t, r.StepIn())
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
 
@@ -288,10 +288,10 @@ func TestReadBinaryAnnotations(t *testing.T) {
 		0xE3, 0x81, 0xF1, 0x0F, // $113::null
 	})
 
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: nil, LocalSID: 0}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$ion"), LocalSID: 1}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: 110}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: 111}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 110}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("bar"), LocalSID: 111}}, false, false)
 	_nextA(t, r, nil, true, true)
 }
 
