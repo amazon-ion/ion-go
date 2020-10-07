@@ -115,7 +115,10 @@ func (w *textWriter) WriteTimestamp(val Timestamp) error {
 
 // WriteSymbol writes a symbol given a SymbolToken.
 func (w *textWriter) WriteSymbol(val SymbolToken) error {
-	text := val.toText()
+	text, err := val.toText()
+	if err != nil {
+		return err
+	}
 	if val.Text != nil {
 		// Wrap text value in single quotes if the symbol's text is a symbol identifier
 		// (ie. of form $n for some integer n)
@@ -401,7 +404,11 @@ func (w *textWriter) writeFieldName(api string) error {
 	name := w.fieldName
 	w.fieldName = nil
 
-	if err := writeSymbol(name.toText(), w.out); err != nil {
+	text, err := name.toText()
+	if err != nil {
+		return err
+	}
+	if err := writeSymbol(text, w.out); err != nil {
 		return err
 	}
 
@@ -419,7 +426,11 @@ func (w *textWriter) writeAnnotations() error {
 	w.annotations = nil
 
 	for _, a := range as {
-		if err := writeSymbol(a.toText(), w.out); err != nil {
+		text, err := a.toText()
+		if err != nil {
+			return err
+		}
+		if err := writeSymbol(text, w.out); err != nil {
 			return err
 		}
 		if err := writeRawString("::", w.out); err != nil {

@@ -157,7 +157,7 @@ func (w *writer) FieldName(val SymbolToken) error {
 		return w.err
 	}
 	if !w.IsInStruct() {
-		w.err = &UsageError{"Writer.FieldNameSymbol", "called when not writing a struct"}
+		w.err = &UsageError{"Writer.FieldName", "called when not writing a struct"}
 		return w.err
 	}
 

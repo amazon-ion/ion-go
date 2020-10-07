@@ -91,15 +91,14 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
-func (st *SymbolToken) toText() string {
-	text := ""
+func (st *SymbolToken) toText() (string, error) {
 	if st.Text != nil {
-		text = *st.Text
+		return *st.Text, nil
 	} else if st.LocalSID != SymbolIDUnknown {
-		text = fmt.Sprintf("$%v", st.LocalSID)
+		return fmt.Sprintf("$%v", st.LocalSID), nil
 	}
 
-	return text
+	return "", fmt.Errorf("ion: invalid symbol token")
 }
 
 // Parses text of the form '$n' for some integer n.
