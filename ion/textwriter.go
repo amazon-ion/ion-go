@@ -291,10 +291,8 @@ func (w *textWriter) pretty() bool {
 	return w.opts&TextWriterPretty == TextWriterPretty
 }
 
-type writeFunction func(string, io.Writer) error
-
 // writeValue writes a stringified value to the output stream.
-func (w *textWriter) writeValue(api string, val string, fn writeFunction) error {
+func (w *textWriter) writeValue(api string, val string, fn func(string, io.Writer) error) error {
 	if w.err != nil {
 		return w.err
 	}
