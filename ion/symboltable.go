@@ -366,8 +366,7 @@ func (t *lst) Find(s string) *SymbolToken {
 	}
 
 	// Check local
-	_, ok := t.index[s]
-	if ok {
+	if _, ok := t.index[s]; ok {
 		return &SymbolToken{Text: &s, LocalSID: SymbolIDUnknown}
 	}
 
