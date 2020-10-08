@@ -240,8 +240,8 @@ func tryCreateTimestamp(ts []int, nsecs int, overflow bool, offset, sign int64, 
 	return NewTimestampWithFractionalSeconds(date, precision, TimezoneLocal, fractionPrecision), nil
 }
 
-// ParseTimestampFromStr parses a timestamp string and returns an ion timestamp.
-func ParseTimestampFromStr(dateStr string) (Timestamp, error) {
+// ParseTimestamp parses a timestamp string and returns an ion timestamp.
+func ParseTimestamp(dateStr string) (Timestamp, error) {
 	if len(dateStr) < 5 {
 		return invalidTimestamp(dateStr)
 	}

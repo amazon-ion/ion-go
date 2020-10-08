@@ -298,5 +298,5 @@ func parseInt(str string, radix int) (interface{}, error) {
 }
 
 func parseTimestamp(val string) (Timestamp, error) {
-	return ParseTimestampFromStr(val)
+	return ParseTimestamp(val)
 }
