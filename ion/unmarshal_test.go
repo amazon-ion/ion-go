@@ -265,7 +265,7 @@ func TestUnmarshalBinary(t *testing.T) {
 
 	var decimalVal Decimal
 	decimalBytes := prefixIVM([]byte{0x51, 0xFF}) // 0d-63
-	test(decimalBytes, decimalVal, MustParseDecimal("0d-63"))
+	test(decimalBytes, decimalVal, *MustParseDecimal("0d-63"))
 
 	var timestampValue Timestamp
 	timestampBytes := prefixIVM([]byte{0x67, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86}) // 0001-02-03T04:05:06Z
@@ -618,7 +618,7 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	bi := new(big.Int).Neg(new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF))
 	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, annotations})
 	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, annotations})
-	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), annotations})
+	test("with::multiple::annotations::2.2", "decimal", foo{*MustParseDecimal("2.2"), annotations})
 	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", annotations})
 	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
 	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, annotations})
