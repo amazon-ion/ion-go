@@ -538,7 +538,6 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 	case reflect.String:
 		if val != nil {
 			v.SetString(*val)
-
 		}
 		return nil
 
@@ -547,7 +546,7 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
 	}

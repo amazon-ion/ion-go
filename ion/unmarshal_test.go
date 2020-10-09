@@ -278,7 +278,7 @@ func TestUnmarshalBinary(t *testing.T) {
 
 	var stringVal string
 	stringBytes := prefixIVM([]byte{0x83, 'a', 'b', 'c'}) // "abc"
-	test(stringBytes, stringVal, newString("abc"))
+	test(stringBytes, stringVal, "abc")
 
 	var clobVal []byte
 	clobBytes := prefixIVM([]byte{0x92, 0x0A, 0x0B})
@@ -619,7 +619,7 @@ func TestUnmarshalWithAnnotation(t *testing.T) {
 	test("with::multiple::annotations::-18446744073709551615", "big.Int", foo{bi, annotations})
 	test("with::multiple::annotations::2.1e1", "float", foo{2.1e1, annotations})
 	test("with::multiple::annotations::2.2", "decimal", foo{MustParseDecimal("2.2"), annotations})
-	test("with::multiple::annotations::\"abc\"", "string", foo{newString("abc"), annotations})
+	test("with::multiple::annotations::\"abc\"", "string", foo{"abc", annotations})
 	timestamp := NewTimestamp(time.Date(2000, 1, 2, 3, 4, 5, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC)
 	test("with::multiple::annotations::2000-01-02T03:04:05Z", "timestamp", foo{timestamp, annotations})
 	test("with::multiple::annotations::{{'''abc'''}}", "clob", foo{[]byte{97, 98, 99}, annotations})
