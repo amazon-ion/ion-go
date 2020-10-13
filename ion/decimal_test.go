@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -328,4 +329,62 @@ func TestUpscale(t *testing.T) {
 	d, _ := ParseDecimal("1d1")
 	actual := d.upscale(4).String()
 	assert.Equal(t, "10.0000", actual)
+}
+
+func TestMarshalingRoundtrip(t *testing.T) {
+	d := struct {
+		Number *Decimal `json:"number"`
+	}{
+		Number: NewDecimal(big.NewInt(10000), -1, false),
+	}
+
+	asb, err := json.Marshal(d)
+	if err != nil {
+		t.Errorf("unexpected error marshalling: %v", err)
+	}
+
+	// eliminate source number
+	d.Number = nil
+
+	// read marshalled content back into same structure
+	if err = json.Unmarshal(asb, &d); err != nil {
+		t.Errorf("unexpected error unmarshalling: %v", err)
+	}
+
+	if d.Number == nil {
+		t.Fatalf("unmarshalled Decimal was nil")
+	}
+	if d.Number.n.Cmp(big.NewInt(10000)) != 0 {
+		t.Errorf("expected n=10000, got n=%d", d.Number.n)
+	}
+	if d.Number.scale != 1 {
+		t.Errorf("expected scale=1, got scale=%d", d.Number.scale)
+	}
+}
+
+func TestMarshalingErrors(t *testing.T) {
+	var d struct {
+		Number *Decimal `json:"number"`
+	}
+
+	// should fail for Ex not being an int32
+	str := `{ "number": { "Co": 1, "Ex": "not an int" } }`
+	if err := json.Unmarshal([]byte(str), &d); err == nil {
+		t.Errorf("expected error unmarshalling bad object, but got none")
+	}
+
+	// should fail for trying to access Co when it's null
+	str = `{ "number": { "Co": null, "Ex": 1 } }`
+	if err := json.Unmarshal([]byte(str), &d); err != nil {
+		t.Errorf("Unexpected error unmarshalling object with nil Co: %v\n", err)
+	}
+	// run an anon block so we can defer/recover within
+	func() {
+		defer func() {
+			if failure := recover(); failure == nil {
+				t.Errorf("expected panic with nil Co, but didn't")
+			}
+		}()
+		d.Number.Add(NewDecimalInt(1))
+	}()
 }

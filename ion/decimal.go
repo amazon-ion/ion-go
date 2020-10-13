@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -393,4 +394,27 @@ func (d *Decimal) String() string {
 
 		return b.String()
 	}
+}
+
+type decimalAsJSON struct {
+	Co *big.Int `json:"co"`
+	Ex int32    `json:"ex"`
+}
+
+// MarshalJSON is implementing Marshaler for Decimal
+func (d Decimal) MarshalJSON() ([]byte, error) {
+	co, ex := d.CoEx()
+	return json.Marshal(&decimalAsJSON{co, ex})
+}
+
+// UnmarshalJSON is implementing Unmarshaler for Decimal
+func (d *Decimal) UnmarshalJSON(blob []byte) error {
+	var daj decimalAsJSON
+	if err := json.Unmarshal(blob, &daj); err != nil {
+		return fmt.Errorf("unmarshalling ion.Decimal: %v", err)
+	}
+	d.n = daj.Co
+	// CoEx() returns negated scale for exponent; re-negate it in order to restore the correct value.
+	d.scale = -daj.Ex
+	return nil
 }
