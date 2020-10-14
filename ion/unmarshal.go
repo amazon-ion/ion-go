@@ -348,7 +348,9 @@ func (d *Decoder) decodeBoolTo(v reflect.Value) error {
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return nil
 		}
 	}
@@ -400,7 +402,9 @@ func (d *Decoder) decodeIntTo(v reflect.Value) error {
 			if err != nil {
 				return err
 			}
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return nil
 		}
 		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[IntType]...)
@@ -439,14 +443,18 @@ func (d *Decoder) decodeFloatTo(v reflect.Value) error {
 			if err != nil {
 				return err
 			}
-			v.Set(reflect.ValueOf(*dec))
+			if val != nil {
+				v.Set(reflect.ValueOf(*dec))
+			}
 			return d.attachAnnotations(v)
 		}
 		return d.decodeToStructWithAnnotation(v, typesAcceptableKinds[FloatType]...)
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return nil
 		}
 	}
@@ -462,14 +470,18 @@ func (d *Decoder) decodeDecimalTo(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Struct:
 		if v.Type() == decimalType {
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return d.attachAnnotations(v)
 		}
 		return d.decodeToStructWithAnnotation(v, decimalType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return nil
 		}
 	}
@@ -485,14 +497,18 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Struct:
 		if v.Type() == timestampType {
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return d.attachAnnotations(v)
 		}
 		return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(*val))
+			if val != nil {
+				v.Set(reflect.ValueOf(*val))
+			}
 			return nil
 		}
 	}
@@ -538,7 +554,6 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 	case reflect.String:
 		if val != nil {
 			v.SetString(*val)
-
 		}
 		return nil
 
@@ -547,7 +562,7 @@ func (d *Decoder) decodeStringTo(v reflect.Value) error {
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
-			v.Set(reflect.ValueOf(val))
+			v.Set(reflect.ValueOf(*val))
 			return nil
 		}
 	}
