@@ -78,14 +78,14 @@ func printVersion() error {
 		return err
 	}
 	{
-		if err := w.FieldName(ion.NewSimpleSymbolToken("version")); err != nil {
+		if err := w.FieldName(ion.NewSymbolTokenFromString("version")); err != nil {
 			return err
 		}
 		if err := w.WriteString(internal.GitCommit); err != nil {
 			return err
 		}
 
-		if err := w.FieldName(ion.NewSimpleSymbolToken("build_time")); err != nil {
+		if err := w.FieldName(ion.NewSymbolTokenFromString("build_time")); err != nil {
 			return err
 		}
 

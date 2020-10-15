@@ -37,7 +37,7 @@ type eventwriter struct {
 // of ion-test-driver events.
 func NewEventWriter(out io.Writer) ion.Writer {
 	w := ion.NewTextWriter(out)
-	w.WriteSymbol(ion.NewSimpleSymbolToken("$ion_event_stream"))
+	w.WriteSymbol(ion.NewSymbolTokenFromString("$ion_event_stream"))
 
 	return &eventwriter{enc: ion.NewEncoder(w)}
 }

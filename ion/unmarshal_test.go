@@ -541,7 +541,7 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", newSimpleSymbolTokenPtr("hello"))
+	test("hello", newSymbolTokenPtrFromString("hello"))
 	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
@@ -556,14 +556,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": newSimpleSymbolTokenPtr("two"),
+		"b": newSymbolTokenPtrFromString("two"),
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, newSimpleSymbolTokenPtr("two")})
+	test("[1, two]", []interface{}{1, newSymbolTokenPtrFromString("two")})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, newSimpleSymbolTokenPtr("+"), newSimpleSymbolTokenPtr("two")})
+	test("(1 + two)", []interface{}{1, newSymbolTokenPtrFromString("+"), newSymbolTokenPtrFromString("two")})
 
 	var result []interface{}
 	test("()", result)
@@ -677,14 +677,14 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 		  }
 		}
 	*/
-	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{NewSimpleSymbolToken("baz")}}
-	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{NewSimpleSymbolToken("bar")}}
-	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{NewSimpleSymbolToken("foo")}}
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{NewSymbolTokenFromString("baz")}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{NewSymbolTokenFromString("bar")}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{NewSymbolTokenFromString("foo")}}
 
 	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
 }
 
-var symbolTokenWith = NewSimpleSymbolToken("with")
-var symbolTokenMultiple = NewSimpleSymbolToken("multiple")
-var symbolTokenAnnotations = NewSimpleSymbolToken("annotations")
+var symbolTokenWith = NewSymbolTokenFromString("with")
+var symbolTokenMultiple = NewSymbolTokenFromString("multiple")
+var symbolTokenAnnotations = NewSymbolTokenFromString("annotations")
 var annotations = []SymbolToken{symbolTokenWith, symbolTokenMultiple, symbolTokenAnnotations}

@@ -46,8 +46,8 @@ func TestSharedSymbolTable(t *testing.T) {
 	testFindByID(t, st, 4, "null")
 	testFindByID(t, st, 7, "")
 
-	testFindSymbolToken(t, st, "def", NewSimpleSymbolToken("def"))
-	testFindSymbolToken(t, st, "foo'bar", NewSimpleSymbolToken("foo'bar"))
+	testFindSymbolToken(t, st, "def", NewSymbolTokenFromString("def"))
+	testFindSymbolToken(t, st, "foo'bar", NewSymbolTokenFromString("foo'bar"))
 
 	testString(t, st, `$ion_shared_symbol_table::{name:"test",version:2,symbols:["abc","def","foo'bar","null","def","ghi"]}`)
 }
@@ -68,9 +68,9 @@ func TestLocalSymbolTable(t *testing.T) {
 	testFindByID(t, st, 11, "bar")
 	testFindByID(t, st, 12, "")
 
-	testFindSymbolToken(t, st, "foo", NewSimpleSymbolToken("foo"))
-	testFindSymbolToken(t, st, "bar", NewSimpleSymbolToken("bar"))
-	testFindSymbolToken(t, st, "$ion", NewSimpleSymbolToken("$ion"))
+	testFindSymbolToken(t, st, "foo", NewSymbolTokenFromString("foo"))
+	testFindSymbolToken(t, st, "bar", NewSymbolTokenFromString("bar"))
+	testFindSymbolToken(t, st, "$ion", NewSymbolTokenFromString("$ion"))
 
 	testString(t, st, `$ion_symbol_table::{symbols:["foo","bar"]}`)
 }
@@ -106,10 +106,10 @@ func TestLocalSymbolTableWithImports(t *testing.T) {
 	testFindByID(t, st, 13, "bar2")
 	testFindByID(t, st, 14, "")
 
-	testFindSymbolToken(t, st, "foo", NewSimpleSymbolToken("foo"))
-	testFindSymbolToken(t, st, "bar", NewSimpleSymbolToken("bar"))
-	testFindSymbolToken(t, st, "foo2", NewSimpleSymbolToken("foo2"))
-	testFindSymbolToken(t, st, "bar2", NewSimpleSymbolToken("bar2"))
+	testFindSymbolToken(t, st, "foo", NewSymbolTokenFromString("foo"))
+	testFindSymbolToken(t, st, "bar", NewSymbolTokenFromString("bar"))
+	testFindSymbolToken(t, st, "foo2", NewSymbolTokenFromString("foo2"))
+	testFindSymbolToken(t, st, "bar2", NewSymbolTokenFromString("bar2"))
 
 	testString(t, st, `$ion_symbol_table::{imports:[{name:"shared",version:1,max_id:2}],symbols:["foo2","bar2"]}`)
 }

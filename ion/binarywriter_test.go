@@ -41,14 +41,14 @@ func TestWriteBinaryStruct(t *testing.T) {
 		assert.NoError(t, w.BeginStruct())
 		assert.NoError(t, w.EndStruct())
 
-		assert.NoError(t, w.Annotation(NewSimpleSymbolToken("foo")))
+		assert.NoError(t, w.Annotation(NewSymbolTokenFromString("foo")))
 		assert.NoError(t, w.BeginStruct())
 		{
-			assert.NoError(t, w.FieldName(NewSimpleSymbolToken("name")))
-			assert.NoError(t, w.Annotation(NewSimpleSymbolToken("bar")))
+			assert.NoError(t, w.FieldName(NewSymbolTokenFromString("name")))
+			assert.NoError(t, w.Annotation(NewSymbolTokenFromString("bar")))
 			assert.NoError(t, w.WriteNull())
 
-			assert.NoError(t, w.FieldName(NewSimpleSymbolToken("max_id")))
+			assert.NoError(t, w.FieldName(NewSymbolTokenFromString("max_id")))
 			assert.NoError(t, w.WriteInt(0))
 		}
 		assert.NoError(t, w.EndStruct())
@@ -67,10 +67,10 @@ func TestWriteBinarySexp(t *testing.T) {
 		assert.NoError(t, w.BeginSexp())
 		assert.NoError(t, w.EndSexp())
 
-		assert.NoError(t, w.Annotation(NewSimpleSymbolToken("foo")))
+		assert.NoError(t, w.Annotation(NewSymbolTokenFromString("foo")))
 		assert.NoError(t, w.BeginSexp())
 		{
-			assert.NoError(t, w.Annotation(NewSimpleSymbolToken("bar")))
+			assert.NoError(t, w.Annotation(NewSymbolTokenFromString("bar")))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))
@@ -91,10 +91,10 @@ func TestWriteBinaryList(t *testing.T) {
 		assert.NoError(t, w.BeginList())
 		assert.NoError(t, w.EndList())
 
-		assert.NoError(t, w.Annotation(NewSimpleSymbolToken("foo")))
+		assert.NoError(t, w.Annotation(NewSymbolTokenFromString("foo")))
 		assert.NoError(t, w.BeginList())
 		{
-			assert.NoError(t, w.Annotation(NewSimpleSymbolToken("bar")))
+			assert.NoError(t, w.Annotation(NewSymbolTokenFromString("bar")))
 			assert.NoError(t, w.WriteNull())
 
 			assert.NoError(t, w.WriteInt(0))

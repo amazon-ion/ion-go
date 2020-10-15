@@ -112,12 +112,12 @@ func symbolIdentifier(symbolText string) (int64, bool) {
 	return SymbolIDUnknown, false
 }
 
-// NewSimpleSymbolToken returns a Symbol Token with the given text value and undefined SID and Source.
-func NewSimpleSymbolToken(text string) SymbolToken {
+// NewSymbolTokenFromString returns a Symbol Token with the given text value and undefined SID and Source.
+func NewSymbolTokenFromString(text string) SymbolToken {
 	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 
-func newSimpleSymbolTokenPtr(text string) *SymbolToken {
+func newSymbolTokenPtrFromString(text string) *SymbolToken {
 	return &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
 }
 
