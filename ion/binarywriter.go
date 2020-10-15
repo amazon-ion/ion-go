@@ -255,26 +255,19 @@ func (w *binaryWriter) WriteSymbol(val SymbolToken) error {
 	if val.LocalSID != SymbolIDUnknown {
 		id = uint64(val.LocalSID)
 	} else if val.Text != nil {
-		text := *val.Text
-		if _, ok := symbolIdentifier(text); ok {
-			// Wrap text value in single quotes if the symbol's text is a symbol identifier
-			// (ie. of form $n for some integer n)
-			// This is done to distinguish from actual symbol table mappings.
-			text = fmt.Sprintf("'%v'", text)
-		}
-
-		id, w.err = w.resolveFromSymbolTable("Writer.WriteSymbol", text)
+		id, w.err = w.resolveFromSymbolTable("Writer.WriteSymbol", *val.Text)
 		if w.err != nil {
 			return w.err
 		}
 	} else {
-		return &UsageError{"Writer.WriteSymbol", "invalid symbol token"}
+		return &UsageError{"Writer.WriteSymbol", "symbol token without defined text or symbol id is invalid"}
 	}
 
 	return w.writeSymbolFromID("Writer.WriteSymbol", id)
 }
 
-// WriteSymbolFromString writes a symbol value given a string.
+// WriteSymbolFromString writes a symbol value given a string that is expected to be in the symbol table.
+// Returns an error if string is not in symbol table.
 func (w *binaryWriter) WriteSymbolFromString(val string) error {
 	var id uint64
 	id, w.err = w.resolve("Writer.WriteSymbolFromString", val)
@@ -529,7 +522,7 @@ func (w *binaryWriter) beginValue(api string) error {
 				return err
 			}
 		} else {
-			return &UsageError{api, "invalid field name symbol token"}
+			return &UsageError{api, "field name symbol token does not have defined text or symbol id."}
 		}
 
 		buf := make([]byte, 0, 10)

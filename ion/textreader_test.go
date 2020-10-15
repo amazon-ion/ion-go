@@ -43,7 +43,7 @@ func TestReadTextSymbols(t *testing.T) {
 
 	r := NewReaderString(ionText)
 	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
-	_symbol(t, r, NewSymbolTokenFromString("$4"))
+	_symbol(t, r, NewSymbolTokenFromString("'$4'"))
 	_symbol(t, r, SymbolToken{Text: newString("name"), LocalSID: 4})
 	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10})
 	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 10})
