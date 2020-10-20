@@ -265,12 +265,6 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 		}
 
 		if tok == tokenSymbolQuoted {
-			if _, ok := symbolIdentifier(val); ok {
-				// Wrap text value in single quotes if the symbol's text is a symbol identifier
-				// (ie. of form $n for some integer n)
-				// This is done to distinguish from actual symbol table mappings.
-				val = fmt.Sprintf("'%v'", val)
-			}
 			t.value = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 			t.valueType = SymbolType
 			t.state = t.stateAfterValue()

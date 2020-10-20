@@ -245,7 +245,7 @@ func TestWriteTextTimestamp(t *testing.T) {
 }
 
 func TestWriteTextSymbol(t *testing.T) {
-	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸',$123:$456}"
+	expected := "{foo:bar,empty:'','null':'null',f:a::b::u::'lo🇺🇸','$123':'$456'}"
 	testTextWriter(t, expected, func(w Writer) {
 		assert.NoError(t, w.BeginStruct())
 
@@ -263,7 +263,7 @@ func TestWriteTextSymbol(t *testing.T) {
 		assert.NoError(t, w.WriteSymbolFromString("lo🇺🇸"))
 
 		assert.NoError(t, w.FieldName(NewSymbolTokenFromString("$123")))
-		assert.NoError(t, w.WriteSymbolFromString("$456"))
+		assert.NoError(t, w.WriteSymbol(NewSymbolTokenFromString("$456")))
 
 		assert.NoError(t, w.EndStruct())
 	})

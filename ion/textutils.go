@@ -147,6 +147,14 @@ func writeSymbol(val interface{}, out io.Writer) error {
 	var text string
 	if token.Text != nil {
 		text = *token.Text
+
+		if _, ok := symbolIdentifier(text); ok {
+			// Wrap text value in single quotes if the symbol's text is a symbol identifier
+			// (ie. of form $n for some integer n)
+			// This is done to distinguish from actual symbol table mappings.
+			text = fmt.Sprintf("'%v'", text)
+			return writeRawString(text, out)
+		}
 	} else if token.LocalSID != SymbolIDUnknown {
 		text = fmt.Sprintf("$%v", token.LocalSID)
 	} else {
