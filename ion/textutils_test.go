@@ -73,7 +73,7 @@ func TestWriteSymbol(t *testing.T) {
 	test := func(sym, expected string) {
 		t.Run(expected, func(t *testing.T) {
 			buf := strings.Builder{}
-			require.NoError(t, writeSymbol(sym, &buf))
+			require.NoError(t, writeSymbolFromString(sym, &buf))
 			actual := buf.String()
 			assert.Equal(t, expected, actual)
 		})

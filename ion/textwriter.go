@@ -115,17 +115,12 @@ func (w *textWriter) WriteTimestamp(val Timestamp) error {
 
 // WriteSymbol writes a symbol given a SymbolToken.
 func (w *textWriter) WriteSymbol(val SymbolToken) error {
-	text, err := val.toText()
-	if err != nil {
-		return err
-	}
-
-	return w.writeValue("Writer.WriteSymbol", text, writeSymbol)
+	return w.writeValue("Writer.WriteSymbol", val, writeSymbol)
 }
 
 // WriteSymbolFromString writes a symbol given a string.
 func (w *textWriter) WriteSymbolFromString(val string) error {
-	return w.writeValue("Writer.WriteSymbolFromString", val, writeSymbol)
+	return w.writeValue("Writer.WriteSymbolFromString", val, writeSymbolFromString)
 }
 
 // WriteString writes a string.
@@ -287,7 +282,7 @@ func (w *textWriter) pretty() bool {
 }
 
 // writeValue writes a stringified value to the output stream.
-func (w *textWriter) writeValue(api string, val string, fn func(string, io.Writer) error) error {
+func (w *textWriter) writeValue(api string, val interface{}, fn func(interface{}, io.Writer) error) error {
 	if w.err != nil {
 		return w.err
 	}
@@ -396,11 +391,7 @@ func (w *textWriter) writeFieldName(api string) error {
 	name := w.fieldName
 	w.fieldName = nil
 
-	text, err := name.toText()
-	if err != nil {
-		return err
-	}
-	if err := writeSymbol(text, w.out); err != nil {
+	if err := writeSymbol(*name, w.out); err != nil {
 		return err
 	}
 
@@ -418,11 +409,7 @@ func (w *textWriter) writeAnnotations() error {
 	w.annotations = nil
 
 	for _, a := range as {
-		text, err := a.toText()
-		if err != nil {
-			return err
-		}
-		if err := writeSymbol(text, w.out); err != nil {
+		if err := writeSymbol(a, w.out); err != nil {
 			return err
 		}
 		if err := writeRawString("::", w.out); err != nil {

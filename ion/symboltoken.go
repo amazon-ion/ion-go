@@ -91,16 +91,6 @@ func (st *SymbolToken) Equal(o *SymbolToken) bool {
 	return false
 }
 
-func (st *SymbolToken) toText() (string, error) {
-	if st.Text != nil {
-		return *st.Text, nil
-	} else if st.LocalSID != SymbolIDUnknown {
-		return fmt.Sprintf("$%v", st.LocalSID), nil
-	}
-
-	return "", fmt.Errorf("ion: invalid symbol token")
-}
-
 // Parses text of the form '$n' for some integer n.
 func symbolIdentifier(symbolText string) (int64, bool) {
 	if len(symbolText) > 1 && symbolText[0] == '$' {
@@ -143,10 +133,6 @@ func NewSymbolToken(symbolTable SymbolTable, text string) (SymbolToken, error) {
 		return SymbolToken{}, fmt.Errorf("ion: invalid symbol table")
 	}
 
-	if sid, ok := symbolIdentifier(text); ok {
-		return NewSymbolTokenBySID(symbolTable, sid)
-	}
-
 	sid, ok := symbolTable.FindByName(text)
 	if !ok {
 		return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}, nil
@@ -169,4 +155,11 @@ func NewSymbolTokens(symbolTable SymbolTable, textVals []string) ([]SymbolToken,
 	}
 
 	return tokens, nil
+}
+
+func newSymbolToken(symbolTable SymbolTable, text string) (SymbolToken, error) {
+	if sid, ok := symbolIdentifier(text); ok {
+		return NewSymbolTokenBySID(symbolTable, sid)
+	}
+	return NewSymbolToken(symbolTable, text)
 }
