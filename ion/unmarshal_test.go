@@ -16,7 +16,6 @@
 package ion
 
 import (
-	"bufio"
 	"bytes"
 	"math"
 	"math/big"
@@ -353,12 +352,6 @@ func TestRoundtripMarshalUnmarshal(t *testing.T) {
 
 			ionBinary, err := MarshalBinary(goStruct, sst)
 			require.NoError(t, err)
-
-			reader := newBinaryReaderBuf(bufio.NewReader(bytes.NewReader(ionBinary)), NewCatalog())
-
-			require.True(t, reader.Next())
-			require.NoError(t, reader.StepIn())
-			require.True(t, reader.Next())
 
 			var decodedResult map[string]interface{}
 			require.NoError(t, Unmarshal(ionBinary, &decodedResult, sst))
