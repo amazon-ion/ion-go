@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"bufio"
 	"bytes"
 	"math"
 	"math/big"
@@ -334,6 +335,46 @@ func TestUnmarshalListSexpBinary(t *testing.T) {
 
 	test(ionByteValue, "sexpToInterface", &[]interface{}{}, &[]interface{}{2, 3, 4}) // unmarshal IonSexp to an interface
 	test(ionByteValue, "sexpToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonSexp to Slice of int
+}
+
+func TestRoundtripMarshalUnmarshal(t *testing.T) {
+	sst := NewSharedSymbolTable("shared symbol table", 1, []string{
+		"FirstName",
+		"LastName",
+	})
+
+	test := func(testName string, expectedFirstName, expectedLastName string, expectedAge int) {
+		t.Run(testName, func(t *testing.T) {
+			goStruct := map[string]interface{}{
+				"FirstName": expectedFirstName,
+				"LastName":  expectedLastName,
+				"Age":       expectedAge,
+			}
+
+			ionBinary, err := MarshalBinary(goStruct, sst)
+			require.NoError(t, err)
+
+			reader := newBinaryReaderBuf(bufio.NewReader(bytes.NewReader(ionBinary)), NewCatalog())
+
+			require.True(t, reader.Next())
+			require.NoError(t, reader.StepIn())
+			require.True(t, reader.Next())
+
+			var decodedResult map[string]interface{}
+			require.NoError(t, Unmarshal(ionBinary, &decodedResult, sst))
+
+			decodedFirstName := decodedResult["FirstName"].(string)
+			decodedLastName := decodedResult["LastName"].(string)
+			decodedAge := decodedResult["Age"].(int)
+
+			assert.Equal(t, expectedFirstName, decodedFirstName)
+			assert.Equal(t, expectedLastName, decodedLastName)
+			assert.Equal(t, expectedAge, decodedAge)
+		})
+	}
+
+	test("John Doe", "John", "Doe", 26)
+	test("Mary Thompson", "Mary", "Thompson", 33)
 }
 
 func TestDecodeFloat(t *testing.T) {

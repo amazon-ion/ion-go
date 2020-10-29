@@ -92,7 +92,7 @@ var typesAcceptableKinds = map[Type][]reflect.Kind{
 //     []interface{}{}                                 sexp
 //     map[string]interface{}{}/struct/interface{}     struct
 //
-func Unmarshal(data []byte, v interface{}, ssts ...SharedSymbolTable ) error {
+func Unmarshal(data []byte, v interface{}, ssts ...SharedSymbolTable) error {
 	catalog := NewCatalog(ssts...)
 	return NewDecoder(NewReaderCat(bytes.NewReader(data), catalog)).DecodeTo(v)
 }
