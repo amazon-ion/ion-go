@@ -336,7 +336,7 @@ func TestUnmarshalListSexpBinary(t *testing.T) {
 	test(ionByteValue, "sexpToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonSexp to Slice of int
 }
 
-func TestRoundtripMarshalUnmarshal(t *testing.T) {
+func TestRoundtripMarshalUnmarshalWithSymbolTable(t *testing.T) {
 	sst := NewSharedSymbolTable("shared symbol table", 1, []string{
 		"FirstName",
 		"LastName",
