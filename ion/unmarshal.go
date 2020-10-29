@@ -92,8 +92,9 @@ var typesAcceptableKinds = map[Type][]reflect.Kind{
 //     []interface{}{}                                 sexp
 //     map[string]interface{}{}/struct/interface{}     struct
 //
-func Unmarshal(data []byte, v interface{}) error {
-	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
+func Unmarshal(data []byte, v interface{}, ssts ...SharedSymbolTable ) error {
+	catalog := NewCatalog(ssts...)
+	return NewDecoder(NewReaderCat(bytes.NewReader(data), catalog)).DecodeTo(v)
 }
 
 // UnmarshalString unmarshals Ion data from a string to the given object.
