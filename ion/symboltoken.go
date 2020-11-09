@@ -27,7 +27,6 @@ const (
 
 // ImportSource is a reference to a SID within a shared symbol table.
 type ImportSource struct {
-
 	// The name of the shared symbol table that this token refers to.
 	Table string
 
@@ -103,6 +102,15 @@ func symbolIdentifier(symbolText string) (int64, bool) {
 	return SymbolIDUnknown, false
 }
 
+// NewSymbolTokenFromString returns a Symbol Token with the given text value and undefined SID and Source.
+func NewSymbolTokenFromString(text string) SymbolToken {
+	return SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+}
+
+func newSymbolTokenPtrFromString(text string) *SymbolToken {
+	return &SymbolToken{Text: &text, LocalSID: SymbolIDUnknown}
+}
+
 // NewSymbolTokenBySID will check and return a symbol token if the given id exists in a symbol table,
 // otherwise return a new symbol token.
 func NewSymbolTokenBySID(symbolTable SymbolTable, sid int64) (SymbolToken, error) {
@@ -123,10 +131,6 @@ func NewSymbolTokenBySID(symbolTable SymbolTable, sid int64) (SymbolToken, error
 func NewSymbolToken(symbolTable SymbolTable, text string) (SymbolToken, error) {
 	if symbolTable == nil {
 		return SymbolToken{}, fmt.Errorf("ion: invalid symbol table")
-	}
-
-	if sid, ok := symbolIdentifier(text); ok {
-		return NewSymbolTokenBySID(symbolTable, sid)
 	}
 
 	sid, ok := symbolTable.FindByName(text)
@@ -151,4 +155,11 @@ func NewSymbolTokens(symbolTable SymbolTable, textVals []string) ([]SymbolToken,
 	}
 
 	return tokens, nil
+}
+
+func newSymbolToken(symbolTable SymbolTable, text string) (SymbolToken, error) {
+	if sid, ok := symbolIdentifier(text); ok {
+		return NewSymbolTokenBySID(symbolTable, sid)
+	}
+	return NewSymbolToken(symbolTable, text)
 }

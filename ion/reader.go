@@ -73,7 +73,6 @@ import (
 // 	}
 //
 type Reader interface {
-
 	// Next advances the Reader to the next position in the current value stream.
 	// It returns true if this is the position of an Ion value, and false if it
 	// is not. On error, it returns false and sets Err.
@@ -361,9 +360,7 @@ func (r *reader) ByteValue() ([]byte, error) {
 
 // Clear clears the current value from the reader.
 func (r *reader) clear() {
-	if r.fieldName != nil {
-		r.fieldName.Text = nil
-	}
+	r.fieldName = nil
 	r.annotations = nil
 	r.valueType = NoType
 	r.value = nil

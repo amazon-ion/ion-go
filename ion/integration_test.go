@@ -76,9 +76,19 @@ var readGoodFilesSkipList = []string{
 	"whitespace.ion",
 }
 
-var binaryRoundTripSkipList = []string{}
+var binaryRoundTripSkipList = []string{
+	"T7-large.10n",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
 
-var textRoundTripSkipList = []string{}
+var textRoundTripSkipList = []string{
+	"T7-large.10n",
+	"utf16.ion",
+	"utf32.ion",
+	"whitespace.ion",
+}
 
 var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_0_0.ion",
@@ -104,7 +114,7 @@ var equivsSkipList = []string{
 	"stringUtf8.ion", // fails on utf-16 surrogate https://github.com/amzn/ion-go/issues/75
 }
 
-var nonEquivsSkipList = []string{}
+var nonEquivsSkipList []string
 
 func TestLoadGood(t *testing.T) {
 	readFilesAndTest(t, goodPath, readGoodFilesSkipList, func(t *testing.T, path string) {
@@ -398,14 +408,11 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 	for reader.Next() {
 		fns, err := reader.FieldName()
 		if err == nil && reader.IsInStruct() && fns != nil {
-			require.NoError(t, writer.FieldNameSymbol(*fns))
+			require.NoError(t, writer.FieldName(*fns))
 		}
 
 		an, err := reader.Annotations()
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		require.NoError(t, err)
 		if len(an) > 0 {
 			require.NoError(t, writer.Annotations(an...))
 		}
@@ -490,8 +497,8 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 
 			if val == nil {
 				assert.NoError(t, writer.WriteNullType(SymbolType))
-			} else if val.Text != nil {
-				assert.NoError(t, writer.WriteSymbol(*val.Text), "Something went wrong while writing a Symbol value")
+			} else {
+				assert.NoError(t, writer.WriteSymbol(*val), "Something went wrong while writing a Symbol value")
 			}
 
 		case StringType:
@@ -544,6 +551,8 @@ func writeFromReaderToWriter(t *testing.T, reader Reader, writer Writer) {
 			require.NoError(t, writer.EndStruct())
 		}
 	}
+
+	assert.NoError(t, reader.Err(), "Something went wrong executing reader.Next()")
 }
 
 // Read the current value in the reader and put that in an ionItem struct (defined in this file).

@@ -92,8 +92,9 @@ var typesAcceptableKinds = map[Type][]reflect.Kind{
 //     []interface{}{}                                 sexp
 //     map[string]interface{}{}/struct/interface{}     struct
 //
-func Unmarshal(data []byte, v interface{}) error {
-	return NewDecoder(NewReader(bytes.NewReader(data))).DecodeTo(v)
+func Unmarshal(data []byte, v interface{}, ssts ...SharedSymbolTable) error {
+	catalog := NewCatalog(ssts...)
+	return NewDecoder(NewReaderCat(bytes.NewReader(data), catalog)).DecodeTo(v)
 }
 
 // UnmarshalString unmarshals Ion data from a string to the given object.
@@ -151,6 +152,9 @@ func (d *Decoder) decode() (interface{}, error) {
 	switch d.r.Type() {
 	case BoolType:
 		val, err := d.r.BoolValue()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 
 	case IntType:
@@ -196,9 +200,15 @@ func (d *Decoder) decodeInt() (interface{}, error) {
 		return nil, nil
 	case Int32:
 		val, err := d.r.IntValue()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 	case Int64:
 		val, err := d.r.Int64Value()
+		if err != nil {
+			return nil, err
+		}
 		return *val, err
 	default:
 		return d.r.BigIntValue()

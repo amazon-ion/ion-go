@@ -1428,14 +1428,14 @@ func isProhibitedControlChar(c int) bool {
 }
 
 func isStringWhitespace(c int) bool {
-	return c == 0x09 || //horizontal tab
-		c == 0x0B || //vertical tab
+	return c == 0x09 || // horizontal tab
+		c == 0x0B || // vertical tab
 		c == 0x0C // form feed
 }
 
 func isNewLineChar(c int) bool {
-	return c == 0x0A || //new line
-		c == 0x0D //carriage return
+	return c == 0x0A || // new line
+		c == 0x0D // carriage return
 }
 
 // isASCII returns true if c is a 7-bit ASCII character.

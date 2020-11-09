@@ -336,6 +336,40 @@ func TestUnmarshalListSexpBinary(t *testing.T) {
 	test(ionByteValue, "sexpToSlice", &[]int{}, &[]int{2, 3, 4})                     // unmarshal IonSexp to Slice of int
 }
 
+func TestRoundtripMarshalUnmarshalWithSymbolTable(t *testing.T) {
+	sst := NewSharedSymbolTable("shared symbol table", 1, []string{
+		"FirstName",
+		"LastName",
+	})
+
+	test := func(testName string, expectedFirstName, expectedLastName string, expectedAge int) {
+		t.Run(testName, func(t *testing.T) {
+			goStruct := map[string]interface{}{
+				"FirstName": expectedFirstName,
+				"LastName":  expectedLastName,
+				"Age":       expectedAge,
+			}
+
+			ionBinary, err := MarshalBinary(goStruct, sst)
+			require.NoError(t, err)
+
+			var decodedResult map[string]interface{}
+			require.NoError(t, Unmarshal(ionBinary, &decodedResult, sst))
+
+			decodedFirstName := decodedResult["FirstName"].(string)
+			decodedLastName := decodedResult["LastName"].(string)
+			decodedAge := decodedResult["Age"].(int)
+
+			assert.Equal(t, expectedFirstName, decodedFirstName)
+			assert.Equal(t, expectedLastName, decodedLastName)
+			assert.Equal(t, expectedAge, decodedAge)
+		})
+	}
+
+	test("John Doe", "John", "Doe", 26)
+	test("Mary Thompson", "Mary", "Thompson", 33)
+}
+
 func TestDecodeFloat(t *testing.T) {
 	test32 := func(str string, eval float32) {
 		t.Run(str, func(t *testing.T) {
@@ -541,7 +575,7 @@ func TestDecode(t *testing.T) {
 
 	test("2020T", NewDateTimestamp(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionYear))
 
-	test("hello", &SymbolToken{Text: newString("hello"), LocalSID: SymbolIDUnknown})
+	test("hello", newSymbolTokenPtrFromString("hello"))
 	test("\"hello\"", newString("hello"))
 
 	test("null.blob", nil)
@@ -556,14 +590,14 @@ func TestDecode(t *testing.T) {
 	test("{}", map[string]interface{}{})
 	test("{a:1,b:two}", map[string]interface{}{
 		"a": 1,
-		"b": &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown},
+		"b": newSymbolTokenPtrFromString("two"),
 	})
 
 	test("null.list", nil)
-	test("[1, two]", []interface{}{1, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
+	test("[1, two]", []interface{}{1, newSymbolTokenPtrFromString("two")})
 
 	test("null.sexp", nil)
-	test("(1 + two)", []interface{}{1, &SymbolToken{Text: newString("+"), LocalSID: SymbolIDUnknown}, &SymbolToken{Text: newString("two"), LocalSID: SymbolIDUnknown}})
+	test("(1 + two)", []interface{}{1, newSymbolTokenPtrFromString("+"), newSymbolTokenPtrFromString("two")})
 
 	var result []interface{}
 	test("()", result)
@@ -677,14 +711,14 @@ func TestUnmarshalNestedStructsWithAnnotation(t *testing.T) {
 		  }
 		}
 	*/
-	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{SymbolToken{Text: newString("baz"), LocalSID: SymbolIDUnknown}}}
-	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}}}
-	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}}}
+	innerStructVal := nestedInt{Value: 5, ValueAnnotation: []SymbolToken{NewSymbolTokenFromString("baz")}}
+	mainStructVal := nestedStruct{Field2: innerStructVal, InnerStructAnnotation: []SymbolToken{NewSymbolTokenFromString("bar")}}
+	expectedValue := topLevelStruct{Field1: mainStructVal, TopLevelAnnotation: []SymbolToken{NewSymbolTokenFromString("foo")}}
 
 	test("foo::{Field1:bar::{Field2:baz::5}}", "nested structs", expectedValue)
 }
 
-var symbolTokenWith = SymbolToken{Text: newString("with"), LocalSID: SymbolIDUnknown}
-var symbolTokenMultiple = SymbolToken{Text: newString("multiple"), LocalSID: SymbolIDUnknown}
-var symbolTokenAnnotations = SymbolToken{Text: newString("annotations"), LocalSID: SymbolIDUnknown}
+var symbolTokenWith = NewSymbolTokenFromString("with")
+var symbolTokenMultiple = NewSymbolTokenFromString("multiple")
+var symbolTokenAnnotations = NewSymbolTokenFromString("annotations")
 var annotations = []SymbolToken{symbolTokenWith, symbolTokenMultiple, symbolTokenAnnotations}

@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"fmt"
 	"io"
 	"math/big"
 	"strconv"
@@ -139,8 +140,34 @@ func formatFloat(val float64) string {
 	return str
 }
 
+// Write the given symbol out.
+func writeSymbol(val interface{}, out io.Writer) error {
+	token := val.(SymbolToken)
+
+	var text string
+	if token.Text != nil {
+		text = *token.Text
+
+		if _, ok := symbolIdentifier(text); ok {
+			// Wrap text value in single quotes if the symbol's text is a symbol identifier
+			// (ie. of form $n for some integer n)
+			// This is done to distinguish from actual symbol table mappings.
+			text = fmt.Sprintf("'%v'", text)
+			return writeRawString(text, out)
+		}
+	} else if token.LocalSID != SymbolIDUnknown {
+		text = fmt.Sprintf("$%v", token.LocalSID)
+	} else {
+		return fmt.Errorf("ion: invalid symbol token")
+	}
+
+	return writeSymbolFromString(text, out)
+}
+
 // Write the given symbol out, quoting and encoding if necessary.
-func writeSymbol(sym string, out io.Writer) error {
+func writeSymbolFromString(val interface{}, out io.Writer) error {
+	sym := val.(string)
+
 	if symbolNeedsQuoting(sym) {
 		if err := writeRawChar('\'', out); err != nil {
 			return err
@@ -219,7 +246,9 @@ func writeEscapedChar(c byte, out io.Writer) error {
 }
 
 // Write out the given raw string.
-func writeRawString(s string, out io.Writer) error {
+func writeRawString(val interface{}, out io.Writer) error {
+	s := val.(string)
+
 	_, err := out.Write([]byte(s))
 	return err
 }
@@ -298,5 +327,5 @@ func parseInt(str string, radix int) (interface{}, error) {
 }
 
 func parseTimestamp(val string) (Timestamp, error) {
-	return ParseTimestampFromStr(val)
+	return ParseTimestamp(val)
 }

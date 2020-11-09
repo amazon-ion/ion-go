@@ -185,7 +185,7 @@ func (t *textReader) nextBeforeFieldName() (bool, error) {
 		if tok == tokenSymbolQuoted {
 			t.fieldName = &SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
 		} else {
-			st, err := NewSymbolToken(t.SymbolTable(), val)
+			st, err := newSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return false, err
 			}
@@ -250,13 +250,14 @@ func (t *textReader) nextBeforeTypeAnnotations() (bool, error) {
 					"annotations that include a '" + val + "' must be enclosed in quotes", t.tok.Pos() - 1}
 			}
 
-			token, err := NewSymbolToken(t.SymbolTable(), val)
-			if err != nil {
-				return false, err
-			}
-
+			var token SymbolToken
 			if tok == tokenSymbolQuoted {
 				token = SymbolToken{Text: &val, LocalSID: SymbolIDUnknown}
+			} else {
+				token, err = newSymbolToken(t.SymbolTable(), val)
+				if err != nil {
+					return false, err
+				}
 			}
 
 			t.annotations = append(t.annotations, token)
@@ -454,11 +455,11 @@ func (t *textReader) onSymbol(val string, tok token, ws bool) error {
 			valueType = FloatType
 			value = math.NaN()
 		default:
-			val, err := NewSymbolToken(t.SymbolTable(), val)
+			st, err := newSymbolToken(t.SymbolTable(), val)
 			if err != nil {
 				return err
 			}
-			value = &val
+			value = &st
 		}
 	}
 

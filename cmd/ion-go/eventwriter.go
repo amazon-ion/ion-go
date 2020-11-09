@@ -37,12 +37,12 @@ type eventwriter struct {
 // of ion-test-driver events.
 func NewEventWriter(out io.Writer) ion.Writer {
 	w := ion.NewTextWriter(out)
-	w.WriteSymbol("$ion_event_stream")
+	w.WriteSymbol(ion.NewSymbolTokenFromString("$ion_event_stream"))
 
 	return &eventwriter{enc: ion.NewEncoder(w)}
 }
 
-func (e *eventwriter) FieldNameSymbol(val ion.SymbolToken) error {
+func (e *eventwriter) FieldName(val ion.SymbolToken) error {
 	if val.Text == nil {
 		sid := fmt.Sprintf("$%v", val.LocalSID)
 		e.fieldname = &sid
@@ -50,11 +50,6 @@ func (e *eventwriter) FieldNameSymbol(val ion.SymbolToken) error {
 	}
 
 	e.fieldname = val.Text
-	return nil
-}
-
-func (e *eventwriter) FieldName(val string) error {
-	e.fieldname = &val
 	return nil
 }
 
@@ -140,11 +135,19 @@ func (e *eventwriter) WriteTimestamp(val ion.Timestamp) error {
 	})
 }
 
-func (e *eventwriter) WriteSymbol(val string) error {
+func (e *eventwriter) WriteSymbol(val ion.SymbolToken) error {
 	return e.write(event{
 		EventType: scalar,
 		IonType:   iontype(ion.SymbolType),
 		ValueText: symbolify(val),
+	})
+}
+
+func (e *eventwriter) WriteSymbolFromString(val string) error {
+	return e.write(event{
+		EventType: scalar,
+		IonType:   iontype(ion.SymbolType),
+		ValueText: stringify(val),
 	})
 }
 
@@ -253,7 +256,7 @@ func stringify(val interface{}) string {
 	return string(bs)
 }
 
-func symbolify(val string) string {
+func symbolify(val ion.SymbolToken) string {
 	buf := strings.Builder{}
 	w := ion.NewTextWriterOpts(&buf, ion.TextWriterQuietFinish)
 

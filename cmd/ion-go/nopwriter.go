@@ -28,11 +28,7 @@ func NewNopWriter() ion.Writer {
 	return nopwriter{}
 }
 
-func (nopwriter) FieldName(string) error {
-	return nil
-}
-
-func (nopwriter) FieldNameSymbol(val ion.SymbolToken) error {
+func (nopwriter) FieldName(ion.SymbolToken) error {
 	return nil
 }
 
@@ -80,7 +76,11 @@ func (nopwriter) WriteTimestamp(ion.Timestamp) error {
 	return nil
 }
 
-func (nopwriter) WriteSymbol(string) error {
+func (nopwriter) WriteSymbol(ion.SymbolToken) error {
+	return nil
+}
+
+func (nopwriter) WriteSymbolFromString(string) error {
 	return nil
 }
 

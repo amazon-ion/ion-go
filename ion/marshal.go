@@ -226,7 +226,7 @@ func (m *Encoder) encodeValue(v reflect.Value, hint Type) error {
 
 	case reflect.String:
 		if hint == SymbolType {
-			return m.w.WriteSymbol(v.String())
+			return m.w.WriteSymbolFromString(v.String())
 		}
 		return m.w.WriteString(v.String())
 
@@ -276,10 +276,11 @@ func (m *Encoder) encodeMap(v reflect.Value, hint Type) error {
 	}
 
 	for _, key := range keys {
-		err = m.w.FieldName(key.s)
+		err = m.w.FieldName(NewSymbolTokenFromString(key.s))
 		if err != nil {
 			return err
 		}
+
 		value := v.MapIndex(key.v)
 		if err := m.encodeValue(value, hint); err != nil {
 			return err
@@ -405,7 +406,7 @@ FieldLoop:
 			continue
 		}
 
-		if err := m.w.FieldName(f.name); err != nil {
+		if err := m.w.FieldName(NewSymbolTokenFromString(f.name)); err != nil {
 			return err
 		}
 		if err := m.encodeValue(fv, f.hint); err != nil {

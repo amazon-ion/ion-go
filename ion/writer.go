@@ -16,7 +16,6 @@
 package ion
 
 import (
-	"fmt"
 	"io"
 	"math/big"
 )
@@ -32,7 +31,7 @@ import (
 // 	w.BeginSexp()
 // 	{
 // 		w.WriteInt(1)
-// 		w.WriteSymbol("+")
+// 		w.WriteSymbolFromString("+")
 // 		w.WriteInt(1)
 // 	}
 // 	w.EndSexp()
@@ -65,12 +64,8 @@ import (
 // 	}
 //
 type Writer interface {
-
 	// FieldName sets the field name for the next value written.
-	FieldName(val string) error
-
-	// FieldName sets the field name symbol for the next value written.
-	FieldNameSymbol(val SymbolToken) error
+	FieldName(val SymbolToken) error
 
 	// Annotation adds a single annotation to the next value written.
 	Annotation(val SymbolToken) error
@@ -105,8 +100,11 @@ type Writer interface {
 	// WriteTimestamp writes a timestamp value.
 	WriteTimestamp(val Timestamp) error
 
-	// WriteSymbol writes a symbol value.
-	WriteSymbol(val string) error
+	// WriteSymbol writes a symbol value given a SymbolToken.
+	WriteSymbol(val SymbolToken) error
+
+	// WriteSymbolFromString writes a symbol value given a string.
+	WriteSymbolFromString(val string) error
 
 	// WriteString writes a string value.
 	WriteString(val string) error
@@ -148,13 +146,13 @@ type writer struct {
 	ctx ctxstack
 	err error
 
-	fieldName   *string
+	fieldName   *SymbolToken
 	annotations []SymbolToken
 }
 
-// FieldName sets the field name for the next value written.
+// FieldName sets the field name symbol for the next value written.
 // It may only be called while writing a struct.
-func (w *writer) FieldName(val string) error {
+func (w *writer) FieldName(val SymbolToken) error {
 	if w.err != nil {
 		return w.err
 	}
@@ -164,24 +162,6 @@ func (w *writer) FieldName(val string) error {
 	}
 
 	w.fieldName = &val
-	return nil
-}
-
-// FieldNameSymbol sets the field name symbol for the next value written.
-// It may only be called while writing a struct.
-func (w *writer) FieldNameSymbol(val SymbolToken) error {
-	if !w.IsInStruct() {
-		w.err = &UsageError{"Writer.FieldNameSymbol", "called when not writing a struct"}
-		return w.err
-	}
-
-	if val.Text == nil {
-		sid := fmt.Sprintf("$%v", val.LocalSID)
-		w.fieldName = &sid
-		return nil
-	}
-
-	w.fieldName = val.Text
 	return nil
 }
 

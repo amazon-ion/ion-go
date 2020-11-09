@@ -106,7 +106,6 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 	maxID := int64(-1)
 
 	for r.Next() {
-		var err error
 		fieldName, err := r.FieldName()
 		if err != nil {
 			return nil, err
@@ -118,16 +117,19 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 		switch *fieldName.Text {
 		case "name":
 			if r.Type() == StringType {
-				var val *string
-				val, err = r.StringValue()
-				if val != nil {
-					name = *val
+				val, err := r.StringValue()
+				if err != nil {
+					return nil, err
 				}
+				name = *val
 			}
 		case "version":
 			if r.Type() == IntType {
-				val, er := r.IntValue()
-				version, err = *val, er
+				val, err := r.IntValue()
+				if err != nil {
+					return nil, err
+				}
+				version = *val
 			}
 		case "max_id":
 			if r.Type() == IntType {
@@ -140,9 +142,6 @@ func readImport(r Reader, cat Catalog) (SharedSymbolTable, error) {
 				}
 				maxID = *i
 			}
-		}
-		if err != nil {
-			return nil, err
 		}
 	}
 

@@ -78,28 +78,24 @@ func printVersion() error {
 		return err
 	}
 	{
-		if err := w.FieldName("version"); err != nil {
+		if err := w.FieldName(ion.NewSymbolTokenFromString("version")); err != nil {
 			return err
 		}
 		if err := w.WriteString(internal.GitCommit); err != nil {
 			return err
 		}
 
+		if err := w.FieldName(ion.NewSymbolTokenFromString("build_time")); err != nil {
+			return err
+		}
+
 		buildtime, err := ion.NewTimestampFromStr(internal.BuildTime, ion.TimestampPrecisionSecond, ion.TimezoneUTC)
 		if err == nil {
-			if err := w.FieldName("build_time"); err != nil {
-				return err
-			}
 			if err := w.WriteTimestamp(buildtime); err != nil {
 				return err
 			}
-		} else {
-			if err := w.FieldName("build_time"); err != nil {
-				return err
-			}
-			if err := w.WriteString("unknown-buildtime"); err != nil {
-				return err
-			}
+		} else if err := w.WriteString("unknown-buildtime"); err != nil {
+			return err
 		}
 	}
 	if err := w.EndStruct(); err != nil {

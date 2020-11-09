@@ -21,8 +21,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -251,14 +249,36 @@ func (w *binaryWriter) WriteTimestamp(val Timestamp) error {
 	return w.writeValue("Writer.WriteTimestamp", buf)
 }
 
-// WriteSymbol writes a symbol value.
-func (w *binaryWriter) WriteSymbol(val string) error {
-	id, err := w.resolve("Writer.WriteSymbol", val)
-	if err != nil {
-		w.err = err
-		return err
+// WriteSymbol writes a symbol value given a SymbolToken.
+func (w *binaryWriter) WriteSymbol(val SymbolToken) error {
+	var id uint64
+	if val.LocalSID != SymbolIDUnknown {
+		id = uint64(val.LocalSID)
+	} else if val.Text != nil {
+		id, w.err = w.resolveFromSymbolTable("Writer.WriteSymbol", *val.Text)
+		if w.err != nil {
+			return w.err
+		}
+	} else {
+		return &UsageError{"Writer.WriteSymbol", "symbol token without defined text or symbol id is invalid"}
 	}
 
+	return w.writeSymbolFromID("Writer.WriteSymbol", id)
+}
+
+// WriteSymbolFromString writes a symbol value given a string that is expected to be in the symbol table.
+// Returns an error if string is not in symbol table.
+func (w *binaryWriter) WriteSymbolFromString(val string) error {
+	var id uint64
+	id, w.err = w.resolve("Writer.WriteSymbolFromString", val)
+	if w.err != nil {
+		return w.err
+	}
+
+	return w.writeSymbolFromID("Writer.WriteSymbolFromString", id)
+}
+
+func (w *binaryWriter) writeSymbolFromID(api string, id uint64) error {
 	vlength := uintLen(id)
 	bufLength := vlength + tagLen(vlength)
 	buf := make([]byte, 0, bufLength)
@@ -266,7 +286,7 @@ func (w *binaryWriter) WriteSymbol(val string) error {
 	buf = appendTag(buf, 0x70, vlength)
 	buf = appendUint(buf, id)
 
-	return w.writeValue("Writer.WriteSymbol", buf)
+	return w.writeValue(api, buf)
 }
 
 // WriteString writes a string.
@@ -492,9 +512,17 @@ func (w *binaryWriter) beginValue(api string) error {
 			return &UsageError{api, "field name not set"}
 		}
 
-		id, err := w.resolve(api, *name)
-		if err != nil {
-			return err
+		var id uint64
+		if name.LocalSID != SymbolIDUnknown {
+			id = uint64(name.LocalSID)
+		} else if name.Text != nil {
+			var err error
+			id, err = w.resolve(api, *name.Text)
+			if err != nil {
+				return err
+			}
+		} else {
+			return &UsageError{api, "field name symbol token does not have defined text or symbol id."}
 		}
 
 		buf := make([]byte, 0, 10)
@@ -591,13 +619,14 @@ func (w *binaryWriter) end(api string, t ctx) error {
 
 // Resolve resolves a symbol to its ID.
 func (w *binaryWriter) resolve(api, sym string) (uint64, error) {
-	if strings.HasPrefix(sym, "$") {
-		id, err := strconv.ParseUint(sym[1:], 10, 64)
-		if err == nil {
-			return id, nil
-		}
+	if id, ok := symbolIdentifier(sym); ok {
+		return uint64(id), nil
 	}
 
+	return w.resolveFromSymbolTable(api, sym)
+}
+
+func (w *binaryWriter) resolveFromSymbolTable(api, sym string) (uint64, error) {
 	if w.lst != nil {
 		id, ok := w.lst.FindByName(sym)
 		if !ok {

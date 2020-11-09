@@ -220,8 +220,8 @@ func (p *processor) process(in ion.Reader) error {
 		if e != nil {
 			return p.error(read, err)
 		}
-		if name != nil && name.Text != nil {
-			if err = p.out.FieldName(*name.Text); err != nil {
+		if name != nil {
+			if err = p.out.FieldName(*name); err != nil {
 				return p.error(write, err)
 			}
 		}
@@ -301,7 +301,7 @@ func (p *processor) process(in ion.Reader) error {
 			err = p.out.WriteTimestamp(*val)
 
 		case ion.SymbolType:
-			val, err := in.StringValue()
+			val, err := in.SymbolValue()
 			if err != nil {
 				return p.error(read, err)
 			}

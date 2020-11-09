@@ -164,21 +164,33 @@ func (s *sst) WriteTo(w Writer) error {
 		return err
 	}
 	{
-		if err := w.FieldName("name"); err != nil {
+		st, err := NewSymbolToken(s, "name")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.WriteString(s.name); err != nil {
 			return err
 		}
 
-		if err := w.FieldName("version"); err != nil {
+		st, err = NewSymbolToken(s, "version")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.WriteInt(int64(s.version)); err != nil {
 			return err
 		}
 
-		if err := w.FieldName("symbols"); err != nil {
+		st, err = NewSymbolToken(s, "symbols")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.BeginList(); err != nil {
@@ -202,7 +214,7 @@ func (s *sst) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
-	s.WriteTo(w)
+	_ = s.WriteTo(w)
 
 	return buf.String()
 }
@@ -281,19 +293,22 @@ func (s *bogusSST) String() string {
 
 	buf := strings.Builder{}
 	w := NewTextWriter(&buf)
-	w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
-	w.BeginStruct()
+	_ = w.Annotations(SymbolToken{Text: &ionSharedSymbolTableText, LocalSID: 9}, SymbolToken{Text: &bogusText, LocalSID: SymbolIDUnknown})
+	_ = w.BeginStruct()
 
-	w.FieldName("name")
-	w.WriteString(s.name)
+	st, _ := NewSymbolToken(s, "name")
+	_ = w.FieldName(st)
+	_ = w.WriteString(s.name)
 
-	w.FieldName("version")
-	w.WriteInt(int64(s.version))
+	st, _ = NewSymbolToken(s, "version")
+	_ = w.FieldName(st)
+	_ = w.WriteInt(int64(s.version))
 
-	w.FieldName("max_id")
-	w.WriteUint(s.maxID)
+	st, _ = NewSymbolToken(s, "max_id")
+	_ = w.FieldName(st)
+	_ = w.WriteUint(s.maxID)
 
-	w.EndStruct()
+	_ = w.EndStruct()
 	return buf.String()
 }
 
@@ -351,8 +366,7 @@ func (t *lst) Find(s string) *SymbolToken {
 	}
 
 	// Check local
-	_, ok := t.index[s]
-	if ok {
+	if _, ok := t.index[s]; ok {
 		return &SymbolToken{Text: &s, LocalSID: SymbolIDUnknown}
 	}
 
@@ -418,7 +432,11 @@ func (t *lst) WriteTo(w Writer) error {
 	}
 
 	if len(t.imports) > 1 {
-		if err := w.FieldName("imports"); err != nil {
+		st, err := NewSymbolToken(t, "imports")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 		if err := w.BeginList(); err != nil {
@@ -430,21 +448,33 @@ func (t *lst) WriteTo(w Writer) error {
 				return err
 			}
 
-			if err := w.FieldName("name"); err != nil {
+			st, err := NewSymbolToken(t, "name")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteString(imp.Name()); err != nil {
 				return err
 			}
 
-			if err := w.FieldName("version"); err != nil {
+			st, err = NewSymbolToken(t, "version")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteInt(int64(imp.Version())); err != nil {
 				return err
 			}
 
-			if err := w.FieldName("max_id"); err != nil {
+			st, err = NewSymbolToken(t, "max_id")
+			if err != nil {
+				return err
+			}
+			if err := w.FieldName(st); err != nil {
 				return err
 			}
 			if err := w.WriteUint(imp.MaxID()); err != nil {
@@ -461,7 +491,11 @@ func (t *lst) WriteTo(w Writer) error {
 	}
 
 	if len(t.symbols) > 0 {
-		if err := w.FieldName("symbols"); err != nil {
+		st, err := NewSymbolToken(t, "symbols")
+		if err != nil {
+			return err
+		}
+		if err := w.FieldName(st); err != nil {
 			return err
 		}
 
@@ -485,7 +519,7 @@ func (t *lst) String() string {
 	buf := strings.Builder{}
 
 	w := NewTextWriter(&buf)
-	t.WriteTo(w)
+	_ = t.WriteTo(w)
 
 	return buf.String()
 }

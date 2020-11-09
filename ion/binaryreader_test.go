@@ -126,14 +126,15 @@ func TestReadBinaryStructs(t *testing.T) {
 	_struct(t, r, func(t *testing.T, r Reader) {
 		_eof(t, r)
 	})
-	_structAF(t, r, nil, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}}, func(t *testing.T, r Reader) {
-		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}}, func(t *testing.T, r Reader) {
+	_structAF(t, r, nil, []SymbolToken{NewSymbolTokenFromString("foo")}, func(t *testing.T, r Reader) {
+		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{NewSymbolTokenFromString("bar")}, func(t *testing.T, r Reader) {
 			_eof(t, r)
 		})
 		_intAF(t, r, &SymbolToken{Text: newString("max_id"), LocalSID: 8}, nil, 0)
 	})
 	_structAF(t, r, nil, nil, func(t *testing.T, r Reader) {
-		_intAF(t, r, &SymbolToken{Text: newString(""), LocalSID: SymbolIDUnknown}, nil, 15)
+		st := NewSymbolTokenFromString("")
+		_intAF(t, r, &st, nil, 15)
 	})
 	_eof(t, r)
 }
@@ -257,7 +258,7 @@ func TestReadBinaryNullFieldName(t *testing.T) {
 		// }
 	})
 	r.Next()
-	r.StepIn()
+	assert.NoError(t, r.StepIn())
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
 
@@ -287,10 +288,10 @@ func TestReadBinaryAnnotations(t *testing.T) {
 		0xE3, 0x81, 0xF1, 0x0F, // $113::null
 	})
 
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: nil, LocalSID: 0}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("$ion"), LocalSID: 1}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: 110}}, false, false)
-	_nextA(t, r, []SymbolToken{SymbolToken{Text: newString("bar"), LocalSID: 111}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 110}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("bar"), LocalSID: 111}}, false, false)
 	_nextA(t, r, nil, true, true)
 }
 
@@ -455,8 +456,8 @@ func TestReadBinaryNulls(t *testing.T) {
 	})
 
 	_null(t, r, NullType)
-	_nullAF(t, r, NullType, nil, []SymbolToken{SymbolToken{Text: newString("$ion"), LocalSID: 1}})
-	_nullAF(t, r, NullType, nil, []SymbolToken{SymbolToken{Text: newString("foo"), LocalSID: SymbolIDUnknown}, SymbolToken{Text: newString("bar"), LocalSID: SymbolIDUnknown}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{NewSymbolTokenFromString("foo"), NewSymbolTokenFromString("bar")})
 	_eof(t, r)
 }
 
