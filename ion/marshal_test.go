@@ -52,6 +52,11 @@ func TestMarshalText(t *testing.T) {
 	test(MustParseDecimal("1.20"), "1.20")
 	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC),
 		"2010-01-01T00:00:00Z")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 770000000, time.UTC), "2010-01-01T00:00:00.77Z")
+	loc, _ := time.LoadLocation("EST")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00-05:00")
+	loc = time.FixedZone("UTC+8", 8*60*60)
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00+08:00")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 

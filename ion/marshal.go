@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
+	"time"
 )
 
 // EncoderOpts holds bit-flag options for an Encoder.
@@ -379,6 +380,9 @@ func (m *Encoder) encodeStruct(v reflect.Value) error {
 	if t == timestampType {
 		return m.encodeTimestamp(v)
 	}
+	if t == nativeTimeType {
+		return m.encodeTimeDate(v)
+	}
 	if t == decimalType {
 		return m.encodeDecimal(v)
 	}
@@ -421,6 +425,33 @@ FieldLoop:
 func (m *Encoder) encodeTimestamp(v reflect.Value) error {
 	t := v.Interface().(Timestamp)
 	return m.w.WriteTimestamp(t)
+}
+
+// encodeTimeDate encodes a native Go type to the output writer as an Ion timestamp.
+func (m *Encoder) encodeTimeDate(v reflect.Value) error {
+	t := v.Interface().(time.Time)
+
+	// Get the time zone kind to build a Timestamp
+	zoneName, zoneOffset := t.Zone()
+	var kind TimezoneKind
+	if zoneName != "" && zoneOffset == 0 {
+		kind = TimezoneUTC
+	} else if zoneName != "" && zoneOffset != 0 {
+		kind = TimezoneLocal
+	} else {
+		kind = TimezoneUnspecified
+	}
+
+	// Get number of fractional seconds precisions
+	ns := t.Nanosecond()
+	numFractionalSeconds := 0
+	if ns > 0 {
+		numFractionalSeconds = len(string(ns))
+	}
+
+	// Time.Date has nano second component
+	timestamp := NewTimestampWithFractionalSeconds(t, TimestampPrecisionNanosecond, kind, uint8(numFractionalSeconds))
+	return m.w.WriteTimestamp(timestamp)
 }
 
 // EncodeDecimal encodes an ion.Decimal to the output writer as an Ion decimal.
