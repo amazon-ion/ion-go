@@ -503,6 +503,16 @@ func TestDecodeStructTo(t *testing.T) {
 	test("{}", &map[string]string{}, &map[string]string{})
 	test("{foo:bar}", &map[string]string{}, &map[string]string{"foo": "bar"})
 	test("{a:4,b:2}", &map[string]int{}, &map[string]int{"a": 4, "b": 2})
+
+	type request struct {
+		Headers map[string][]string `ion:"headers"`
+	}
+
+	test("{headers:{key1:[val1],key2:[val2,val3],key3:[val4]}}", &request{}, &request{Headers: map[string][]string{
+		"key1": {"val1"},
+		"key2": {"val2", "val3"},
+		"key3": {"val4"},
+	}})
 }
 
 func TestDecodeListTo(t *testing.T) {
