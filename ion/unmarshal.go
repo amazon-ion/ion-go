@@ -711,19 +711,21 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 		v.Set(reflect.MakeMap(t))
 	}
 
-	subv := reflect.New(t.Elem()).Elem()
-
 	if err := d.r.StepIn(); err != nil {
 		return err
 	}
 
 	for d.r.Next() {
+		subv := reflect.New(t.Elem()).Elem()
+
 		fieldName, err := d.r.FieldName()
 		if err != nil {
 			return err
 		}
 
 		if fieldName != nil && fieldName.Text != nil {
+			fieldNameText := *fieldName.Text
+
 			if err := d.decodeTo(subv); err != nil {
 				return err
 			}
@@ -731,7 +733,7 @@ func (d *Decoder) decodeStructToMap(v reflect.Value) error {
 			var kv reflect.Value
 			switch t.Key().Kind() {
 			case reflect.String:
-				kv = reflect.ValueOf(*fieldName.Text)
+				kv = reflect.ValueOf(fieldNameText)
 			default:
 				panic(fmt.Sprintf("the key for map to hold field name must be of type string. Found: %v", t.Key().Kind().String()))
 			}
