@@ -223,9 +223,9 @@ func haveSameTypes(this, other interface{}) bool {
 }
 
 func getContainersType(in interface{}) interface{} {
-	switch in.(type) {
+	switch in := in.(type) {
 	case *string:
-		return in.(*string)
+		return in
 	case nil:
 		return nil
 	default:
