@@ -202,10 +202,7 @@ func (w *binaryWriter) WriteDecimal(val *Decimal) error {
 	// If the value is positive 0. (aka 0d0) then L is zero, there are no length or
 	// representation fields, and the entire value is encoded as the single byte 0x50.
 	if coef.Sign() == 0 && int64(exp) == 0 && !val.isNegZero {
-		buf := make([]byte, 0, 0)
-		buf = appendTag(buf, 0x50, 0)
-
-		return w.writeValue("Writer.WriteDecimal", buf)
+		return w.writeValue("Writer.WriteDecimal", []byte{0x50})
 	}
 
 	// Otherwise, length or representation fields are present and must be considered.

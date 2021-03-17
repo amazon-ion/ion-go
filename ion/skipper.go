@@ -657,7 +657,7 @@ func (t *tokenizer) skipContainer(term int) (int, error) {
 // char.
 func (t *tokenizer) skipContainerHelper(term int) error {
 	if term != ']' && term != ')' && term != '}' {
-		panic(fmt.Sprintf("unexpected character: %v. Expected one of the closing container characters: ] } )", string(term)))
+		panic(fmt.Sprintf("unexpected character: %q. Expected one of the closing container characters: ] } )", term))
 	}
 
 	for {
