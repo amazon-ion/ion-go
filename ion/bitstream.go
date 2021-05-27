@@ -663,18 +663,7 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 			return Timestamp{}, err
 		}
 
-		if nsecs > 0 {
-			fractionPrecision = 9
-
-			// Adjust fractionPrecision for each trailing zero.
-			// ie. .123456000 should have 6 fractionPrecision instead of 9
-			ns := nsecs
-			for ns > 0 && (ns%10) == 0 {
-				ns /= 10
-				fractionPrecision--
-			}
-			precision = TimestampPrecisionNanosecond
-		} else if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
+		if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
 			fractionPrecision = fracSecsBytes[0] ^ 0xC0
 			precision = TimestampPrecisionNanosecond
 		}

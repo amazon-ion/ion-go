@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -447,7 +446,7 @@ func (m *Encoder) encodeTimeDate(v reflect.Value) error {
 	ns := t.Nanosecond()
 	numFractionalSeconds := 0
 	if ns > 0 {
-		numFractionalSeconds = len(strconv.Itoa(ns))
+		numFractionalSeconds = 9
 	}
 
 	// Time.Date has nano second component
