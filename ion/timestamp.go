@@ -36,6 +36,8 @@ const (
 	TimestampPrecisionNanosecond
 )
 
+const maxFractionalPrecision = 9
+
 func (tp TimestampPrecision) String() string {
 	switch tp {
 	case TimestampNoPrecision:
@@ -159,29 +161,15 @@ func NewTimestampFromStr(dateStr string, precision TimestampPrecision, kind Time
 	if precision >= TimestampPrecisionNanosecond {
 		pointIdx := strings.LastIndex(dateStr, ".")
 		if pointIdx != -1 {
-			nonZeroFraction := false
 
 			idx := pointIdx + 1
 			for idx < len(dateStr) && isDigit(int(dateStr[idx])) {
-				if dateStr[idx] != '0' {
-					nonZeroFraction = true
-				}
 				fractionUnits++
 				idx++
 			}
 
 			if idx == len(dateStr) {
 				return Timestamp{}, fmt.Errorf("ion: invalid date string '%v'", dateStr)
-			}
-
-			// We do not want to include trailing zeros for a non-zero fraction (ie. .1234000 -> .1234)
-			// So we adjust fractionUnits accordingly.
-			if nonZeroFraction {
-				idx--
-				for idx > pointIdx && dateStr[idx] == '0' {
-					fractionUnits--
-					idx--
-				}
 			}
 		}
 	}
@@ -461,7 +449,7 @@ func (ts Timestamp) String() string {
 	// So we may need to make some adjustments.
 
 	// Add back removed trailing zeros from fractional seconds (ie. ".000")
-	if ts.precision >= TimestampPrecisionNanosecond && ts.dateTime.Nanosecond() == 0 && ts.numFractionalSeconds > 0 {
+	if ts.precision >= TimestampPrecisionNanosecond && ts.numFractionalSeconds > 0 {
 		// Find the position of 'T'
 		tIndex := strings.Index(format, "T")
 		if tIndex == -1 {
@@ -482,8 +470,23 @@ func (ts Timestamp) String() string {
 		// This position better be right of 'T'
 		if index != -1 && tIndex < index {
 			zeros := strings.Builder{}
-			zeros.WriteByte('.')
-			for i := uint8(0); i < ts.numFractionalSeconds; i++ {
+			numTrailingZeros := 0
+
+			// Specify trailing zeros if fractional precision is less than the nanoseconds.
+			// e.g. A timestamp: 2021-05-25 13:41:31.00001234 with fractional precision: 2 will print 2021-05-25 13:41:31.00
+			if ts.dateTime.Nanosecond() == 0 ||
+				maxFractionalPrecision - len(strconv.Itoa(ts.dateTime.Nanosecond())) >= int(ts.numFractionalSeconds) {
+				zeros.WriteByte('.')
+				numTrailingZeros = int(ts.numFractionalSeconds)
+			} else {
+				dotIndex := strings.LastIndex(format, ".")
+				if dotIndex != -1 {
+					numTrailingZeros = int(ts.numFractionalSeconds) - (index - dotIndex) + 1
+				}
+			}
+
+			// Add trailing zeros until the fractional seconds portion is correct length
+			for i := 0; i < numTrailingZeros; i++ {
 				zeros.WriteByte('0')
 			}
 
@@ -515,12 +518,19 @@ func (ts Timestamp) Equal(ts1 Timestamp) bool {
 		ts.numFractionalSeconds == ts1.numFractionalSeconds
 }
 
-// TruncatedNanoseconds returns nanoseconds with trailing zeros removed (ie. 123456000 gets truncated to 123456).
+// TruncatedNanoseconds returns nanoseconds with trailing values removed up to the difference of max fractional precision - time stamp's fractional precision
+// e.g. 123456000 with fractional precision: 3 will get truncated to 123.
 func (ts Timestamp) TruncatedNanoseconds() int {
 	nsecs := ts.dateTime.Nanosecond()
-	for i := uint8(0); i < (9-ts.numFractionalSeconds) && nsecs > 0 && (nsecs%10) == 0; i++ {
-		nsecs /= 10
+
+	// Don't write coefficient byte if fractional precision is less than the nanoseconds because it is optional.
+	// e.g. A timestamp: 2021-05-25 13:41:31.00001234 with fractional precision: 2 will only write exponent byte of value 2.
+	if maxFractionalPrecision - len(strconv.Itoa(nsecs)) >= int(ts.numFractionalSeconds) {
+		return 0
 	}
 
+	for i := uint8(0); i < (maxFractionalPrecision-ts.numFractionalSeconds) && nsecs > 0; i++ {
+		nsecs /= 10
+	}
 	return nsecs
 }
