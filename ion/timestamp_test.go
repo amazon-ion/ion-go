@@ -241,112 +241,112 @@ func TestTruncateNanoseconds(t *testing.T) {
 
 	tests := []struct {
 		fields   fields
-		name 	 string
+		name     string
 		expected int
 	}{
 		{
 			fields:   fields{2000, 1, 1, 1, 0, 0, 0, TimestampPrecisionYear, 0},
-			name: "2000T",
+			name:     "2000T",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 1, 1, 0, 0, 0, TimestampPrecisionMonth, 0},
-			name: "2000-01T",
+			name:     "2000-01T",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 1, 0, 0, 0, TimestampPrecisionDay, 0},
-			name: "2000-01-02T",
+			name:     "2000-01-02T",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 0, 0, TimestampPrecisionMinute, 0},
-			name: "2000-01-02T03:04Z",
+			name:     "2000-01-02T03:04Z",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 0, TimestampPrecisionSecond, 0},
-			name: "2000-01-02T03:04:05Z",
+			name:     "2000-01-02T03:04:05Z",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 100000000, TimestampPrecisionNanosecond, 1},
-			name: "2000-01-02T03:04:05.1Z",
+			name:     "2000-01-02T03:04:05.1Z",
 			expected: 1,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 220000000, TimestampPrecisionNanosecond, 1},
-			name: "2000-01-02T03:04:05.2Z",
+			name:     "2000-01-02T03:04:05.2Z",
 			expected: 2,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 1},
-			name: "2000-01-02T03:04:05.0Z",
+			name:     "2000-01-02T03:04:05.0Z",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 2},
-			name: "2000-01-02T03:04:05.01Z",
+			name:     "2000-01-02T03:04:05.01Z",
 			expected: 1,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 120000000, TimestampPrecisionNanosecond, 2},
-			name: "2000-01-02T03:04:05.12Z",
+			name:     "2000-01-02T03:04:05.12Z",
 			expected: 12,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123000000, TimestampPrecisionNanosecond, 3},
-			name: "2000-01-02T03:04:05.123Z",
+			name:     "2000-01-02T03:04:05.123Z",
 			expected: 123,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123456789, TimestampPrecisionNanosecond, 4},
-			name: "2000-01-02T03:04:05.1234Z",
+			name:     "2000-01-02T03:04:05.1234Z",
 			expected: 1234,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123450000, TimestampPrecisionNanosecond, 5},
-			name: "2000-01-02T03:04:05.12345Z",
+			name:     "2000-01-02T03:04:05.12345Z",
 			expected: 12345,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123456000, TimestampPrecisionNanosecond, 6},
-			name: "2000-01-02T03:04:05.123456Z",
+			name:     "2000-01-02T03:04:05.123456Z",
 			expected: 123456,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123456700, TimestampPrecisionNanosecond, 7},
-			name: "2000-01-02T03:04:05.1234567Z",
+			name:     "2000-01-02T03:04:05.1234567Z",
 			expected: 1234567,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123456780, TimestampPrecisionNanosecond, 8},
-			name: "2000-01-02T03:04:05.12345678Z",
+			name:     "2000-01-02T03:04:05.12345678Z",
 			expected: 12345678,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 123456789, TimestampPrecisionNanosecond, 9},
-			name: "2000-01-02T03:04:05.123456789Z",
+			name:     "2000-01-02T03:04:05.123456789Z",
 			expected: 123456789,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 5000, TimestampPrecisionNanosecond, 2},
-			name: "2000-01-02T03:04:05.000005000",
+			name:     "2000-01-02T03:04:05.000005000",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 6000, TimestampPrecisionNanosecond, 5},
-			name: "2000-01-02T03:04:05.000006000",
+			name:     "2000-01-02T03:04:05.000006000",
 			expected: 0,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 7000, TimestampPrecisionNanosecond, 6},
-			name: "2000-01-02T03:04:05.000007000",
+			name:     "2000-01-02T03:04:05.000007000",
 			expected: 7,
 		},
 		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 7001, TimestampPrecisionNanosecond, 6},
-			name: "2000-01-02T03:04:05.000007001",
+			name:     "2000-01-02T03:04:05.000007001",
 			expected: 7,
 		},
 	}

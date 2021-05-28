@@ -142,13 +142,13 @@ func TestMarshalBinary(t *testing.T) {
 
 	test(time.Date(2010, 1, 1, 0, 0, 0, 1, time.UTC), "time with 1 nanosecond", prefixIVM([]byte{
 		0x6A, 0x80, 0x0F, 0xDA, 0x81, 0x81, 0x80, 0x80, 0x80,
-		0xC9,  // exponent: 9
-		0x01,  // coefficient: 1
+		0xC9, // exponent: 9
+		0x01, // coefficient: 1
 	}))
 
 	test(time.Date(2010, 1, 1, 0, 0, 0, 5000, time.UTC), "time with 5000 nanoseconds", prefixIVM([]byte{
 		0x6B, 0x80, 0x0F, 0xDA, 0x81, 0x81, 0x80, 0x80, 0x80,
-		0xC9,  // exponent: 9
+		0xC9,       // exponent: 9
 		0x13, 0x88, // coefficient: 5000
 	}))
 }

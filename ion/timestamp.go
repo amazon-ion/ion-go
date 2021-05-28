@@ -475,7 +475,7 @@ func (ts Timestamp) String() string {
 			// Specify trailing zeros if fractional precision is less than the nanoseconds.
 			// e.g. A timestamp: 2021-05-25T13:41:31.00001234 with fractional precision: 2 will return "2021-05-25 13:41:31.00"
 			ns := ts.dateTime.Nanosecond()
-			if ts.dateTime.Nanosecond() == 0 || maxFractionalPrecision - len(strconv.Itoa(ns)) >= int(ts.numFractionalSeconds) {
+			if ts.dateTime.Nanosecond() == 0 || maxFractionalPrecision-len(strconv.Itoa(ns)) >= int(ts.numFractionalSeconds) {
 				zeros.WriteByte('.')
 				numZerosNeeded = int(ts.numFractionalSeconds)
 			} else {
