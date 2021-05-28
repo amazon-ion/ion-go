@@ -473,9 +473,9 @@ func (ts Timestamp) String() string {
 			numTrailingZeros := 0
 
 			// Specify trailing zeros if fractional precision is less than the nanoseconds.
-			// e.g. A timestamp: 2021-05-25 13:41:31.00001234 with fractional precision: 2 will print 2021-05-25 13:41:31.00
-			if ts.dateTime.Nanosecond() == 0 ||
-				maxFractionalPrecision - len(strconv.Itoa(ts.dateTime.Nanosecond())) >= int(ts.numFractionalSeconds) {
+			// e.g. A timestamp: 2021-05-25T13:41:31.00001234 with fractional precision: 2 will return "2021-05-25 13:41:31.00"
+			ns := ts.dateTime.Nanosecond()
+			if ts.dateTime.Nanosecond() == 0 || maxFractionalPrecision - len(strconv.Itoa(ns)) >= int(ts.numFractionalSeconds) {
 				zeros.WriteByte('.')
 				numTrailingZeros = int(ts.numFractionalSeconds)
 			} else {
@@ -522,12 +522,6 @@ func (ts Timestamp) Equal(ts1 Timestamp) bool {
 // e.g. 123456000 with fractional precision: 3 will get truncated to 123.
 func (ts Timestamp) TruncatedNanoseconds() int {
 	nsecs := ts.dateTime.Nanosecond()
-
-	// Don't write coefficient byte if fractional precision is less than the nanoseconds because it is optional.
-	// e.g. A timestamp: 2021-05-25 13:41:31.00001234 with fractional precision: 2 will only write exponent byte of value 2.
-	if maxFractionalPrecision - len(strconv.Itoa(nsecs)) >= int(ts.numFractionalSeconds) {
-		return 0
-	}
 
 	for i := uint8(0); i < (maxFractionalPrecision-ts.numFractionalSeconds) && nsecs > 0; i++ {
 		nsecs /= 10
