@@ -52,7 +52,6 @@ func TestParseTimestamp(t *testing.T) {
 	test("1234-05-06T07:08:09.000100100Z", "1234-05-06T07:08:09.000100100Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
 	test("1234-05-06T07:08:09.100100100Z", "1234-05-06T07:08:09.100100100Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
 	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
-	test("1234-05-06T07:08:09.00010010044Z", "1234-05-06T07:08:09.000100100Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
 	test("1234-05-06T07:08:09.00010010055Z", "1234-05-06T07:08:09.000100101Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
 	test("1234-05-06T07:08:09.00010010099Z", "1234-05-06T07:08:09.000100101Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)
 	test("1234-05-06T07:08:09.99999999999Z", "1234-05-06T07:08:10.000000000Z", TimestampPrecisionNanosecond, TimezoneUTC, 9)

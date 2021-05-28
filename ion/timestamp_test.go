@@ -104,6 +104,11 @@ func TestNewTimestampFromStr(t *testing.T) {
 			args:     args{"2000-01-02T03:04:05.123456789Z", TimestampPrecisionSecond, TimezoneUTC},
 			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123456789, time.UTC), precision: TimestampPrecisionSecond, kind: TimezoneUTC},
 		},
+		{
+			testCase: "2000-01-02T03:04:05.123000000Z",
+			args:     args{"2000-01-02T03:04:05.123000000Z", TimestampPrecisionSecond, TimezoneUTC},
+			expected: Timestamp{dateTime: time.Date(2000, time.Month(1), 2, 3, 4, 5, 123000000, time.UTC), precision: TimestampPrecisionSecond, kind: TimezoneUTC},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.testCase, func(t *testing.T) {
@@ -156,6 +161,18 @@ func TestTimestampString(t *testing.T) {
 			expected: "2000-01-02T03:04:05.1Z",
 		},
 		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 220000000, TimestampPrecisionNanosecond, 1},
+			expected: "2000-01-02T03:04:05.2Z",
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 1},
+			expected: "2000-01-02T03:04:05.0Z",
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 2},
+			expected: "2000-01-02T03:04:05.01Z",
+		},
+		{
 			fields:   fields{2000, 1, 2, 3, 4, 5, 120000000, TimestampPrecisionNanosecond, 2},
 			expected: "2000-01-02T03:04:05.12Z",
 		},
@@ -164,7 +181,7 @@ func TestTimestampString(t *testing.T) {
 			expected: "2000-01-02T03:04:05.123Z",
 		},
 		{
-			fields:   fields{2000, 1, 2, 3, 4, 5, 123400000, TimestampPrecisionNanosecond, 4},
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456789, TimestampPrecisionNanosecond, 4},
 			expected: "2000-01-02T03:04:05.1234Z",
 		},
 		{
@@ -205,6 +222,151 @@ func TestTimestampString(t *testing.T) {
 				numFractionalSeconds: tt.fields.numFractionalSeconds,
 			}
 			assert.Equal(t, tt.expected, ts.String())
+		})
+	}
+}
+
+func TestTruncateNanoseconds(t *testing.T) {
+	type fields struct {
+		year                 int
+		month                int
+		day                  int
+		hour                 int
+		minute               int
+		second               int
+		nanosecond           int
+		precision            TimestampPrecision
+		numFractionalSeconds uint8
+	}
+
+	tests := []struct {
+		fields   fields
+		name 	 string
+		expected int
+	}{
+		{
+			fields:   fields{2000, 1, 1, 1, 0, 0, 0, TimestampPrecisionYear, 0},
+			name: "2000T",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 1, 1, 0, 0, 0, TimestampPrecisionMonth, 0},
+			name: "2000-01T",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 1, 0, 0, 0, TimestampPrecisionDay, 0},
+			name: "2000-01-02T",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 0, 0, TimestampPrecisionMinute, 0},
+			name: "2000-01-02T03:04Z",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 0, TimestampPrecisionSecond, 0},
+			name: "2000-01-02T03:04:05Z",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 100000000, TimestampPrecisionNanosecond, 1},
+			name: "2000-01-02T03:04:05.1Z",
+			expected: 1,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 220000000, TimestampPrecisionNanosecond, 1},
+			name: "2000-01-02T03:04:05.2Z",
+			expected: 2,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 1},
+			name: "2000-01-02T03:04:05.0Z",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 12000000, TimestampPrecisionNanosecond, 2},
+			name: "2000-01-02T03:04:05.01Z",
+			expected: 1,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 120000000, TimestampPrecisionNanosecond, 2},
+			name: "2000-01-02T03:04:05.12Z",
+			expected: 12,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123000000, TimestampPrecisionNanosecond, 3},
+			name: "2000-01-02T03:04:05.123Z",
+			expected: 123,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456789, TimestampPrecisionNanosecond, 4},
+			name: "2000-01-02T03:04:05.1234Z",
+			expected: 1234,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123450000, TimestampPrecisionNanosecond, 5},
+			name: "2000-01-02T03:04:05.12345Z",
+			expected: 12345,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456000, TimestampPrecisionNanosecond, 6},
+			name: "2000-01-02T03:04:05.123456Z",
+			expected: 123456,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456700, TimestampPrecisionNanosecond, 7},
+			name: "2000-01-02T03:04:05.1234567Z",
+			expected: 1234567,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456780, TimestampPrecisionNanosecond, 8},
+			name: "2000-01-02T03:04:05.12345678Z",
+			expected: 12345678,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 123456789, TimestampPrecisionNanosecond, 9},
+			name: "2000-01-02T03:04:05.123456789Z",
+			expected: 123456789,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 5000, TimestampPrecisionNanosecond, 2},
+			name: "2000-01-02T03:04:05.000005000",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 6000, TimestampPrecisionNanosecond, 5},
+			name: "2000-01-02T03:04:05.000006000",
+			expected: 0,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 7000, TimestampPrecisionNanosecond, 6},
+			name: "2000-01-02T03:04:05.000007000",
+			expected: 7,
+		},
+		{
+			fields:   fields{2000, 1, 2, 3, 4, 5, 7001, TimestampPrecisionNanosecond, 6},
+			name: "2000-01-02T03:04:05.000007001",
+			expected: 7,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dateTime := time.Date(tt.fields.year, time.Month(tt.fields.month), tt.fields.day, tt.fields.hour,
+				tt.fields.minute, tt.fields.second, tt.fields.nanosecond, time.UTC)
+
+			kind := TimezoneUnspecified
+			if tt.fields.precision >= TimestampPrecisionMinute {
+				kind = TimezoneUTC
+			}
+
+			ts := &Timestamp{
+				dateTime:             dateTime,
+				precision:            tt.fields.precision,
+				kind:                 kind,
+				numFractionalSeconds: tt.fields.numFractionalSeconds,
+			}
+			assert.Equal(t, tt.expected, ts.TruncatedNanoseconds())
 		})
 	}
 }
