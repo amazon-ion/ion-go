@@ -478,9 +478,10 @@ func (ts Timestamp) String() string {
 				zeros.WriteByte('.')
 				numZerosNeeded = int(ts.numFractionalSeconds)
 			} else {
-				dotIndex := strings.LastIndex(format, ".")
-				if dotIndex != -1 {
-					numZerosNeeded = int(ts.numFractionalSeconds) - (timeZoneIndex - dotIndex) + 1
+				decimalPlaceIndex := strings.LastIndex(format, ".")
+				if decimalPlaceIndex != -1 {
+					decimalPlacesOccupied := timeZoneIndex - decimalPlaceIndex - 1
+					numZerosNeeded = int(ts.numFractionalSeconds) - decimalPlacesOccupied
 				}
 			}
 
