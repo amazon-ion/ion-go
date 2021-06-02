@@ -652,19 +652,12 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 
 	// Check the fractional seconds part of the timestamp.
 	if length > 0 {
-		// First byte indicates number of precision units in fractional seconds.
-		fracSecsBytes, err := b.in.Peek(1)
+		nsecs, overflow, fractionPrecision, err = b.readNsecs(length)
 		if err != nil {
 			return Timestamp{}, err
 		}
 
-		nsecs, overflow, err = b.readNsecs(length)
-		if err != nil {
-			return Timestamp{}, err
-		}
-
-		if len(fracSecsBytes) > 0 && fracSecsBytes[0] > 0xC0 && (fracSecsBytes[0]^0xC0) > 0 {
-			fractionPrecision = fracSecsBytes[0] ^ 0xC0
+		if fractionPrecision > 0 {
 			precision = TimestampPrecisionNanosecond
 		}
 	}
@@ -681,32 +674,34 @@ func (b *bitstream) ReadTimestamp() (Timestamp, error) {
 }
 
 // ReadNsecs reads the fraction part of a timestamp and rounds to nanoseconds.
-// This function returns the nanoseconds as an int, overflow as a bool, and an error
+// This function returns the nanoseconds as an int, overflow as a bool, exponent as an uint8, and an error
 // if there was a problem executing this function.
-func (b *bitstream) readNsecs(length uint64) (int, bool, error) {
+func (b *bitstream) readNsecs(length uint64) (int, bool, uint8, error) {
 	d, err := b.readDecimal(length)
 	if err != nil {
-		return 0, false, err
+		return 0, false, 0, err
 	}
 
 	nsec, err := d.ShiftL(9).trunc()
 	if err != nil || nsec < 0 || nsec > 999999999 {
 		msg := fmt.Sprintf("invalid timestamp fraction: %v", d)
-		return 0, false, &SyntaxError{msg, b.pos}
+		return 0, false, 0, &SyntaxError{msg, b.pos}
 	}
 
 	nsec, err = d.ShiftL(9).round()
 	if err != nil {
 		msg := fmt.Sprintf("invalid timestamp fraction: %v", d)
-		return 0, false, &SyntaxError{msg, b.pos}
+		return 0, false, 0, &SyntaxError{msg, b.pos}
 	}
+
+	exponent := uint8(d.scale)
 
 	// Overflow to second.
 	if nsec == 1000000000 {
-		return 0, true, nil
+		return 0, true, exponent, nil
 	}
 
-	return int(nsec), false, nil
+	return int(nsec), false, exponent, nil
 }
 
 // ReadDecimal reads a decimal value of the given length: an exponent encoded as a
