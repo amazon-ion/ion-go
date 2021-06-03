@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -443,15 +442,8 @@ func (m *Encoder) encodeTimeDate(v reflect.Value) error {
 		kind = TimezoneUnspecified
 	}
 
-	// Get number of fractional seconds precisions
-	ns := t.Nanosecond()
-	numFractionalSeconds := 0
-	if ns > 0 {
-		numFractionalSeconds = len(strconv.Itoa(ns))
-	}
-
 	// Time.Date has nano second component
-	timestamp := NewTimestampWithFractionalSeconds(t, TimestampPrecisionNanosecond, kind, uint8(numFractionalSeconds))
+	timestamp := NewTimestampWithFractionalSeconds(t, TimestampPrecisionNanosecond, kind, maxFractionalPrecision)
 	return m.w.WriteTimestamp(timestamp)
 }
 

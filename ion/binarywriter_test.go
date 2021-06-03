@@ -186,7 +186,7 @@ func TestWriteBinaryTimestamp(t *testing.T) {
 	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 
 	testBinaryWriter(t, eval, func(w Writer) {
-		assert.NoError(t, w.WriteTimestamp(NewTimestamp(time.Time{}, TimestampPrecisionNanosecond, TimezoneUTC)))
+		assert.NoError(t, w.WriteTimestamp(NewTimestamp(time.Time{}, TimestampPrecisionSecond, TimezoneUTC)))
 		assert.NoError(t, w.WriteTimestamp(nowish))
 	})
 }

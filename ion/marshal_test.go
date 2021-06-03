@@ -52,11 +52,12 @@ func TestMarshalText(t *testing.T) {
 	test(MustParseDecimal("1.20"), "1.20")
 	test(NewTimestamp(time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC),
 		"2010-01-01T00:00:00Z")
-	test(time.Date(2010, 1, 1, 0, 0, 0, 770000000, time.UTC), "2010-01-01T00:00:00.77Z")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 1, time.UTC), "2010-01-01T00:00:00.000000001Z")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 770000000, time.UTC), "2010-01-01T00:00:00.770000000Z")
 	loc, _ := time.LoadLocation("EST")
-	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00-05:00")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00.000000000-05:00")
 	loc = time.FixedZone("UTC+8", 8*60*60)
-	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00+08:00")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00.000000000+08:00")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 
@@ -137,6 +138,18 @@ func TestMarshalBinary(t *testing.T) {
 		0xD5,
 		0x8A, 0x21, 0x2A,
 		0x8B, 0x20,
+	}))
+
+	test(time.Date(2010, 1, 1, 0, 0, 0, 1, time.UTC), "time with 1 nanosecond", prefixIVM([]byte{
+		0x6A, 0x80, 0x0F, 0xDA, 0x81, 0x81, 0x80, 0x80, 0x80,
+		0xC9, // exponent: 9
+		0x01, // coefficient: 1
+	}))
+
+	test(time.Date(2010, 1, 1, 0, 0, 0, 5000, time.UTC), "time with 5000 nanoseconds", prefixIVM([]byte{
+		0x6B, 0x80, 0x0F, 0xDA, 0x81, 0x81, 0x80, 0x80, 0x80,
+		0xC9,       // exponent: 9
+		0x13, 0x88, // coefficient: 5000
 	}))
 }
 
