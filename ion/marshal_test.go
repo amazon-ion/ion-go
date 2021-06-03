@@ -55,9 +55,9 @@ func TestMarshalText(t *testing.T) {
 	test(time.Date(2010, 1, 1, 0, 0, 0, 1, time.UTC), "2010-01-01T00:00:00.000000001Z")
 	test(time.Date(2010, 1, 1, 0, 0, 0, 770000000, time.UTC), "2010-01-01T00:00:00.770000000Z")
 	loc, _ := time.LoadLocation("EST")
-	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00-05:00")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00.000000000-05:00")
 	loc = time.FixedZone("UTC+8", 8*60*60)
-	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00+08:00")
+	test(time.Date(2010, 1, 1, 0, 0, 0, 0, loc), "2010-01-01T00:00:00.000000000+08:00")
 
 	test("hello\tworld", "\"hello\\tworld\"")
 

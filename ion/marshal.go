@@ -442,16 +442,8 @@ func (m *Encoder) encodeTimeDate(v reflect.Value) error {
 		kind = TimezoneUnspecified
 	}
 
-	// Get number of fractional seconds precisions
-	ns := t.Nanosecond()
-	numFractionalSeconds := 0
-	// Go native time object will always have 9 precision units when nanoseconds > 0
-	if ns > 0 {
-		numFractionalSeconds = maxFractionalPrecision
-	}
-
 	// Time.Date has nano second component
-	timestamp := NewTimestampWithFractionalSeconds(t, TimestampPrecisionNanosecond, kind, uint8(numFractionalSeconds))
+	timestamp := NewTimestampWithFractionalSeconds(t, TimestampPrecisionNanosecond, kind, maxFractionalPrecision)
 	return m.w.WriteTimestamp(timestamp)
 }
 

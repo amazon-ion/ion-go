@@ -133,23 +133,34 @@ type Timestamp struct {
 
 // NewDateTimestamp constructor meant for timestamps that only have a date portion (ie. no time portion).
 func NewDateTimestamp(dateTime time.Time, precision TimestampPrecision) Timestamp {
-	return Timestamp{dateTime, precision, TimezoneUnspecified, 0}
+	numDecimalPlacesOfFractionalSeconds := uint8(0)
+	if precision >= TimestampPrecisionNanosecond {
+		numDecimalPlacesOfFractionalSeconds = maxFractionalPrecision
+	}
+	return Timestamp{dateTime, precision, TimezoneUnspecified, numDecimalPlacesOfFractionalSeconds}
 }
 
 // NewTimestamp constructor
 func NewTimestamp(dateTime time.Time, precision TimestampPrecision, kind TimezoneKind) Timestamp {
+	numDecimalPlacesOfFractionalSeconds := uint8(0)
+
 	if precision <= TimestampPrecisionDay {
 		// Timestamps with Year, Month, or Day precision necessarily have TimezoneUnspecified timezone.
 		kind = TimezoneUnspecified
+	} else if precision >= TimestampPrecisionNanosecond {
+		numDecimalPlacesOfFractionalSeconds = maxFractionalPrecision
 	}
-	return Timestamp{dateTime, precision, kind, 0}
+	return Timestamp{dateTime, precision, kind, numDecimalPlacesOfFractionalSeconds}
 }
 
 // NewTimestampWithFractionalSeconds constructor
 func NewTimestampWithFractionalSeconds(dateTime time.Time, precision TimestampPrecision, kind TimezoneKind, fractionPrecision uint8) Timestamp {
-	if fractionPrecision > 9 {
+	if fractionPrecision > maxFractionalPrecision {
 		// 9 is the max precision supported
-		fractionPrecision = 9
+		fractionPrecision = maxFractionalPrecision
+	}
+	if precision < TimestampPrecisionNanosecond {
+		fractionPrecision = 0
 	}
 	return Timestamp{dateTime, precision, kind, fractionPrecision}
 }
