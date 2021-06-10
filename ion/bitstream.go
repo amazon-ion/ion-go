@@ -694,7 +694,12 @@ func (b *bitstream) readNsecs(length uint64) (int, bool, uint8, error) {
 		return 0, false, 0, &SyntaxError{msg, b.pos}
 	}
 
-	exponent := uint8(d.scale)
+	exponent := uint8(0)
+
+	// check if the scale is positive then convert using uint8
+	if d.scale > 0 {
+		exponent = uint8(d.scale)
+	}
 
 	// Overflow to second.
 	if nsec == 1000000000 {
