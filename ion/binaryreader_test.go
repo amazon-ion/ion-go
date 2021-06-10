@@ -303,6 +303,7 @@ func TestReadBinaryTimestamps(t *testing.T) {
 		0x64, 0x80, 0x81, 0x81, 0x81, // 0001-01-01T
 		0x66, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, // 0001-01-01T00:00Z
 		0x67, 0x80, 0x81, 0x81, 0x81, 0x80, 0x80, 0x80, // 0001-01-01T00:00:00Z
+		0x69, 0x80, 0x0f, 0xd0, 0x81, 0x81, 0x80, 0x80, 0x80, 0x81, //2000-01-01-01T00:00:00Z with 0d1 fractional seconds
 		0x6E, 0x8E, // 0x0E-bit timestamp
 		0x04, 0xD8, // offset: +600 minutes (+10:00)
 		0x0F, 0xE3, // year:   2019
@@ -323,6 +324,7 @@ func TestReadBinaryTimestamps(t *testing.T) {
 	_timestamp(t, r, NewTimestamp(time.Time{}, TimestampPrecisionMinute, TimezoneUTC))
 	_timestamp(t, r, NewTimestamp(time.Time{}, TimestampPrecisionSecond, TimezoneUTC))
 
+	_timestamp(t, r, NewTimestamp(time.Date(2000, time.Month(1), 1, 0, 0, 0, 0, time.UTC), TimestampPrecisionSecond, TimezoneUTC))
 	nowish, _ := NewTimestampFromStr("2019-08-04T18:15:43.863494000+10:00", TimestampPrecisionNanosecond, TimezoneLocal)
 	_timestamp(t, r, nowish)
 	_eof(t, r)
