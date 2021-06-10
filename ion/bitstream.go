@@ -694,10 +694,13 @@ func (b *bitstream) readNsecs(length uint64) (int, bool, uint8, error) {
 		return 0, false, 0, &SyntaxError{msg, b.pos}
 	}
 
-	exponent := uint8(0)
+	var exponent uint8
 
-	// check if the scale is positive then convert using uint8
-	if d.scale > 0 {
+	// check if the scale is negative and coefficient is zero then set exponent value to 0
+	// otherwise set exponent value as per the scale value
+	if d.scale < 0 && nsec == 0 {
+		exponent = uint8(0)
+	} else {
 		exponent = uint8(d.scale)
 	}
 
