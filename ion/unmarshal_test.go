@@ -422,10 +422,16 @@ func TestDecodeTimestampTo(t *testing.T) {
 		t.Run(str, func(t *testing.T) {
 			d := NewDecoder(NewReaderString(str))
 
-			var val Timestamp
-			require.NoError(t, d.DecodeTo(&val))
+			var timestampVal Timestamp
+			require.NoError(t, d.DecodeTo(&timestampVal))
 
-			assert.True(t, val.Equal(eval), "expected %v, got %v", eval, val)
+			d = NewDecoder(NewReaderString(str))
+
+			var timeVal time.Time
+			require.NoError(t, d.DecodeTo(&timeVal))
+
+			assert.True(t, timestampVal.Equal(eval), "expected %v, got %v", eval, timestampVal)
+			assert.True(t, timeVal.Equal(eval.dateTime), "expected %v, got %v", eval.dateTime, timeVal)
 		})
 	}
 	test("null", Timestamp{})
