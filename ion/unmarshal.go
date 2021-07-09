@@ -506,13 +506,20 @@ func (d *Decoder) decodeTimestampTo(v reflect.Value) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		if v.Type() == timestampType {
+		switch v.Type() {
+		case timestampType:
 			if val != nil {
 				v.Set(reflect.ValueOf(*val))
 			}
 			return d.attachAnnotations(v)
+		case nativeTimeType:
+			if val != nil {
+				v.Set(reflect.ValueOf((*val).dateTime))
+			}
+			return d.attachAnnotations(v)
+		default:
+			return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 		}
-		return d.decodeToStructWithAnnotation(v, timestampType.Kind())
 
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
