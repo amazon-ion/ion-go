@@ -38,6 +38,11 @@ var typesAcceptableKinds = map[Type][]reflect.Kind{
 	ListType:  {reflect.Slice, reflect.Array},
 }
 
+// Unmarshaler is the interface implemented by types that can unmarshal themselves to Ion.
+type Unmarshaler interface {
+	UnmarshalIon(r Reader) error
+}
+
 // Unmarshal unmarshals Ion data to the given object.
 //
 // User must pass the proper object type to the unmarshalled Ion data.
@@ -289,6 +294,8 @@ func (d *Decoder) DecodeTo(v interface{}) error {
 	return d.decodeTo(rv)
 }
 
+var unmarshalerType = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+
 func (d *Decoder) decodeTo(v reflect.Value) error {
 	if !v.IsValid() {
 		// Don't actually have anywhere to put this value; skip it.
@@ -303,6 +310,11 @@ func (d *Decoder) decodeTo(v reflect.Value) error {
 			return d.attachAnnotations(v)
 		}
 		return nil
+	}
+
+	t := v.Type()
+	if t.Kind() != reflect.Ptr && v.CanAddr() && reflect.PtrTo(t).Implements(unmarshalerType) {
+		return v.Addr().Interface().(Unmarshaler).UnmarshalIon(d.r)
 	}
 
 	switch d.r.Type() {
