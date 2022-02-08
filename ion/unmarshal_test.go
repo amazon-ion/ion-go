@@ -316,6 +316,29 @@ func TestUnmarshalStructBinary(t *testing.T) {
 	test(ionByteValue, "structToStruct", &foo{}, &foo{2}) // unmarshal IonStruct to a Go struct
 }
 
+type unmarshalMe struct {
+	Name   string
+	custom bool
+}
+
+func (u *unmarshalMe) UnmarshalIon(r Reader) error {
+	u.custom = true
+	return nil
+}
+
+func TestUnmarshalCustomMarshaler(t *testing.T) {
+	ionBinary, err := MarshalBinary(unmarshalMe{
+		Name: "John Doe",
+	})
+	require.NoError(t, err)
+
+	dec := NewDecoder(NewReader(bytes.NewReader(ionBinary)))
+	var decodedResult unmarshalMe
+
+	assert.NoError(t, dec.DecodeTo(&decodedResult))
+	assert.True(t, decodedResult.custom)
+}
+
 func TestUnmarshalListSexpBinary(t *testing.T) {
 	test := func(data []byte, testName string, val, eval interface{}) {
 		t.Run("reflect.TypeOf(val).String()", func(t *testing.T) {
