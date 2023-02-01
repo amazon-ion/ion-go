@@ -1161,7 +1161,9 @@ func (t *tokenizer) ReadLongClob() ([]byte, error) {
 	return val, nil
 }
 
-// IsTripleQuote returns true if this is a triple-quote sequence (''').
+// IsTripleQuote returns true if this is a triple-quote sequence; i.e.:
+//
+//	'''
 func (t *tokenizer) IsTripleQuote() (bool, error) {
 	// We've just read a '\'', check if the next two are too.
 	cs, err := t.peekN(2)
