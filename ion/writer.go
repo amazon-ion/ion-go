@@ -27,29 +27,29 @@ import (
 // calls to Write will write values inside of the container until a matching
 // End method is called.
 //
-// 	var w Writer
-// 	w.BeginSexp()
-// 	{
-// 		w.WriteInt(1)
-// 		w.WriteSymbolFromString("+")
-// 		w.WriteInt(1)
-// 	}
-// 	w.EndSexp()
+//	var w Writer
+//	w.BeginSexp()
+//	{
+//		w.WriteInt(1)
+//		w.WriteSymbolFromString("+")
+//		w.WriteInt(1)
+//	}
+//	w.EndSexp()
 //
 // When writing values inside a struct, the FieldName method must be called before
 // each value to set the value's field name. The Annotation method may likewise
 // be called before writing any value to add an annotation to the value.
 //
-// 	var w Writer
-// 	w.Annotation("user")
-// 	w.BeginStruct()
-// 	{
-// 		w.FieldName("id")
-// 		w.WriteString("foo")
-// 		w.FieldName("name")
-// 		w.WriteString("bar")
-// 	}
-// 	w.EndStruct()
+//	var w Writer
+//	w.Annotation("user")
+//	w.BeginStruct()
+//	{
+//		w.FieldName("id")
+//		w.WriteString("foo")
+//		w.FieldName("name")
+//		w.WriteString("bar")
+//	}
+//	w.EndStruct()
 //
 // When you're done writing values, you should call Finish to ensure everything has
 // been flushed from in-memory buffers. While individual methods all return an error
@@ -57,12 +57,11 @@ import (
 // return the previous error. This lets you keep code a bit cleaner by only checking
 // the return value of the final method call (generally Finish).
 //
-// 	var w Writer
-// 	writeSomeStuff(w)
-// 	if err := w.Finish(); err != nil {
-// 		return err
-// 	}
-//
+//	var w Writer
+//	writeSomeStuff(w)
+//	if err := w.Finish(); err != nil {
+//		return err
+//	}
 type Writer interface {
 	// FieldName sets the field name for the next value written.
 	FieldName(val SymbolToken) error

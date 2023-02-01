@@ -67,9 +67,8 @@ func (t *tokenizer) SkipDot() (bool, error) {
 	return true, nil
 }
 
-// SkipLobWhitespace skips whitespace when we're inside a large
-// object ({{  ///=  }} or {{ '''///=''' }}) where comments are
-// not allowed.
+// SkipLobWhitespace skips whitespace when we're inside a blob
+// or clob where comments are not allowed.
 func (t *tokenizer) SkipLobWhitespace() (int, error) {
 	c, _, err := t.skipLobWhitespace()
 	return c, err
@@ -502,8 +501,8 @@ func (t *tokenizer) skipStringHelper() error {
 	}
 }
 
-// SkipLongString skips over a '''-enclosed string, returning the next
-// character after the closing '''.
+// SkipLongString skips over a triple-quote-enclosed string, returning the next
+// character after the closing triple-quote.
 func (t *tokenizer) skipLongString() (int, error) {
 	if err := t.skipLongStringHelper(t.skipCommentsHandler); err != nil {
 		return 0, err
@@ -511,7 +510,7 @@ func (t *tokenizer) skipLongString() (int, error) {
 	return t.read()
 }
 
-// SkipLongStringHelper skips over a '''-enclosed string.
+// SkipLongStringHelper skips over a triple-quote-enclosed string.
 func (t *tokenizer) skipLongStringHelper(handler commentHandler) error {
 	for {
 		c, err := t.read()
@@ -544,7 +543,7 @@ func (t *tokenizer) skipLongStringHelper(handler commentHandler) error {
 // of the long string, and if we have consumed any ' characters. Also, it can detect
 // if another long string starts after the current one; in that case, it returns
 // false indicating this is not the end of the long string, and true for consumed '
-// as we have read the closing ''' of the first long string.
+// as we have read the closing triple-quote of the first long string.
 func (t *tokenizer) skipEndOfLongString(handler commentHandler) (bool, bool, error) {
 	isConsumed := false
 	// We just read a ', check for two more ''s.
@@ -756,9 +755,8 @@ func (t *tokenizer) skipWhitespaceHelper() (bool, error) {
 	return ok, err
 }
 
-// SkipLobWhitespace skips whitespace when we're inside a large
-// object ({{  ///=  }} or {{ '''///=''' }}) where comments are
-// not allowed.
+// SkipLobWhitespace skips whitespace when we're inside a blob
+// or clob, where comments are not allowed.
 func (t *tokenizer) skipLobWhitespace() (int, bool, error) {
 	// Comments are not allowed inside a lob value; if we see a '/',
 	// it's the start of a base64-encoded value.

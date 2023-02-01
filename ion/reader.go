@@ -33,10 +33,10 @@ import (
 // Next moves the Reader to the position after the final value in the stream, it returns
 // false, making it easy to loop through the values in a stream.
 //
-// 	var r Reader
-// 	for r.Next() {
-// 		// ...
-// 	}
+//	var r Reader
+//	for r.Next() {
+//		// ...
+//	}
 //
 // Next also returns false in case of error. This can be distinguished from a legitimate
 // end-of-stream by calling Err after exiting the loop.
@@ -56,22 +56,21 @@ import (
 // outer sequence of values. The Reader will be positioned at the end of the composite value,
 // such that a call to Next will move to the immediately-following value (if any).
 //
-// 	r := NewTextReaderStr("[foo, bar] [baz]")
-// 	for r.Next() {
-// 		if err := r.StepIn(); err != nil {
-// 			return err
-// 		}
-// 		for r.Next() {
-// 			fmt.Println(r.StringValue())
-// 		}
-// 		if err := r.StepOut(); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	if err := r.Err(); err != nil {
-// 		return err
-// 	}
-//
+//	r := NewTextReaderStr("[foo, bar] [baz]")
+//	for r.Next() {
+//		if err := r.StepIn(); err != nil {
+//			return err
+//		}
+//		for r.Next() {
+//			fmt.Println(r.StringValue())
+//		}
+//		if err := r.StepOut(); err != nil {
+//			return err
+//		}
+//	}
+//	if err := r.Err(); err != nil {
+//		return err
+//	}
 type Reader interface {
 	// Next advances the Reader to the next position in the current value stream.
 	// It returns true if this is the position of an Ion value, and false if it
