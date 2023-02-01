@@ -21,7 +21,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/amzn/ion-go/ion"
+	"github.com/amazon-ion/ion-go/ion"
 )
 
 // process reads the specified input file(s) and re-writes the contents in the
@@ -83,7 +83,7 @@ func newProcessor(args []string) (*processor, error) {
 			}
 			ret.errf = args[i]
 
-		// https://github.com/amzn/ion-go/issues/121
+		// https://github.com/amazon-ion/ion-go/issues/121
 
 		default:
 			return nil, errors.New("unrecognized option \"" + arg + "\"")

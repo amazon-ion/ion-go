@@ -559,7 +559,7 @@ func (w *binaryWriter) beginValue(api string) error {
 			buf = appendVarUint(buf, id)
 		}
 
-		// https://github.com/amzn/ion-go/issues/120
+		// https://github.com/amazon-ion/ion-go/issues/120
 		w.bufs.push(&container{code: 0xE0})
 		if err := w.write(buf); err != nil {
 			return err

@@ -1,4 +1,4 @@
-module github.com/amzn/ion-go
+module github.com/amazon-ion/ion-go
 
 go 1.13
 

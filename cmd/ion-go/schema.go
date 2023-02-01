@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/amzn/ion-go/ion"
+	"github.com/amazon-ion/ion-go/ion"
 )
 
 type importdescriptor struct {

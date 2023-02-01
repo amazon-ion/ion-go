@@ -19,7 +19,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/amzn/ion-go/ion"
+	"github.com/amazon-ion/ion-go/ion"
 )
 
 type stdin struct{}

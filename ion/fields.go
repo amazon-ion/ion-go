@@ -64,7 +64,7 @@ type fielder struct {
 }
 
 // FieldsFor returns the fields of the given struct type.
-// https://github.com/amzn/ion-go/issues/117
+// https://github.com/amazon-ion/ion-go/issues/117
 func fieldsFor(t reflect.Type) []field {
 	fldr := fielder{index: map[string]bool{}}
 	fldr.inspect(t, nil)

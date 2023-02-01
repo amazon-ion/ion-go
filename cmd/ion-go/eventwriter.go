@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/amzn/ion-go/ion"
+	"github.com/amazon-ion/ion-go/ion"
 )
 
 type eventwriter struct {
