@@ -14,7 +14,7 @@ jobs:
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: recursive
 
@@ -28,35 +28,44 @@ jobs:
 
     - name: Build
       run: go build -v ./...
-    
+
     - name: Test with coverage
       run: go test -v ./... -coverprofile coverage.txt
-      
-      
+
     - name: Upload Coverage report to CodeCov
       uses: codecov/codecov-action@v1
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         file: ./coverage.txt
-  
-  imports:
-    name: goimports
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: imports
-        token: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: check
-      uses: grandcolline/golang-github-actions@v1.1.0
-      with:
-        run: lint
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.13"
+
+      - name: Install goimports
+        run: go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # goimports provides a superset of gofmt functionality
+      - run: goimports -w .
+
+      - name: Run go mod tidy on all modules
+        run: go mod tidy
+
+      # If there are any diffs from goimports or go mod tidy, fail.
+      - name: Verify no changes from goimports and go mod tidy.
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            # Show the files that failed to pass the check.
+            echo 'Lint check failed:'
+            git diff --minimal --compact-summary
+            echo 'To fix this check, run "goimports -w . && go mod tidy"'
+            exit 1
+          fi
