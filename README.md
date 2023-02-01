@@ -1,12 +1,12 @@
 # Amazon Ion Go
 
-[![Build Status](https://github.com/amzn/ion-go/workflows/Go%20Build/badge.svg)](https://github.com/amzn/ion-go/actions?query=workflow%3A%22Go+Build%22)
-[![license](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/amzn/ion-go/blob/master/LICENSE)
-[![docs](https://img.shields.io/badge/docs-api-green.svg)](https://pkg.go.dev/github.com/amzn/ion-go?tab=doc)
+[![Build Status](https://github.com/amazon-ion/ion-go/workflows/Go%20Build/badge.svg)](https://github.com/amazon-ion/ion-go/actions?query=workflow%3A%22Go+Build%22)
+[![license](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/amazon-ion/ion-go/blob/master/LICENSE)
+[![docs](https://img.shields.io/badge/docs-api-green.svg)](https://pkg.go.dev/github.com/amazon-ion/ion-go?tab=doc)
 
-Amazon Ion ( http://amzn.github.io/ion-docs/ ) library for Go
+Amazon Ion ( https://amazon-ion.github.io/ion-docs/ ) library for Go
 
-[Ion Cookbook](https://amzn.github.io/ion-docs/guides/cookbook.html) demonstrates code samples for some simple Amazon Ion use cases.
+[Ion Cookbook](https://amazon-ion.github.io/ion-docs/guides/cookbook.html) demonstrates code samples for some simple Amazon Ion use cases.
 
 This package is based on work from David Murray ([fernomac](https://github.com/fernomac/)) on https://github.com/fernomac/ion-go.
 The Ion team greatly appreciates David's contributions to the Ion community.
@@ -32,7 +32,7 @@ The easiest way to clone the `ion-go` repository and initialize its `ion-tests`
 submodule is to run the following command.
 
 ```
-$ git clone --recursive https://github.com/amzn/ion-go.git ion-go
+$ git clone --recursive https://github.com/amazon-ion/ion-go.git ion-go
 ```
 
 Alternatively, the submodule may be initialized independent of the clone
@@ -71,7 +71,7 @@ It is recommended that you hook this in your favorite IDE (`Tools` > `File Watch
 
 ## Usage
 
-Import `github.com/amzn/ion-go/ion` and you're off to the races.
+Import `github.com/amazon-ion/ion-go/ion` and you're off to the races.
 
 ### Marshaling and Unmarshaling
 

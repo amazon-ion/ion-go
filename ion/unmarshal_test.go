@@ -647,7 +647,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestDecodeLotsOfInts(t *testing.T) {
-	// Regression test for https://github.com/amzn/ion-go/issues/53
+	// Regression test for https://github.com/amazon-ion/ion-go/issues/53
 	buf := bytes.Buffer{}
 	w := NewBinaryWriter(&buf)
 	for i := 0; i < 512; i++ {

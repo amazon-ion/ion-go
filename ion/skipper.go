@@ -602,7 +602,7 @@ func (t *tokenizer) skipBlobHelper() error {
 		return err
 	}
 
-	// https://github.com/amzn/ion-go/issues/115
+	// https://github.com/amazon-ion/ion-go/issues/115
 	for c != '}' {
 		c, _, err = t.skipLobWhitespace()
 		if err != nil {

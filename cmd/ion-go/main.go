@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/amzn/ion-go/internal"
-	"github.com/amzn/ion-go/ion"
+	"github.com/amazon-ion/ion-go/internal"
+	"github.com/amazon-ion/ion-go/ion"
 )
 
 // main is the main entry point for ion-go.

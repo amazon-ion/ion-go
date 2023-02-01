@@ -303,7 +303,7 @@ func keysFor(v reflect.Value) []mapkey {
 	res := make([]mapkey, len(keys))
 
 	for i, key := range keys {
-		// https://github.com/amzn/ion-go/issues/116
+		// https://github.com/amazon-ion/ion-go/issues/116
 		if key.Kind() != reflect.String {
 			panic("unexpected map key type")
 		}
