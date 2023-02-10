@@ -362,8 +362,9 @@ func TestMarshalJSON(t *testing.T) {
 }
 
 func TestUnmarshalJSON(t *testing.T) {
-	test := func(a string, expected *Decimal) {
+	test := func(a string, expected string) {
 		t.Run("("+a+")", func(t *testing.T) {
+			expectedDec := MustParseDecimal(expected)
 
 			var r struct {
 				D *Decimal `json:"d"`
@@ -371,19 +372,30 @@ func TestUnmarshalJSON(t *testing.T) {
 			err := json.Unmarshal([]byte(`{"d":`+a+`}`), &r)
 			require.NoError(t, err)
 
-			assert.Truef(t, expected.Equal(r.D), "expected %v, got %v", expected, r.D)
+			assert.Truef(t, expectedDec.Equal(r.D), "expected %v, got %v", expected, r.D)
 		})
 	}
 
-	test("123000", MustParseDecimal("123000"))
-	test("123.1", MustParseDecimal("123.1"))
-	test("123.10", MustParseDecimal("123.1"))
+	test("123000", "123000")
+	test("123.1", "123.1")
+	test("123.10", "123.1")
+	test("-123000", "-123000")
+	test("-123.1", "-123.1")
+	test("-123.10", "-123.1")
 
-	test("1e+2", MustParseDecimal("100"))
-	test("1e2", MustParseDecimal("100"))
-	test("1E2", MustParseDecimal("100"))
-	test("1E+2", MustParseDecimal("100"))
+	test("1e+2", "100")
+	test("1e2", "100")
+	test("1E2", "100")
+	test("1E+2", "100")
 
-	test("1e-2", MustParseDecimal("0.01"))
-	test("1E-2", MustParseDecimal("0.01"))
+	test("-1e+2", "-100")
+	test("-1e2", "-100")
+	test("-1E2", "-100")
+	test("-1E+2", "-100")
+
+	test("1e-2", "0.01")
+	test("1E-2", "0.01")
+
+	test("-1e-2", "-0.01")
+	test("-1E-2", "-0.01")
 }
