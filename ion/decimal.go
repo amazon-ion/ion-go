@@ -390,3 +390,51 @@ func (d *Decimal) String() string {
 		return b.String()
 	}
 }
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (d *Decimal) UnmarshalJSON(decimalBytes []byte) error {
+	str := string(decimalBytes)
+	if str == "null" {
+		return nil
+	}
+	str = strings.Replace(str, "E", "D", 1)
+	str = strings.Replace(str, "e", "d", 1)
+	parsed, err := ParseDecimal(str)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling decimal '%s': %w", str, err)
+	}
+	*d = *parsed
+	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (d *Decimal) MarshalJSON() ([]byte, error) {
+	absN := new(big.Int).Abs(d.n).String()
+	scale := int(-d.scale)
+	sign := d.n.Sign()
+
+	var str string
+	if scale == 0 {
+		str = absN
+	} else if scale > 0 {
+		// add zeroes to the right
+		str = absN + strings.Repeat("0", scale)
+	} else {
+		// add zeroes to the left
+		absScale := -scale
+		nLen := len(absN)
+
+		if absScale >= nLen {
+			str = "0." + strings.Repeat("0", absScale-nLen) + absN
+		} else {
+			str = absN[:nLen-absScale] + "." + absN[nLen-absScale:]
+		}
+		str = strings.TrimRight(str, "0")
+		str = strings.TrimSuffix(str, ".")
+	}
+
+	if sign == -1 {
+		str = "-" + str
+	}
+	return []byte(str), nil
+}
