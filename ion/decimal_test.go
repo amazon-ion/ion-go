@@ -16,6 +16,7 @@
 package ion
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -328,4 +329,73 @@ func TestUpscale(t *testing.T) {
 	d, _ := ParseDecimal("1d1")
 	actual := d.upscale(4).String()
 	assert.Equal(t, "10.0000", actual)
+}
+
+func TestMarshalJSON(t *testing.T) {
+	test := func(a string, expected string) {
+		t.Run("("+a+")", func(t *testing.T) {
+			ad, err := ParseDecimal(a)
+			require.NoError(t, err)
+
+			am, err := ad.MarshalJSON()
+			require.NoError(t, err)
+
+			assert.Equal(t, []byte(expected), am)
+		})
+	}
+	test("123000", "123000")
+
+	test("1.01", "1.01")
+	test("0.01", "0.01")
+	test("0.0", "0")
+	test("0.123456789012345678901234567890", "0.12345678901234567890123456789")                                                           // Trims trailing zeros
+	test("123456789012345678901234567890.123456789012345678901234567890", "123456789012345678901234567890.12345678901234567890123456789") // Trims trailing zeros
+
+	test("1d-2", "0.01")
+	test("1d-3", "0.001")
+	test("1d2", "100")
+
+	test("-1d3", "-1000")
+	test("-1d-3", "-0.001")
+	test("-0.0", "0")
+	test("-0.1", "-0.1")
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	test := func(a string, expected string) {
+		t.Run("("+a+")", func(t *testing.T) {
+			expectedDec := MustParseDecimal(expected)
+
+			var r struct {
+				D *Decimal `json:"d"`
+			}
+			err := json.Unmarshal([]byte(`{"d":`+a+`}`), &r)
+			require.NoError(t, err)
+
+			assert.Truef(t, expectedDec.Equal(r.D), "expected %v, got %v", expected, r.D)
+		})
+	}
+
+	test("123000", "123000")
+	test("123.1", "123.1")
+	test("123.10", "123.1")
+	test("-123000", "-123000")
+	test("-123.1", "-123.1")
+	test("-123.10", "-123.1")
+
+	test("1e+2", "100")
+	test("1e2", "100")
+	test("1E2", "100")
+	test("1E+2", "100")
+
+	test("-1e+2", "-100")
+	test("-1e2", "-100")
+	test("-1E2", "-100")
+	test("-1E+2", "-100")
+
+	test("1e-2", "0.01")
+	test("1E-2", "0.01")
+
+	test("-1e-2", "-0.01")
+	test("-1E-2", "-0.01")
 }
