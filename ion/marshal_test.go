@@ -18,6 +18,7 @@ package ion
 import (
 	"bytes"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,10 @@ func TestMarshalText(t *testing.T) {
 	test(byte(42), "42")
 	test(-42, "-42")
 	test(uint64(math.MaxUint64), "18446744073709551615")
+	bigIntPos, _ := new(big.Int).SetString("123456789012345678901234567890", 10)
+	test(bigIntPos, "123456789012345678901234567890")
+	bigIntNeg, _ := new(big.Int).SetString("-123456789012345678901234567890", 10)
+	test(bigIntNeg, "-123456789012345678901234567890")
 	test(math.MinInt64, "-9223372036854775808")
 
 	test(42.0, "4.2e+1")

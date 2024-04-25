@@ -384,6 +384,9 @@ func (m *Encoder) encodeStruct(v reflect.Value) error {
 	if t == decimalType {
 		return m.encodeDecimal(v)
 	}
+	if t == bigIntType {
+		return m.encodeBigInt(v)
+	}
 
 	if err := m.w.BeginStruct(); err != nil {
 		return err
@@ -445,10 +448,16 @@ func (m *Encoder) encodeTimeDate(v reflect.Value) error {
 	return m.w.WriteTimestamp(timestamp)
 }
 
-// EncodeDecimal encodes an ion.Decimal to the output writer as an Ion decimal.
+// encodeDecimal encodes an ion.Decimal to the output writer as an Ion decimal.
 func (m *Encoder) encodeDecimal(v reflect.Value) error {
 	d := v.Addr().Interface().(*Decimal)
 	return m.w.WriteDecimal(d)
+}
+
+// encodeBigInt encodes a math/big.Int to the output writer as a big.Int.
+func (m *Encoder) encodeBigInt(v reflect.Value) error {
+	b := v.Addr().Interface().(*big.Int)
+	return m.w.WriteBigInt(b)
 }
 
 func (m *Encoder) encodeWithAnnotation(v reflect.Value, fields []field) error {
