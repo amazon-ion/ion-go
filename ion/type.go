@@ -39,9 +39,6 @@ const (
 	// DecimalType is the type of an arbitrary-precision Ion decimal value.
 	DecimalType
 
-	// BigIntType is the type of a multi-precision integer value.
-	BigIntType
-
 	// TimestampType is the type of an arbitrary-precision Ion timestamp.
 	TimestampType
 
@@ -103,8 +100,6 @@ func (t Type) String() string {
 		return "list"
 	case SexpType:
 		return "sexp"
-	case BigIntType:
-		return "bigint"
 	default:
 		return fmt.Sprintf("<unknown type %v>", uint8(t))
 	}
