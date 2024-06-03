@@ -24,8 +24,9 @@ import (
 type binaryReader struct {
 	reader
 
-	bits bitstream
-	cat  Catalog
+	bits     bitstream
+	cat      Catalog
+	resetPos uint64
 }
 
 func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
@@ -35,6 +36,36 @@ func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 	r.bits.Init(in)
 	return r
 }
+
+// Reset causes the binary reader to start reading from the given input bytes
+// while skipping most of the initialization steps needed to prepare the
+// reader. Reset is most commonly called with the same bytes as the reader
+// was originally created with (e.g. via NewReaderBytes) as an optimization
+// when the same data needs to be read multiple times.
+//
+// While it is possible to call Reset with different input bytes, the Reader
+// will only work correctly if the new bytes contain the exact same binary
+// version marker and local symbols as the original input. If there are any
+// doubts whether this is the case, it is instead recommended to create a
+// new Reader using NewReaderBytes (or NewReaderCat) instead. Attempting to
+// reuse a binaryReader with inconsistent input bytes will cause the reader
+// to return errors, misappropriate values to unrelated or non-existent
+// attributes, or incorrectly parse data values.
+func (r *binaryReader) Reset(in []byte) error {
+	if r.resetPos == invalidReset {
+		return &UsageError{"binaryReader.Reset", "cannot reset when multiple local symbol tables found"}
+	}
+	r.annotations = nil
+	r.valueType = NoType
+	r.value = nil
+	r.err = nil
+	r.eof = false
+	r.bits = bitstream{}
+	r.bits.InitBytes(in[r.resetPos:])
+	return nil
+}
+
+const invalidReset uint64 = 1<<64 - 1
 
 // Next moves the reader to the next value.
 func (r *binaryReader) Next() bool {
@@ -218,6 +249,11 @@ func (r *binaryReader) next() (bool, error) {
 			st, err := readLocalSymbolTable(r, r.cat)
 			if err == nil {
 				r.lst = st
+				if r.resetPos == 0 {
+					r.resetPos = r.bits.pos
+				} else {
+					r.resetPos = invalidReset
+				}
 				return false, nil
 			}
 			return false, err
