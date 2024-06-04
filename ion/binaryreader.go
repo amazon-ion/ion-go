@@ -51,6 +51,9 @@ func newBinaryReaderBuf(in *bufio.Reader, cat Catalog) Reader {
 // reuse a binaryReader with inconsistent input bytes will cause the reader
 // to return errors, misappropriate values to unrelated or non-existent
 // attributes, or incorrectly parse data values.
+//
+// This API is experimental and should be considered unstable.
+// See https://github.com/amazon-ion/ion-go/pull/196
 func (r *binaryReader) Reset(in []byte) error {
 	if r.resetPos == invalidReset {
 		return &UsageError{"binaryReader.Reset", "cannot reset when multiple local symbol tables found"}
