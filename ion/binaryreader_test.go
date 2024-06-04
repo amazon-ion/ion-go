@@ -112,15 +112,57 @@ func TestReadBinaryLST(t *testing.T) {
 	assert.False(t, ok, "found a symbol for bogus")
 }
 
+var binaryStructsBytes = []byte{
+	0xDF,                   // null.struct
+	0xD0,                   // {}
+	0xEA, 0x81, 0xEE, 0xD7, // foo::{
+	0x84, 0xE3, 0x81, 0xEF, 0xD0, // name:bar::{},
+	0x88, 0x20, // max_id:0},
+	0xD3, 0xF0, 0x21, 0x0F, // {"":15},
+}
+
 func TestReadBinaryStructs(t *testing.T) {
-	r := readBinary([]byte{
-		0xDF,                   // null.struct
-		0xD0,                   // {}
-		0xEA, 0x81, 0xEE, 0xD7, // foo::{
-		0x84, 0xE3, 0x81, 0xEF, 0xD0, // name:bar::{},
-		0x88, 0x20, // max_id:0},
-		0xD3, 0xF0, 0x21, 0x0F, // {"":15},
+	r := readBinary(binaryStructsBytes)
+
+	_null(t, r, StructType)
+	_struct(t, r, func(t *testing.T, r Reader) {
+		_eof(t, r)
 	})
+	_structAF(t, r, nil, []SymbolToken{NewSymbolTokenFromString("foo")}, func(t *testing.T, r Reader) {
+		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{NewSymbolTokenFromString("bar")}, func(t *testing.T, r Reader) {
+			_eof(t, r)
+		})
+		_intAF(t, r, &SymbolToken{Text: newString("max_id"), LocalSID: 8}, nil, 0)
+	})
+	_structAF(t, r, nil, nil, func(t *testing.T, r Reader) {
+		st := NewSymbolTokenFromString("")
+		_intAF(t, r, &st, nil, 15)
+	})
+	_eof(t, r)
+}
+
+func TestReadBinaryStructsWithReset(t *testing.T) {
+	bytes := append(prefixBytes, binaryStructsBytes...)
+	r := NewReaderBytes(bytes)
+
+	_null(t, r, StructType)
+	_struct(t, r, func(t *testing.T, r Reader) {
+		_eof(t, r)
+	})
+	_structAF(t, r, nil, []SymbolToken{NewSymbolTokenFromString("foo")}, func(t *testing.T, r Reader) {
+		_structAF(t, r, &SymbolToken{Text: newString("name"), LocalSID: 4}, []SymbolToken{NewSymbolTokenFromString("bar")}, func(t *testing.T, r Reader) {
+			_eof(t, r)
+		})
+		_intAF(t, r, &SymbolToken{Text: newString("max_id"), LocalSID: 8}, nil, 0)
+	})
+	_structAF(t, r, nil, nil, func(t *testing.T, r Reader) {
+		st := NewSymbolTokenFromString("")
+		_intAF(t, r, &st, nil, 15)
+	})
+	_eof(t, r)
+
+	br := r.(*binaryReader)
+	require.NoError(t, br.Reset(bytes))
 
 	_null(t, r, StructType)
 	_struct(t, r, func(t *testing.T, r Reader) {
@@ -262,15 +304,17 @@ func TestReadBinaryNullFieldName(t *testing.T) {
 	_nextF(t, r, &SymbolToken{}, true, true)
 }
 
+var binarySymbolBytes = []byte{
+	0x71, 0x00, // $0
+	0x71, 0x01, // $ion
+	0x71, 0x6E, // foo
+	0x71, 0x6F, // bar
+	0x7F,       // null.symbol
+	0x71, 0x71, // $113
+}
+
 func TestReadBinarySymbols(t *testing.T) {
-	r := readBinary([]byte{
-		0x71, 0x00, // $0
-		0x71, 0x01, // $ion
-		0x71, 0x6E, // foo
-		0x71, 0x6F, // bar
-		0x7F,       // null.symbol
-		0x71, 0x71, // $113
-	})
+	r := readBinary(binarySymbolBytes)
 	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
 	_symbol(t, r, SymbolToken{Text: newString("$ion"), LocalSID: 1})
 	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 110})
@@ -279,14 +323,58 @@ func TestReadBinarySymbols(t *testing.T) {
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
 }
 
+func TestReadBinarySymbolsWithReset(t *testing.T) {
+	bytes := append(prefixBytes, binarySymbolBytes...)
+	r := NewReaderBytes(bytes)
+
+	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
+	_symbol(t, r, SymbolToken{Text: newString("$ion"), LocalSID: 1})
+	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 110})
+	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbolAF(t, r, nil, nil, nil, false, false)
+	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
+
+	br := r.(*binaryReader)
+	require.NoError(t, br.Reset(bytes))
+
+	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 0}, false, false)
+	_symbol(t, r, SymbolToken{Text: newString("$ion"), LocalSID: 1})
+	_symbol(t, r, SymbolToken{Text: newString("foo"), LocalSID: 110})
+	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbolAF(t, r, nil, nil, nil, false, false)
+	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
+}
+
+var binaryAnnotationBytes = []byte{
+	0xE3, 0x81, 0x80, 0x0F, // $0::null
+	0xE3, 0x81, 0x81, 0x0F, // $ion::null
+	0xE3, 0x81, 0xEE, 0x0F, // foo::null
+	0xE3, 0x81, 0xEF, 0x0F, // bar::null
+	0xE3, 0x81, 0xF1, 0x0F, // $113::null
+}
+
 func TestReadBinaryAnnotations(t *testing.T) {
-	r := readBinary([]byte{
-		0xE3, 0x81, 0x80, 0x0F, // $0::null
-		0xE3, 0x81, 0x81, 0x0F, // $ion::null
-		0xE3, 0x81, 0xEE, 0x0F, // foo::null
-		0xE3, 0x81, 0xEF, 0x0F, // bar::null
-		0xE3, 0x81, 0xF1, 0x0F, // $113::null
-	})
+	r := readBinary(binaryAnnotationBytes)
+
+	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 110}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("bar"), LocalSID: 111}}, false, false)
+	_nextA(t, r, nil, true, true)
+}
+
+func TestReadBinaryAnnotationsWithReset(t *testing.T) {
+	bytes := append(prefixBytes, binaryAnnotationBytes...)
+	r := NewReaderBytes(bytes)
+
+	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("foo"), LocalSID: 110}}, false, false)
+	_nextA(t, r, []SymbolToken{{Text: newString("bar"), LocalSID: 111}}, false, false)
+	_nextA(t, r, nil, true, true)
+
+	br := r.(*binaryReader)
+	require.NoError(t, br.Reset(bytes))
 
 	_nextA(t, r, []SymbolToken{{Text: nil, LocalSID: 0}}, false, false)
 	_nextA(t, r, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}}, false, false)
@@ -376,26 +464,28 @@ func TestReadBinaryFloats(t *testing.T) {
 	_eof(t, r)
 }
 
+var multipleLSTBytes = []byte{
+	0x71, 0x0B, // $11
+	0x71, 0x6F, // bar
+	0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
+	0xEE, 0x90, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
+	0x86, 0x71, 0x03, // imports: `$ion_symbol_table`,
+	0x87, 0xB8, // symbols:[
+	0x83, 'f', 'o', 'o', // "foo"
+	0x83, 'b', 'a', 'r', // "bar" ]}
+	0x71, 0x0B, // bar
+	0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
+	0x86, 0x71, 0x03, // imports: $ion_symbol_table
+	0x87, 0xB4, // symbols:[
+	0x83, 'b', 'a', 'z', // "baz" ]}
+	0x71, 0x0B, // bar
+	0x71, 0x0C, // baz
+	0x71, 0x0C, // $12
+	0x71, 0x6F, // $111
+}
+
 func TestReadMultipleLSTs(t *testing.T) {
-	r := readBinary([]byte{
-		0x71, 0x0B, // $11
-		0x71, 0x6F, // bar
-		0xE3, 0x81, 0x83, 0xDF, // $ion_symbol_table::null.struct
-		0xEE, 0x90, 0x81, 0x83, 0xDD, // $ion_symbol_table::{
-		0x86, 0x71, 0x03, // imports: `$ion_symbol_table`,
-		0x87, 0xB8, // symbols:[
-		0x83, 'f', 'o', 'o', // "foo"
-		0x83, 'b', 'a', 'r', // "bar" ]}
-		0x71, 0x0B, // bar
-		0xEC, 0x81, 0x83, 0xD9, // $ion_symbol_table::{
-		0x86, 0x71, 0x03, // imports: $ion_symbol_table
-		0x87, 0xB4, // symbols:[
-		0x83, 'b', 'a', 'z', // "baz" ]}
-		0x71, 0x0B, // bar
-		0x71, 0x0C, // baz
-		0x71, 0x0C, // $12
-		0x71, 0x6F, // $111
-	})
+	r := readBinary(multipleLSTBytes)
 
 	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 11}, false, false)
 	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 111})
@@ -404,6 +494,22 @@ func TestReadMultipleLSTs(t *testing.T) {
 	_symbol(t, r, SymbolToken{Text: newString("baz"), LocalSID: 12})
 	_symbol(t, r, SymbolToken{Text: newString("baz"), LocalSID: 12})
 	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
+}
+
+func TestReadMultipleLSTsWithReset(t *testing.T) {
+	bytes := append(prefixBytes, multipleLSTBytes...)
+	r := NewReaderBytes(bytes)
+
+	_symbolAF(t, r, nil, nil, &SymbolToken{Text: nil, LocalSID: 11}, false, false)
+	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 111})
+	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, SymbolToken{Text: newString("bar"), LocalSID: 11})
+	_symbol(t, r, SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbol(t, r, SymbolToken{Text: newString("baz"), LocalSID: 12})
+	_symbolAF(t, r, nil, nil, &SymbolToken{}, true, true)
+
+	br := r.(*binaryReader)
+	require.EqualError(t, br.Reset(bytes), "ion: usage error in binaryReader.Reset: cannot reset when multiple local symbol tables found")
 }
 
 func TestReadBinaryInts(t *testing.T) {
@@ -445,17 +551,37 @@ func TestReadBinaryBools(t *testing.T) {
 	_eof(t, r)
 }
 
+var binaryNullBytes = []byte{
+	0x00,       // 1-byte NOP
+	0x0F,       // null
+	0x01, 0xFF, // 2-byte NOP
+	0xE3, 0x81, 0x81, 0x0F, // $ion::null
+	0x0E, 0x8F, // 16-byte NOP
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0xE4, 0x82, 0xEE, 0xEF, 0x0F, // foo::bar::null
+}
+
 func TestReadBinaryNulls(t *testing.T) {
-	r := readBinary([]byte{
-		0x00,       // 1-byte NOP
-		0x0F,       // null
-		0x01, 0xFF, // 2-byte NOP
-		0xE3, 0x81, 0x81, 0x0F, // $ion::null
-		0x0E, 0x8F, // 16-byte NOP
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0xE4, 0x82, 0xEE, 0xEF, 0x0F, // foo::bar::null
-	})
+	r := readBinary(binaryNullBytes)
+
+	_null(t, r, NullType)
+	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{NewSymbolTokenFromString("foo"), NewSymbolTokenFromString("bar")})
+	_eof(t, r)
+}
+
+func TestReadBinaryNullsWithReset(t *testing.T) {
+	bytes := append(prefixBytes, binaryNullBytes...)
+	r := NewReaderBytes(bytes)
+
+	_null(t, r, NullType)
+	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
+	_nullAF(t, r, NullType, nil, []SymbolToken{NewSymbolTokenFromString("foo"), NewSymbolTokenFromString("bar")})
+	_eof(t, r)
+
+	br := r.(*binaryReader)
+	require.NoError(t, br.Reset(bytes))
 
 	_null(t, r, NullType)
 	_nullAF(t, r, NullType, nil, []SymbolToken{{Text: newString("$ion"), LocalSID: 1}})
@@ -469,22 +595,40 @@ func TestReadEmptyBinary(t *testing.T) {
 	_eof(t, r)
 }
 
+var prefixBytes = []byte{
+	0xE0, 0x01, 0x00, 0xEA, // $ion_1_0
+	0xEE, 0xA0, 0x81, 0x83, 0xDE, 0x9C, // $ion_symbol_table::{
+	0x86, 0xBE, 0x8E, // imports:[
+	0xDD,                                // {
+	0x84, 0x85, 'b', 'o', 'g', 'u', 's', // name: "bogus"
+	0x85, 0x21, 0x2A, // version: 42
+	0x88, 0x21, 0x64, // max_id: 100
+	// }]
+	0x87, 0xB9, // symbols: [
+	0x83, 'f', 'o', 'o', // "foo"
+	0x83, 'b', 'a', 'r', // "bar"
+	0x80, // ""
+	// ]
+	// }
+}
+
 func readBinary(ion []byte) Reader {
-	prefix := []byte{
-		0xE0, 0x01, 0x00, 0xEA, // $ion_1_0
-		0xEE, 0xA0, 0x81, 0x83, 0xDE, 0x9C, // $ion_symbol_table::{
-		0x86, 0xBE, 0x8E, // imports:[
-		0xDD,                                // {
-		0x84, 0x85, 'b', 'o', 'g', 'u', 's', // name: "bogus"
-		0x85, 0x21, 0x2A, // version: 42
-		0x88, 0x21, 0x64, // max_id: 100
-		// }]
-		0x87, 0xB9, // symbols: [
-		0x83, 'f', 'o', 'o', // "foo"
-		0x83, 'b', 'a', 'r', // "bar"
-		0x80, // ""
-		// ]
-		// }
-	}
-	return NewReaderBytes(append(prefix, ion...))
+	return NewReaderBytes(append(prefixBytes, ion...))
+}
+
+func TestReadBinaryStringsWithReset(t *testing.T) {
+	r := readBinary([]byte{
+		0x8F,
+		0x80,      // ""
+		0x81, 'a', // "a"
+		0x8E, 0x96,
+		'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', ' ', 'b', 'u', 't',
+		' ', 'l', 'o', 'n', 'g', 'e', 'r',
+	})
+
+	_null(t, r, StringType)
+	_string(t, r, newString(""))
+	_string(t, r, newString("a"))
+	_string(t, r, newString("hello world but longer"))
+	_eof(t, r)
 }
