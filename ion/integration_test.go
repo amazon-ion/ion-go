@@ -95,6 +95,8 @@ var malformedIonsSkipList = []string{
 	"invalidVersionMarker_ion_1234_0.ion",
 	"invalidVersionMarker_ion_1_1.ion",
 	"invalidVersionMarker_ion_2_0.ion",
+	"invalidVersionMarker_unsupported_major_version.ion", // ion-go#198
+	"invalidVersionMarker_unsupported_minor_version.ion", // ion-go#198
 	"minLongWithLenTooSmall.10n",
 	"nopPadTooShort.10n",
 	"nullDotCommentInt.ion",
